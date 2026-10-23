@@ -190,8 +190,11 @@ function compareSemver(v1, v2) {
 // 检查 GitHub 仓库最新 Release 版本
 ipcMain.handle('check-github-update', async (event, customRepo) => {
   const config = loadConfig()
-  const repo = (customRepo || config.githubRepo || 'LiSB/dev-orbit').trim()
-  const currentVersion = '1.1.0'
+  const repo = (customRepo || config.githubRepo || '1852676265/dev-orbit').trim()
+  let currentVersion = '1.1.1'
+  try {
+    currentVersion = require('../package.json').version || '1.1.1'
+  } catch (e) {}
   return new Promise((resolve) => {
     const https = require('https')
     const options = {

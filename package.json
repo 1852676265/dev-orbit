@@ -1,6 +1,6 @@
 {
   "name": "dev-orbit",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "DevOrbit - 个人开发者工作台：本地任务归档、SQL发布跟踪与资产管理",
   "main": "electron/main.js",
   "author": "LiSB",
