@@ -115,7 +115,7 @@
       <!-- 过滤与状态栏 -->
       <div class="flex items-center justify-between flex-shrink-0 flex-wrap gap-3">
         <div class="flex items-center gap-3">
-          <h2 class="text-base font-bold text-white flex items-center gap-2 tracking-wide">
+          <h2 class="text-base font-bold app-page-heading flex items-center gap-2 tracking-wide">
             <Layers class="w-4 h-4 text-emerald-400" />
             开发任务工作台
           </h2>
@@ -133,19 +133,19 @@
             </button>
           </div>
 
-          <span class="text-xs text-slate-400 font-mono">
+          <span class="text-xs app-page-muted font-mono">
             已加载 {{ filteredTasks.length }} 个任务
           </span>
         </div>
 
         <div class="flex items-center gap-2 flex-wrap">
           <!-- 1. 透光度档位 (解决挡住背景的核心控制器) -->
-          <div class="flex items-center bg-slate-900/70 backdrop-blur-md p-0.5 rounded-xl border border-white/10 shadow-sm text-xs" title="卡片透光度档位">
+          <div class="flex items-center app-filter-box backdrop-blur-md p-0.5 rounded-xl shadow-sm text-xs" title="卡片透光度档位">
             <button
               type="button"
               @click="setTransparencyMode('crystal')"
               class="px-2 py-1 rounded-lg transition flex items-center gap-1"
-              :class="transparencyMode === 'crystal' ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40 shadow-sm' : 'text-slate-400 hover:text-slate-200'"
+              :class="transparencyMode === 'crystal' ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40 shadow-sm' : 'app-filter-btn'"
               title="💎 超透直透 (0模糊，文字悬浮，背景100%清晰)"
             >
               <Sparkles class="w-3 h-3 text-emerald-400" />
@@ -155,7 +155,7 @@
               type="button"
               @click="setTransparencyMode('soft')"
               class="px-2 py-1 rounded-lg transition"
-              :class="transparencyMode === 'soft' ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40 shadow-sm' : 'text-slate-400 hover:text-slate-200'"
+              :class="transparencyMode === 'soft' ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40 shadow-sm' : 'app-filter-btn'"
               title="🌫️ 轻磨砂 (微透浮层)"
             >
               <span>轻磨砂</span>
@@ -164,20 +164,20 @@
               type="button"
               @click="setTransparencyMode('solid')"
               class="px-2 py-1 rounded-lg transition"
-              :class="transparencyMode === 'solid' ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40 shadow-sm' : 'text-slate-400 hover:text-slate-200'"
-              title="🛡️ 深色 (高对比度)"
+              :class="transparencyMode === 'solid' ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40 shadow-sm' : 'app-filter-btn'"
+              title="🛡️ 深色/实色 (高对比度)"
             >
-              <span>深色</span>
+              <span>{{ isLight ? '实色' : '深色' }}</span>
             </button>
           </div>
 
           <!-- 2. 排版避让选择 (把画面主体雕像/风景彻底让出来) -->
-          <div class="flex items-center bg-slate-900/70 backdrop-blur-md p-0.5 rounded-xl border border-white/10 shadow-sm text-xs" title="避让画面视觉焦点">
+          <div class="flex items-center app-filter-box backdrop-blur-md p-0.5 rounded-xl shadow-sm text-xs" title="避让画面视觉焦点">
             <button
               type="button"
               @click="setLayoutAlign('full')"
               class="p-1.5 rounded-lg transition"
-              :class="layoutAlign === 'full' ? 'bg-emerald-500/20 text-emerald-300 font-bold shadow-sm' : 'text-slate-400 hover:text-slate-200'"
+              :class="layoutAlign === 'full' ? 'bg-emerald-500/20 text-emerald-300 font-bold shadow-sm' : 'app-filter-btn'"
               title="全屏宽景排布"
             >
               <Maximize2 class="w-3.5 h-3.5" />
@@ -186,7 +186,7 @@
               type="button"
               @click="setLayoutAlign('left')"
               class="p-1.5 rounded-lg transition"
-              :class="layoutAlign === 'left' ? 'bg-emerald-500/20 text-emerald-300 font-bold shadow-sm' : 'text-slate-400 hover:text-slate-200'"
+              :class="layoutAlign === 'left' ? 'bg-emerald-500/20 text-emerald-300 font-bold shadow-sm' : 'app-filter-btn'"
               title="靠左避让 (右侧全景留白给雕像/风景)"
             >
               <AlignLeft class="w-3.5 h-3.5" />
@@ -195,7 +195,7 @@
               type="button"
               @click="setLayoutAlign('right')"
               class="p-1.5 rounded-lg transition"
-              :class="layoutAlign === 'right' ? 'bg-emerald-500/20 text-emerald-300 font-bold shadow-sm' : 'text-slate-400 hover:text-slate-200'"
+              :class="layoutAlign === 'right' ? 'bg-emerald-500/20 text-emerald-300 font-bold shadow-sm' : 'app-filter-btn'"
               title="靠右避让 (左侧全景留白)"
             >
               <AlignRight class="w-3.5 h-3.5" />
@@ -203,12 +203,12 @@
           </div>
 
           <!-- 3. 网格 VS 紧凑行模式 -->
-          <div class="flex items-center bg-slate-900/70 backdrop-blur-md p-0.5 rounded-xl border border-white/10 shadow-sm text-xs">
+          <div class="flex items-center app-filter-box backdrop-blur-md p-0.5 rounded-xl shadow-sm text-xs">
             <button
               type="button"
               @click="setViewMode('grid')"
               class="p-1.5 rounded-lg transition"
-              :class="viewMode === 'grid' ? 'bg-emerald-500/20 text-emerald-300 font-bold shadow-sm' : 'text-slate-400 hover:text-slate-200'"
+              :class="viewMode === 'grid' ? 'bg-emerald-500/20 text-emerald-300 font-bold shadow-sm' : 'app-filter-btn'"
               title="大卡片网格模式"
             >
               <LayoutGrid class="w-3.5 h-3.5" />
@@ -217,7 +217,7 @@
               type="button"
               @click="setViewMode('compact')"
               class="p-1.5 rounded-lg transition"
-              :class="viewMode === 'compact' ? 'bg-emerald-500/20 text-emerald-300 font-bold shadow-sm' : 'text-slate-400 hover:text-slate-200'"
+              :class="viewMode === 'compact' ? 'bg-emerald-500/20 text-emerald-300 font-bold shadow-sm' : 'app-filter-btn'"
               title="极简单行紧凑模式 (遮挡减少 80%)"
             >
               <List class="w-3.5 h-3.5" />
@@ -227,7 +227,7 @@
           <!-- 筛选下拉 -->
           <select
             v-model="filterStatus"
-            class="bg-slate-900/70 backdrop-blur-md border border-slate-700/80 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 cursor-pointer shadow-sm"
+            class="app-filter-box backdrop-blur-md rounded-xl px-2.5 py-1.5 text-xs focus:outline-none cursor-pointer shadow-sm"
           >
             <option value="all">全部状态</option>
             <option value="developing">🛠️ 开发中</option>
@@ -248,8 +248,8 @@
       </div>
 
       <!-- 年份分层切换栏 -->
-      <div class="flex items-center gap-2 border-b border-slate-800/70 pb-3 flex-shrink-0 overflow-x-auto">
-        <span class="text-xs text-slate-400 font-medium flex items-center gap-1 mr-1">
+      <div class="flex items-center gap-2 border-b pb-3 flex-shrink-0 overflow-x-auto" style="border-color: var(--filter-bar-border)">
+        <span class="text-xs app-page-muted font-medium flex items-center gap-1 mr-1">
           <Calendar class="w-3.5 h-3.5 text-amber-400" />
           归属年份:
         </span>
@@ -259,7 +259,7 @@
           class="px-3 py-1 rounded-xl text-xs font-medium transition backdrop-blur-sm border"
           :class="selectedYear === 'all'
             ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 font-semibold shadow-sm'
-            : 'bg-slate-900/50 hover:bg-slate-800/70 text-slate-400 hover:text-slate-200 border-slate-800/60'"
+            : 'app-year-pill'"
         >
           全部年份 ({{ projectScopedTasksCount }})
         </button>
@@ -271,10 +271,10 @@
           class="px-3 py-1 rounded-xl text-xs font-medium transition flex items-center gap-1.5 backdrop-blur-sm border"
           :class="selectedYear === yr
             ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 font-semibold shadow-sm'
-            : 'bg-slate-900/50 hover:bg-slate-800/70 text-slate-400 hover:text-slate-200 border-slate-800/60'"
+            : 'app-year-pill'"
         >
           <span>📁 {{ yr }} 年</span>
-          <span class="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-950/60 font-mono">
+          <span class="text-[10px] px-1.5 py-0.2 rounded-full font-mono opacity-80" :class="isLight ? 'bg-slate-200/80 text-slate-700' : 'bg-slate-950/60'">
             {{ getYearCount(yr) }}
           </span>
         </button>
@@ -282,12 +282,12 @@
 
       <!-- 任务展示区域 (支持网格大卡片与极简紧凑行) -->
       <div class="flex-1 overflow-y-auto pr-1 custom-scrollbar">
-        <div v-if="filteredTasks.length === 0" class="text-center py-24 text-slate-500 text-sm">
-          <FolderKanban class="w-12 h-12 mx-auto mb-2 opacity-40 text-slate-400" />
-          <p class="font-medium text-slate-400">
+        <div v-if="filteredTasks.length === 0" class="text-center py-24 text-sm app-page-muted">
+          <FolderKanban class="w-12 h-12 mx-auto mb-2 opacity-50 text-current" />
+          <p class="font-medium app-page-heading">
             {{ getEmptyNotice() }}
           </p>
-          <p class="text-xs text-slate-500 mt-1">
+          <p class="text-xs app-page-muted mt-1">
             点击右上角“新建任务工作区”，将自动在本地 <span class="font-mono text-emerald-400">{{ selectedYear === 'all' ? '2026' : selectedYear }}\</span> 目录下生成任务脚手架
           </p>
         </div>
@@ -305,7 +305,7 @@
           <div
             v-for="task in filteredTasks"
             :key="task.fullPath"
-            class="group relative border rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 cursor-pointer flex flex-col justify-between min-h-[165px]"
+            class="group relative border rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 cursor-pointer flex flex-col justify-between min-h-[165px] app-task-card"
             :style="cardCustomStyle"
             @click="$emit('select-task', task)"
             @contextmenu.prevent.stop="openTaskContextMenu($event, task)"
@@ -314,7 +314,7 @@
               <!-- 顶部标签与状态 -->
               <div class="flex items-center justify-between gap-2 mb-2.5">
                 <div class="flex items-center gap-1.5 flex-wrap">
-                  <span class="px-2 py-0.5 text-[11px] font-mono rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/25 flex items-center gap-1">
+                  <span class="px-2 py-0.5 text-[11px] font-mono rounded-md bg-amber-500/15 text-amber-400 border border-amber-500/25 flex items-center gap-1">
                     📁 {{ task.year }}年
                   </span>
                   <!-- 点击项目徽章快速过滤该项目 -->
@@ -339,7 +339,7 @@
                   <!-- 快捷更多操作按钮 (点击同样唤出右键菜单) -->
                   <button
                     @click.stop="openTaskContextMenu($event, task)"
-                    class="p-1 text-slate-400 hover:text-slate-100 hover:bg-slate-700/60 rounded-lg transition"
+                    class="p-1 app-task-subtext hover:text-emerald-400 rounded-lg transition"
                     title="右键或点击此处打开操作菜单"
                   >
                     <MoreVertical class="w-3.5 h-3.5" />
@@ -348,33 +348,33 @@
               </div>
 
               <!-- 需求标题 -->
-              <h3 class="text-sm font-bold text-slate-100 group-hover:text-emerald-300 transition duration-200 line-clamp-2 my-2 leading-snug">
+              <h3 class="text-sm font-bold app-task-title group-hover:text-emerald-400 transition duration-200 line-clamp-2 my-2 leading-snug">
                 {{ task.title }}
               </h3>
 
-              <div class="text-[11px] text-slate-400 font-mono flex items-center gap-1.5 mb-3">
-                <Clock class="w-3 h-3 text-slate-400 flex-shrink-0" />
+              <div class="text-[11px] app-task-subtext font-mono flex items-center gap-1.5 mb-3">
+                <Clock class="w-3 h-3 text-current opacity-70 flex-shrink-0" />
                 <span>创建于: {{ new Date(task.createdAt || Date.now()).toLocaleDateString() }}</span>
               </div>
             </div>
 
             <!-- 底部 SQL 状态胶囊与操作快捷键 -->
-            <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs mt-auto">
+            <div class="pt-3 border-t flex items-center justify-between text-xs mt-auto" style="border-color: var(--card-border)">
               <!-- SQL 脚本发布提醒 (图标完全包裹在胶囊格子内部) -->
               <div class="flex items-center min-w-0">
                 <div
                   v-if="task.sqlCount === 0"
-                  class="inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-md text-slate-400 bg-slate-800/40 border border-slate-700/50"
+                  class="inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-md app-task-tag"
                 >
-                  <Database class="w-3 h-3 text-slate-500 flex-shrink-0" />
+                  <Database class="w-3 h-3 opacity-60 flex-shrink-0" />
                   <span>无 SQL 脚本</span>
                 </div>
                 <div
                   v-else
                   class="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-0.5 rounded-md font-medium border"
                   :class="task.prodPendingCount > 0
-                    ? 'text-amber-300 bg-amber-500/10 border-amber-500/20'
-                    : 'text-emerald-300 bg-emerald-500/10 border-emerald-500/20'"
+                    ? 'text-amber-400 bg-amber-500/15 border-amber-500/30'
+                    : 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30'"
                 >
                   <Database
                     class="w-3 h-3 flex-shrink-0"
@@ -389,7 +389,7 @@
                 <button
                   @click.stop="openIDE(task.fullPath)"
                   title="在代码编辑器中打开"
-                  class="p-1 text-slate-400 hover:text-emerald-300 rounded hover:bg-slate-800 transition"
+                  class="p-1 app-task-subtext hover:text-emerald-400 rounded transition"
                 >
                   <Code2 class="w-3.5 h-3.5" />
                 </button>
@@ -397,7 +397,7 @@
                 <button
                   @click.stop="openExplorer(task.fullPath)"
                   title="在 Windows 资源管理器中打开"
-                  class="p-1 text-slate-400 hover:text-slate-100 rounded hover:bg-slate-800 transition"
+                  class="p-1 app-task-subtext hover:text-emerald-400 rounded transition"
                 >
                   <FolderOpen class="w-3.5 h-3.5" />
                 </button>
@@ -419,14 +419,14 @@
           <div
             v-for="task in filteredTasks"
             :key="task.fullPath"
-            class="group relative border rounded-xl px-4 py-2.5 transition-all duration-200 cursor-pointer flex items-center justify-between gap-3"
+            class="group relative border rounded-xl px-4 py-2.5 transition-all duration-200 cursor-pointer flex items-center justify-between gap-3 app-task-card"
             :style="cardCustomStyle"
             @click="$emit('select-task', task)"
             @contextmenu.prevent.stop="openTaskContextMenu($event, task)"
           >
             <!-- 左侧：年份、项目与需求名称 -->
             <div class="flex items-center gap-2.5 min-w-0 flex-1">
-              <span class="px-2 py-0.5 text-[11px] font-mono rounded bg-amber-500/15 text-amber-300 border border-amber-500/25 flex-shrink-0">
+              <span class="px-2 py-0.5 text-[11px] font-mono rounded bg-amber-500/15 text-amber-400 border border-amber-500/25 flex-shrink-0">
                 📁 {{ task.year }}
               </span>
               <span
@@ -438,7 +438,7 @@
               >
                 {{ task.project || '常规项目' }}
               </span>
-              <h3 class="text-xs font-bold text-slate-100 group-hover:text-emerald-300 transition truncate">
+              <h3 class="text-xs font-bold app-task-title group-hover:text-emerald-400 transition truncate">
                 {{ task.title }}
               </h3>
             </div>
@@ -447,23 +447,23 @@
             <div class="flex items-center gap-3 flex-shrink-0">
               <div
                 v-if="task.sqlCount === 0"
-                class="text-[11px] text-slate-400 bg-slate-800/40 border border-slate-700/40 px-2 py-0.5 rounded flex items-center gap-1"
+                class="text-[11px] app-task-tag px-2 py-0.5 rounded flex items-center gap-1"
               >
-                <Database class="w-3 h-3 text-slate-500" />
+                <Database class="w-3 h-3 opacity-60" />
                 <span>无 SQL</span>
               </div>
               <div
                 v-else
                 class="text-[11px] px-2 py-0.5 rounded font-medium border flex items-center gap-1"
                 :class="task.prodPendingCount > 0
-                  ? 'text-amber-300 bg-amber-500/15 border-amber-500/30'
-                  : 'text-emerald-300 bg-emerald-500/15 border-emerald-500/30'"
+                  ? 'text-amber-400 bg-amber-500/15 border-amber-500/30'
+                  : 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30'"
               >
                 <Database class="w-3 h-3" :class="task.prodPendingCount > 0 ? 'text-amber-400' : 'text-emerald-400'" />
                 <span>{{ task.sqlCount }} 份 SQL</span>
               </div>
 
-              <span class="text-[11px] text-slate-400 font-mono hidden md:inline">
+              <span class="text-[11px] app-task-subtext font-mono hidden md:inline">
                 {{ new Date(task.createdAt || Date.now()).toLocaleDateString() }}
               </span>
 
@@ -476,20 +476,20 @@
                 <button
                   @click.stop="openIDE(task.fullPath)"
                   title="在代码编辑器中打开"
-                  class="p-1 text-slate-400 hover:text-emerald-300 rounded hover:bg-slate-800 transition"
+                  class="p-1 app-task-subtext hover:text-emerald-400 rounded transition"
                 >
                   <Code2 class="w-3.5 h-3.5" />
                 </button>
                 <button
                   @click.stop="openExplorer(task.fullPath)"
                   title="在 Windows 资源管理器中打开"
-                  class="p-1 text-slate-400 hover:text-slate-100 rounded hover:bg-slate-800 transition"
+                  class="p-1 app-task-subtext hover:text-emerald-400 rounded transition"
                 >
                   <FolderOpen class="w-3.5 h-3.5" />
                 </button>
                 <button
                   @click.stop="openTaskContextMenu($event, task)"
-                  class="p-1 text-slate-400 hover:text-slate-100 hover:bg-slate-700/60 rounded transition"
+                  class="p-1 app-task-subtext hover:text-emerald-400 rounded transition"
                   title="更多操作"
                 >
                   <MoreVertical class="w-3.5 h-3.5" />
@@ -664,6 +664,10 @@ const props = defineProps({
     type: Array,
     default: () => ['2026', '2025']
   },
+  isLight: {
+    type: Boolean,
+    default: false
+  },
   cardOpacity: {
     type: Number,
     default: 20
@@ -683,7 +687,7 @@ function setViewMode(mode) {
   localStorage.setItem('devtaskhub_view_mode', mode)
 }
 
-// 透光度档位: 'crystal' (超透0模糊) | 'soft' (轻磨砂4px) | 'solid' (深色)
+// 透光度档位: 'crystal' (超透0模糊) | 'soft' (轻磨砂4px) | 'solid' (深色/实色)
 const transparencyMode = ref(localStorage.getItem('devtaskhub_transparency_mode') || 'crystal')
 function setTransparencyMode(mode) {
   transparencyMode.value = mode
@@ -698,6 +702,37 @@ function setLayoutAlign(align) {
 }
 
 const cardCustomStyle = computed(() => {
+  if (props.isLight) {
+    if (transparencyMode.value === 'crystal') {
+      return {
+        backgroundColor: 'rgba(255, 255, 255, 0.65)',
+        borderColor: 'rgba(203, 213, 225, 0.85)',
+        backdropFilter: 'none',
+        WebkitBackdropFilter: 'none',
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)',
+        textShadow: 'none'
+      }
+    } else if (transparencyMode.value === 'soft') {
+      return {
+        backgroundColor: 'rgba(255, 255, 255, 0.88)',
+        borderColor: 'rgba(226, 232, 240, 0.95)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.06)',
+        textShadow: 'none'
+      }
+    } else {
+      return {
+        backgroundColor: 'var(--card-bg, #ffffff)',
+        borderColor: 'var(--card-border, rgba(226, 232, 240, 0.95))',
+        backdropFilter: 'none',
+        WebkitBackdropFilter: 'none',
+        boxShadow: '0 6px 24px rgba(0, 0, 0, 0.07)'
+      }
+    }
+  }
+
+  // 深色主题模式
   if (transparencyMode.value === 'crystal') {
     return {
       backgroundColor: 'rgba(15, 23, 42, 0.06)',
@@ -718,8 +753,8 @@ const cardCustomStyle = computed(() => {
     }
   } else {
     return {
-      backgroundColor: 'rgba(15, 23, 42, 0.75)',
-      borderColor: 'rgba(255, 255, 255, 0.1)',
+      backgroundColor: 'var(--card-bg, rgba(15, 23, 42, 0.75))',
+      borderColor: 'var(--card-border, rgba(255, 255, 255, 0.1))',
       backdropFilter: 'blur(12px)',
       WebkitBackdropFilter: 'blur(12px)'
     }
@@ -985,15 +1020,30 @@ function getEmptyNotice() {
 }
 
 function getStatusBadgeClass(status) {
+  if (props.isLight) {
+    switch (status) {
+      case 'developing':
+        return 'bg-blue-100 text-blue-700 border border-blue-300'
+      case 'testing':
+        return 'bg-purple-100 text-purple-700 border border-purple-300'
+      case 'release_ready':
+        return 'bg-amber-100 text-amber-800 border border-amber-300'
+      case 'archived':
+        return 'bg-slate-200 text-slate-700 border border-slate-300'
+      default:
+        return 'bg-slate-200 text-slate-700'
+    }
+  }
+
   switch (status) {
     case 'developing':
-      return 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+      return 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
     case 'testing':
-      return 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+      return 'bg-purple-500/15 text-purple-400 border border-purple-500/30'
     case 'release_ready':
-      return 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+      return 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
     case 'archived':
-      return 'bg-slate-700/60 text-slate-400 border border-slate-600/50'
+      return 'bg-slate-800/80 text-slate-400 border border-slate-700/60'
     default:
       return 'bg-slate-700 text-slate-300'
   }

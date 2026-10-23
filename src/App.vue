@@ -1,7 +1,7 @@
 <template>
   <div
-    class="h-screen w-screen flex flex-col relative overflow-hidden font-sans select-none text-slate-100 bg-slate-950"
-    :style="rootThemeStyle"
+    class="h-screen w-screen flex flex-col relative overflow-hidden font-sans select-none"
+    :style="[rootThemeStyle, { backgroundColor: 'var(--page-bg)', color: 'var(--page-text-main)' }]"
     :data-theme-accent="currentTheme.colorTheme || 'emerald'"
   >
     
@@ -11,9 +11,9 @@
       :style="backgroundStyle"
     ></div>
 
-    <!-- 暗度遮罩层 (确保不论图片多亮，文字都具备极佳的对比度与可读性) -->
+    <!-- 遮罩层 (自定义壁纸时按需调节对比度，预设渐变时透明) -->
     <div
-      class="absolute inset-0 z-0 bg-slate-950 pointer-events-none transition-opacity duration-300"
+      class="absolute inset-0 z-0 pointer-events-none transition-opacity duration-300"
       :style="overlayStyle"
     ></div>
 
@@ -123,6 +123,7 @@
         v-if="currentView === 'tasks'"
         :tasks="tasks"
         :years="years"
+        :is-light="isCurrentThemeLight"
         :card-opacity="currentTheme.cardOpacity ?? 20"
         :card-glass="currentTheme.cardGlass !== false"
         @open-new-task="openNewTaskModal"
@@ -225,6 +226,12 @@ const currentTheme = ref({
   cardOpacity: 18
 })
 
+// 判断当前主题是否为浅色明亮风格 (如洁白、雾灰)
+const isCurrentThemeLight = computed(() => {
+  const c = getThemeConfig(currentTheme.value.colorTheme || 'emerald', currentTheme.value.customPrimaryColor || '#10b981')
+  return !!c.isLight
+})
+
 // 全局动态配色主题样式注入 (CSS 变量)
 const rootThemeStyle = computed(() => {
   const c = getThemeConfig(currentTheme.value.colorTheme || 'emerald', currentTheme.value.customPrimaryColor || '#10b981')
@@ -235,6 +242,31 @@ const rootThemeStyle = computed(() => {
     '--theme-primary-light': `rgba(${c.primaryRgb}, 0.16)`,
     '--theme-primary-border': `rgba(${c.primaryRgb}, 0.38)`,
     '--theme-primary-glow': `rgba(${c.primaryRgb}, 0.25)`,
+    // 全局页面背景与文字
+    '--page-bg': c.pageBg || '#020617',
+    '--page-gradient': c.pageGradient || 'linear-gradient(135deg, #020617 0%, #0f172a 100%)',
+    '--page-text-main': c.pageTextMain || '#f8fafc',
+    '--page-text-muted': c.pageTextMuted || '#94a3b8',
+    // 任务卡片外观
+    '--card-bg': c.cardBg || 'rgba(15, 23, 42, 0.75)',
+    '--card-border': c.cardBorder || 'rgba(255, 255, 255, 0.1)',
+    '--card-shadow': c.cardShadow || '0 4px 20px rgba(0, 0, 0, 0.25)',
+    '--card-hover-border': c.cardHoverBorder || 'rgba(255, 255, 255, 0.25)',
+    '--card-title-color': c.cardTitleColor || '#f8fafc',
+    '--card-subtext-color': c.cardSubtextColor || '#94a3b8',
+    '--card-tag-bg': c.cardTagBg || 'rgba(15, 23, 42, 0.6)',
+    '--card-tag-text': c.cardTagText || '#94a3b8',
+    '--card-tag-border': c.cardTagBorder || 'rgba(255, 255, 255, 0.08)',
+    // 过滤与状态栏
+    '--filter-bar-bg': c.filterBarBg || 'rgba(15, 23, 42, 0.75)',
+    '--filter-bar-border': c.filterBarBorder || 'rgba(255, 255, 255, 0.1)',
+    '--filter-bar-item-bg': c.filterBarItemBg || 'rgba(15, 23, 42, 0.6)',
+    '--filter-bar-item-text': c.filterBarItemText || '#94a3b8',
+    '--filter-bar-item-active-bg': c.filterBarItemActiveBg || 'rgba(255, 255, 255, 0.15)',
+    '--filter-bar-item-active-text': c.filterBarItemActiveText || '#ffffff',
+    '--year-pill-bg': c.yearPillBg || 'rgba(15, 23, 42, 0.6)',
+    '--year-pill-text': c.yearPillText || '#94a3b8',
+    '--year-pill-border': c.yearPillBorder || 'rgba(255, 255, 255, 0.1)',
     // Chrome Header (顶栏)
     '--chrome-header-bg': c.headerBg,
     '--chrome-header-border': c.headerBorder,
@@ -277,13 +309,22 @@ const backgroundStyle = computed(() => {
       backgroundSize: 'cover',
       backgroundPosition: 'center',
       backgroundRepeat: 'no-repeat',
-      // 自定义高清壁纸默认 100% 超清无模糊，完全还原本图细腻画质
       filter: currentTheme.value.blurLevel === 'none' || !currentTheme.value.blurLevel ? 'none' : getBlurFilter(currentTheme.value.blurLevel)
     }
   }
 
+  const c = getThemeConfig(currentTheme.value.colorTheme || 'emerald', currentTheme.value.customPrimaryColor || '#10b981')
+  
+  // 浅色主题（如洁白、雾灰）或默认情况直接启用对应主题专属全景渐变
+  if (c.isLight || !currentTheme.value.presetId || currentTheme.value.presetId === 'aurora') {
+    return {
+      background: c.pageGradient || c.pageBg,
+      filter: getBlurFilter(currentTheme.value.blurLevel)
+    }
+  }
+
   const pId = currentTheme.value.presetId || 'aurora'
-  let grad = 'radial-gradient(at 0% 0%, rgba(5, 150, 105, 0.5) 0px, transparent 55%), radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.4) 0px, transparent 55%), radial-gradient(at 50% 100%, rgba(13, 148, 136, 0.35) 0px, transparent 60%), #020617'
+  let grad = c.pageGradient || '#020617'
   if (pId === 'cyber') {
     grad = 'radial-gradient(at 10% 20%, rgba(139, 92, 246, 0.5) 0px, transparent 50%), radial-gradient(at 90% 80%, rgba(244, 63, 94, 0.4) 0px, transparent 55%), radial-gradient(at 50% 50%, rgba(30, 27, 75, 0.5) 0px, transparent 70%), #030712'
   } else if (pId === 'obsidian') {
@@ -300,13 +341,19 @@ const backgroundStyle = computed(() => {
 })
 
 const overlayStyle = computed(() => {
-  // 自定义壁纸时若历史暗度过高，适度限制在轻柔区间（0.15~0.30），让壁纸色彩明艳通透
-  let op = currentTheme.value.overlayOpacity ?? 20
-  if (currentTheme.value.type === 'custom') {
-    op = Math.min(op, 30)
+  if (currentTheme.value.type !== 'custom') {
+    return {
+      opacity: 0,
+      backgroundColor: 'transparent'
+    }
   }
+
+  const c = getThemeConfig(currentTheme.value.colorTheme || 'emerald', currentTheme.value.customPrimaryColor || '#10b981')
+  let op = currentTheme.value.overlayOpacity ?? 20
+  op = Math.min(op, 30)
   return {
-    opacity: op / 100
+    opacity: op / 100,
+    backgroundColor: c.isLight ? '#ffffff' : '#020617'
   }
 })
 

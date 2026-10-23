@@ -266,3 +266,68 @@
 [data-theme-accent="mist-grey"] .app-sidebar {
   box-shadow: 1px 0 4px rgba(0, 0, 0, 0.04);
 }
+
+/* ================= 全局工作区页面与卡片主题联动 ================= */
+.app-page-heading {
+  color: var(--page-text-main) !important;
+}
+
+.app-page-muted {
+  color: var(--page-text-muted) !important;
+}
+
+.app-filter-box {
+  background-color: var(--filter-bar-bg) !important;
+  border: 1px solid var(--filter-bar-border) !important;
+  color: var(--filter-bar-item-text) !important;
+  transition: all 0.2s ease;
+}
+
+.app-filter-btn {
+  color: var(--filter-bar-item-text) !important;
+  transition: all 0.2s ease;
+}
+
+.app-filter-btn:hover {
+  color: var(--page-text-main) !important;
+}
+
+.app-year-pill {
+  background-color: var(--year-pill-bg) !important;
+  border: 1px solid var(--year-pill-border) !important;
+  color: var(--year-pill-text) !important;
+  transition: all 0.2s ease;
+}
+
+.app-year-pill:hover {
+  color: var(--page-text-main) !important;
+}
+
+.app-task-card {
+  box-shadow: var(--card-shadow) !important;
+}
+
+.app-task-title {
+  color: var(--card-title-color) !important;
+}
+
+.app-task-subtext {
+  color: var(--card-subtext-color) !important;
+}
+
+.app-task-tag {
+  background-color: var(--card-tag-bg) !important;
+  color: var(--card-tag-text) !important;
+  border: 1px solid var(--card-tag-border) !important;
+}
+
+/* 浅色主题模式滚动条强化 */
+[data-theme-accent="white"] ::-webkit-scrollbar-thumb,
+[data-theme-accent="mist-grey"] ::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.45);
+}
+
+[data-theme-accent="white"] ::-webkit-scrollbar-thumb:hover,
+[data-theme-accent="mist-grey"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.65);
+}

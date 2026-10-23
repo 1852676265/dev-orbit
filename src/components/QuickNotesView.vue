@@ -3,12 +3,12 @@
     <!-- 顶栏：分类过滤与操作 -->
     <div class="flex items-center justify-between flex-shrink-0">
       <div class="flex items-center gap-3">
-        <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+        <h2 class="text-lg font-bold app-page-heading flex items-center gap-2">
           <BookMarked class="w-5 h-5 text-amber-400" />
           随手记 & 常用命令库
         </h2>
-        <span class="text-xs text-slate-400">
-          (已记录 {{ notes.length }} 条命令/笔记，数据存储在本地 <span class="font-mono text-slate-300">_quick_notes/</span>)
+        <span class="text-xs app-page-muted">
+          (已记录 {{ notes.length }} 条命令/笔记，数据存储在本地 <span class="font-mono text-emerald-400">_quick_notes/</span>)
         </span>
       </div>
 
@@ -20,7 +20,7 @@
             v-model="searchQuery"
             type="text"
             placeholder="搜索命令名称或内容..."
-            class="w-full bg-slate-900/70 backdrop-blur-md border border-slate-700/80 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 shadow-sm"
+            class="w-full app-filter-box backdrop-blur-md rounded-xl pl-9 pr-3 py-1.5 text-xs placeholder:opacity-50 focus:outline-none focus:ring-1 focus:ring-emerald-500 shadow-sm"
           />
         </div>
 
@@ -38,8 +38,8 @@
     <div class="flex items-center gap-2 flex-wrap flex-shrink-0">
       <button
         @click="selectedTag = ''"
-        class="px-3 py-1 rounded-full text-xs font-medium transition"
-        :class="selectedTag === '' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'"
+        class="px-3 py-1 rounded-full text-xs font-medium transition border"
+        :class="selectedTag === '' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'app-year-pill'"
       >
         全部 ({{ notes.length }})
       </button>
@@ -47,8 +47,8 @@
         v-for="tag in allTags"
         :key="tag"
         @click="selectedTag = tag"
-        class="px-3 py-1 rounded-full text-xs font-medium transition"
-        :class="selectedTag === tag ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'"
+        class="px-3 py-1 rounded-full text-xs font-medium transition border"
+        :class="selectedTag === tag ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'app-year-pill'"
       >
         #{{ tag }}
       </button>
@@ -56,7 +56,7 @@
 
     <!-- 命令卡片网格 -->
     <div class="flex-1 overflow-y-auto pr-1">
-      <div v-if="filteredNotes.length === 0" class="text-center py-20 text-slate-500 text-sm">
+      <div v-if="filteredNotes.length === 0" class="text-center py-20 text-sm app-page-muted">
         <StickyNote class="w-10 h-10 mx-auto mb-2 opacity-50" />
         没有找到相关的命令或笔记
       </div>
@@ -65,11 +65,12 @@
         <div
           v-for="note in filteredNotes"
           :key="note.id"
-          class="bg-slate-900/60 hover:bg-slate-800/70 border border-slate-700/50 hover:border-amber-500/50 rounded-2xl p-5 backdrop-blur-md shadow-lg shadow-black/20 hover:shadow-2xl hover:shadow-amber-500/10 transition-all duration-300 hover:-translate-y-0.5 flex flex-col justify-between group"
+          class="app-task-card rounded-2xl p-5 backdrop-blur-md border transition-all duration-300 hover:-translate-y-0.5 flex flex-col justify-between group"
+          :style="{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }"
         >
           <div>
             <div class="flex items-start justify-between gap-2 mb-2">
-              <h3 class="text-sm font-bold text-slate-100 group-hover:text-amber-300 transition line-clamp-1">
+              <h3 class="text-sm font-bold app-task-title group-hover:text-amber-400 transition line-clamp-1">
                 {{ note.title }}
               </h3>
               <span class="text-[11px] px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-300 font-mono flex-shrink-0">
@@ -78,26 +79,26 @@
             </div>
 
             <!-- 命令内容展示与一键复制 -->
-            <div class="relative bg-slate-950/80 border border-slate-800/90 rounded-xl p-3 font-mono text-xs text-emerald-300 whitespace-pre-wrap break-all max-h-36 overflow-y-auto shadow-inner">
+            <div class="relative app-task-tag rounded-xl p-3 font-mono text-xs whitespace-pre-wrap break-all max-h-36 overflow-y-auto shadow-inner" style="color: var(--theme-primary)">
               {{ note.content }}
             </div>
           </div>
 
-          <div class="mt-4 pt-3 border-t border-slate-700/50 flex items-center justify-between text-xs">
-            <span class="text-[11px] text-slate-500">
+          <div class="mt-4 pt-3 border-t flex items-center justify-between text-xs" style="border-color: var(--card-border)">
+            <span class="text-[11px] app-task-subtext">
               {{ new Date(note.createdAt).toLocaleDateString() }}
             </span>
             <div class="flex items-center gap-2">
               <button
                 @click="editNote(note)"
-                class="p-1 text-slate-400 hover:text-slate-200 transition"
+                class="p-1 app-task-subtext hover:text-current transition"
                 title="编辑"
               >
                 <Pencil class="w-3.5 h-3.5" />
               </button>
               <button
                 @click="deleteNote(note.id)"
-                class="p-1 text-slate-400 hover:text-rose-400 transition"
+                class="p-1 app-task-subtext hover:text-rose-400 transition"
                 title="删除"
               >
                 <Trash2 class="w-3.5 h-3.5" />
