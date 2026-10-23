@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build and Packaging Outputs
+dist/
+dist-electron/
+release/
+build/
+*.exe
+*.zip
+*.dmg
+*.AppImage
+
+# Logs and Crash dumps
+*.log
+crash.txt
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# System Files
+.DS_Store
+Thumbs.db
+
+# IDE and Editor Cache
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Local environment
+.env.local
+.env.*.local

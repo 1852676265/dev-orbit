@@ -1,0 +1,268 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 极简自定义滚动条 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.4);
+}
+
+/* 关键字高亮闪烁效果 */
+@keyframes highlightPulse {
+  0% {
+    background-color: rgba(234, 179, 8, 0.4);
+  }
+  50% {
+    background-color: rgba(234, 179, 8, 0.15);
+  }
+  100% {
+    background-color: rgba(234, 179, 8, 0.3);
+  }
+}
+
+.highlight-row {
+  animation: highlightPulse 1.5s infinite alternate ease-in-out;
+  border-left: 3px solid #eab308;
+}
+
+/* ================= 全局动态配色主题系统 (Color Theme System) ================= */
+:root {
+  --theme-primary: #10b981;
+  --theme-primary-rgb: 16, 185, 129;
+  --theme-primary-hover: #059669;
+  --theme-primary-light: rgba(16, 185, 129, 0.15);
+  --theme-primary-border: rgba(16, 185, 129, 0.35);
+  --theme-primary-glow: rgba(16, 185, 129, 0.25);
+}
+
+/* 核心强调色文字与图标 */
+[data-theme-accent] .text-emerald-400,
+[data-theme-accent] .text-emerald-300,
+[data-theme-accent] .text-emerald-500 {
+  color: var(--theme-primary) !important;
+}
+
+[data-theme-accent] .hover\:text-emerald-300:hover,
+[data-theme-accent] .hover\:text-emerald-400:hover {
+  color: var(--theme-primary) !important;
+}
+
+/* 核心强调色主按钮背景 */
+[data-theme-accent] .bg-emerald-600,
+[data-theme-accent] .bg-emerald-500 {
+  background-color: var(--theme-primary) !important;
+}
+
+[data-theme-accent] .hover\:bg-emerald-500:hover,
+[data-theme-accent] .hover\:bg-emerald-600:hover {
+  background-color: var(--theme-primary-hover) !important;
+}
+
+/* 强调色边框与发光圈 */
+[data-theme-accent] .border-emerald-500,
+[data-theme-accent] .border-emerald-400,
+[data-theme-accent] .border-emerald-600 {
+  border-color: var(--theme-primary) !important;
+}
+
+[data-theme-accent] .border-emerald-500\/30,
+[data-theme-accent] .border-emerald-500\/40,
+[data-theme-accent] .border-emerald-500\/50,
+[data-theme-accent] .border-emerald-500\/80,
+[data-theme-accent] .border-emerald-400\/30,
+[data-theme-accent] .border-emerald-700,
+[data-theme-accent] .border-emerald-800,
+[data-theme-accent] .border-emerald-800\/80,
+[data-theme-accent] .hover\:border-emerald-500\/30:hover,
+[data-theme-accent] .hover\:border-emerald-500\/80:hover {
+  border-color: rgba(var(--theme-primary-rgb), 0.38) !important;
+}
+
+/* 强调色半透明药丸/高亮背景 */
+[data-theme-accent] .bg-emerald-500\/10,
+[data-theme-accent] .bg-emerald-500\/15,
+[data-theme-accent] .bg-emerald-500\/20,
+[data-theme-accent] .bg-emerald-950,
+[data-theme-accent] .bg-emerald-950\/30,
+[data-theme-accent] .bg-emerald-950\/40,
+[data-theme-accent] .bg-emerald-950\/70,
+[data-theme-accent] .bg-emerald-950\/80,
+[data-theme-accent] .hover\:bg-emerald-900:hover,
+[data-theme-accent] .hover\:bg-emerald-500\/20:hover {
+  background-color: rgba(var(--theme-primary-rgb), 0.16) !important;
+}
+
+[data-theme-accent] .from-emerald-950\/70 {
+  --tw-gradient-from: rgba(var(--theme-primary-rgb), 0.25) var(--tw-gradient-from-position) !important;
+}
+
+[data-theme-accent] .from-emerald-600 {
+  --tw-gradient-from: var(--theme-primary) var(--tw-gradient-from-position) !important;
+}
+
+[data-theme-accent] .ring-emerald-500,
+[data-theme-accent] .ring-emerald-500\/30,
+[data-theme-accent] .ring-emerald-500\/40,
+[data-theme-accent] .ring-emerald-500\/50 {
+  --tw-ring-color: rgba(var(--theme-primary-rgb), 0.5) !important;
+}
+
+[data-theme-accent] .shadow-emerald-900\/30,
+[data-theme-accent] .shadow-emerald-950\/50,
+[data-theme-accent] .shadow-emerald-950\/60 {
+  --tw-shadow-color: rgba(var(--theme-primary-rgb), 0.45) !important;
+}
+
+[data-theme-accent] .accent-emerald-500 {
+  accent-color: var(--theme-primary) !important;
+}
+
+/* 当洁白主题选中时，高对比度处理白色主按钮上的文字 */
+[data-theme-accent="white"] .bg-emerald-600,
+[data-theme-accent="white"] .bg-emerald-500 {
+  color: #020617 !important;
+  font-weight: 700 !important;
+}
+
+[data-theme-accent="white"] .bg-emerald-600 svg,
+[data-theme-accent="white"] .bg-emerald-500 svg {
+  color: #020617 !important;
+  stroke: #020617 !important;
+}
+
+/* ================= 顶栏 (Top Header) 主题联动 ================= */
+.app-header {
+  background-color: var(--chrome-header-bg) !important;
+  border-bottom: 1px solid var(--chrome-header-border) !important;
+  color: var(--chrome-header-text) !important;
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+.app-header h1 {
+  color: var(--chrome-header-text) !important;
+}
+
+.app-header-item {
+  background-color: var(--chrome-header-item-bg) !important;
+  border: 1px solid var(--chrome-header-item-border) !important;
+  color: var(--chrome-header-item-text) !important;
+  transition: all 0.2s ease;
+}
+
+.app-header-item:hover {
+  background-color: var(--chrome-header-item-hover) !important;
+  color: var(--chrome-header-text) !important;
+}
+
+.app-header-kbd {
+  background-color: var(--chrome-header-item-kbd-bg) !important;
+  border: 1px solid var(--chrome-header-item-border) !important;
+  color: var(--chrome-header-item-text) !important;
+}
+
+.app-nav-tabs {
+  background-color: var(--chrome-tabs-bg) !important;
+  border: 1px solid var(--chrome-tabs-border) !important;
+  transition: all 0.2s ease;
+}
+
+.app-nav-tab-active {
+  background-color: var(--chrome-tab-active-bg) !important;
+  color: var(--chrome-tab-active-text) !important;
+  border: 1px solid var(--chrome-tab-active-border) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+
+.app-nav-tab-inactive {
+  color: var(--chrome-tab-inactive-text) !important;
+}
+
+.app-nav-tab-inactive:hover {
+  color: var(--chrome-header-text) !important;
+}
+
+/* ================= 左侧栏 (Left Sidebar) 主题联动 ================= */
+.app-sidebar {
+  background-color: var(--chrome-sidebar-bg) !important;
+  border-right: 1px solid var(--chrome-sidebar-border) !important;
+  color: var(--chrome-sidebar-text) !important;
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+.app-sidebar-header {
+  border-bottom: 1px solid var(--chrome-sidebar-border) !important;
+}
+
+.app-sidebar-title {
+  color: var(--chrome-sidebar-title) !important;
+}
+
+.app-sidebar-item {
+  color: var(--chrome-sidebar-text) !important;
+  border: 1px solid transparent !important;
+  transition: all 0.2s ease;
+}
+
+.app-sidebar-item:hover {
+  background-color: var(--chrome-sidebar-item-hover) !important;
+  color: var(--chrome-sidebar-title) !important;
+}
+
+.app-sidebar-item-active {
+  background-color: var(--chrome-sidebar-item-active-bg) !important;
+  border: 1px solid var(--chrome-sidebar-item-active-border) !important;
+  color: var(--chrome-sidebar-item-active-text) !important;
+  font-weight: 600 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+}
+
+.app-sidebar-badge {
+  background-color: var(--chrome-sidebar-badge-bg) !important;
+  color: var(--chrome-sidebar-badge-text) !important;
+}
+
+.app-sidebar-badge-active {
+  background-color: var(--chrome-sidebar-badge-active-bg) !important;
+  color: var(--chrome-sidebar-badge-active-text) !important;
+}
+
+.app-sidebar-footer {
+  border-top: 1px solid var(--chrome-sidebar-border) !important;
+}
+
+.app-sidebar-footer-btn {
+  background-color: var(--chrome-sidebar-footer-btn-bg) !important;
+  border: 1px solid var(--chrome-sidebar-footer-btn-border) !important;
+  color: var(--chrome-sidebar-footer-btn-text) !important;
+  transition: all 0.2s ease;
+}
+
+.app-sidebar-footer-btn:hover {
+  background-color: var(--chrome-sidebar-item-hover) !important;
+  color: var(--chrome-sidebar-title) !important;
+}
+
+/* 洁白/雾灰浅色模式下的细节强化 */
+[data-theme-accent="white"] .app-header,
+[data-theme-accent="mist-grey"] .app-header {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme-accent="white"] .app-sidebar,
+[data-theme-accent="mist-grey"] .app-sidebar {
+  box-shadow: 1px 0 4px rgba(0, 0, 0, 0.04);
+}
