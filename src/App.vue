@@ -3,6 +3,7 @@
     class="h-screen w-screen flex flex-col relative overflow-hidden font-sans select-none"
     :style="[rootThemeStyle, { backgroundColor: 'var(--page-bg)', color: 'var(--page-text-main)' }]"
     :data-theme-accent="currentTheme.colorTheme || 'emerald'"
+    :data-theme-mode="isCurrentThemeLight ? 'light' : 'dark'"
   >
     
     <!-- 动态背景画布层 (支持自定义壁纸与系统预设渐变) -->
@@ -27,7 +28,7 @@
         <div>
           <h1 class="text-sm font-bold tracking-tight flex items-center gap-2">
             DevOrbit
-            <span class="text-[10px] font-medium px-1.5 py-0.2 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800/80">v1.1</span>
+            <span class="text-[10px] font-medium px-1.5 py-0.2 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800/80">v1.2</span>
           </h1>
         </div>
       </div>
@@ -133,6 +134,7 @@
       />
       <QuickNotesView
         v-else-if="currentView === 'notes'"
+        :is-light="isCurrentThemeLight"
         @toast="showToast"
       />
     </main>
@@ -182,7 +184,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import {
   TerminalSquare, Layers, BookMarked, Search, FolderGit2, Settings, Palette,
   Eye, EyeOff
@@ -231,6 +233,20 @@ const isCurrentThemeLight = computed(() => {
   const c = getThemeConfig(currentTheme.value.colorTheme || 'emerald', currentTheme.value.customPrimaryColor || '#10b981')
   return !!c.isLight
 })
+
+// 实时同步主题模式 (light / dark) 与主题强调色至 DOM 根节点，使全局弹窗与右键菜单瞬间完成明暗自适应
+watch([() => currentTheme.value.colorTheme, isCurrentThemeLight], ([color, isLight]) => {
+  const mode = isLight ? 'light' : 'dark'
+  const accent = color || 'emerald'
+  if (typeof document !== 'undefined') {
+    document.documentElement.setAttribute('data-theme-mode', mode)
+    document.documentElement.setAttribute('data-theme-accent', accent)
+    if (document.body) {
+      document.body.setAttribute('data-theme-mode', mode)
+      document.body.setAttribute('data-theme-accent', accent)
+    }
+  }
+}, { immediate: true })
 
 // 全局动态配色主题样式注入 (CSS 变量)
 const rootThemeStyle = computed(() => {
@@ -314,34 +330,14 @@ const backgroundStyle = computed(() => {
   }
 
   const c = getThemeConfig(currentTheme.value.colorTheme || 'emerald', currentTheme.value.customPrimaryColor || '#10b981')
-  
-  // 浅色主题（如洁白、雾灰）或默认情况直接启用对应主题专属全景渐变
-  if (c.isLight || !currentTheme.value.presetId || currentTheme.value.presetId === 'aurora') {
-    return {
-      background: c.pageGradient || c.pageBg,
-      filter: getBlurFilter(currentTheme.value.blurLevel)
-    }
-  }
-
-  const pId = currentTheme.value.presetId || 'aurora'
-  let grad = c.pageGradient || '#020617'
-  if (pId === 'cyber') {
-    grad = 'radial-gradient(at 10% 20%, rgba(139, 92, 246, 0.5) 0px, transparent 50%), radial-gradient(at 90% 80%, rgba(244, 63, 94, 0.4) 0px, transparent 55%), radial-gradient(at 50% 50%, rgba(30, 27, 75, 0.5) 0px, transparent 70%), #030712'
-  } else if (pId === 'obsidian') {
-    grad = 'radial-gradient(circle at 50% 0%, rgba(30, 41, 59, 0.7) 0px, transparent 70%), #020617'
-  } else if (pId === 'nebula') {
-    grad = 'radial-gradient(at 0% 100%, rgba(14, 165, 233, 0.45) 0px, transparent 55%), radial-gradient(at 100% 20%, rgba(59, 130, 246, 0.4) 0px, transparent 50%), radial-gradient(at 50% 0%, rgba(15, 23, 42, 0.8) 0px, transparent 60%), #020617'
-  } else if (pId === 'sunset') {
-    grad = 'radial-gradient(at 20% 0%, rgba(217, 119, 6, 0.4) 0px, transparent 50%), radial-gradient(at 80% 100%, rgba(159, 18, 57, 0.45) 0px, transparent 55%), radial-gradient(at 100% 0%, rgba(76, 29, 149, 0.5) 0px, transparent 60%), #030712'
-  }
   return {
-    background: grad,
+    background: c.pageGradient || c.pageBg || '#020617',
     filter: getBlurFilter(currentTheme.value.blurLevel)
   }
 })
 
 const overlayStyle = computed(() => {
-  if (currentTheme.value.type !== 'custom') {
+  if (currentTheme.value.type !== 'custom' || !currentTheme.value.customBg) {
     return {
       opacity: 0,
       backgroundColor: 'transparent'

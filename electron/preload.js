@@ -50,7 +50,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 随手记 / 常用命令库
   getQuickNotes: () => ipcRenderer.invoke('get-quick-notes'),
   saveQuickNote: (note) => ipcRenderer.invoke('save-quick-note', note),
+  saveQuickNotesBatch: (notes) => ipcRenderer.invoke('save-quick-notes-batch', notes),
   deleteQuickNote: (id) => ipcRenderer.invoke('delete-quick-note', id),
+  getQuickNoteCategories: () => ipcRenderer.invoke('get-quick-note-categories'),
+  saveQuickNoteCategories: (categories) => ipcRenderer.invoke('save-quick-note-categories', categories),
 
   // 智能全文搜索 & 行定位
   searchKeyword: (query) => ipcRenderer.invoke('search-keyword', query),

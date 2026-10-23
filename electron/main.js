@@ -12,7 +12,7 @@ process.on('uncaughtException', (err) => {
 })
 
 let mainWindow = null
-const isDev = !app.isPackaged
+const isDev = !app.isPackaged && process.argv.includes('--dev')
 
 // 配置文件路径 (存储在用户数据目录，避免随着exe移动丢失)
 const configPath = path.join(app.getPath('userData'), 'devorbit_config.json')
@@ -191,9 +191,9 @@ function compareSemver(v1, v2) {
 ipcMain.handle('check-github-update', async (event, customRepo) => {
   const config = loadConfig()
   const repo = (customRepo || config.githubRepo || '1852676265/dev-orbit').trim()
-  let currentVersion = '1.1.1'
+  let currentVersion = '1.2.0'
   try {
-    currentVersion = require('../package.json').version || '1.1.1'
+    currentVersion = require('../package.json').version || '1.2.0'
   } catch (e) {}
   return new Promise((resolve) => {
     const https = require('https')
@@ -952,6 +952,26 @@ ipcMain.handle('save-quick-note', async (event, note) => {
   return notes
 })
 
+ipcMain.handle('save-quick-notes-batch', async (event, newNotes) => {
+  const noteFile = getQuickNotesPath()
+  let notes = []
+  if (fs.existsSync(noteFile)) {
+    try {
+      notes = JSON.parse(fs.readFileSync(noteFile, 'utf-8'))
+    } catch (e) {}
+  }
+  if (Array.isArray(newNotes) && newNotes.length > 0) {
+    const formatted = newNotes.map((n, idx) => ({
+      ...n,
+      id: 'note_' + Date.now() + '_' + idx,
+      createdAt: new Date().toISOString()
+    }))
+    notes.unshift(...formatted)
+    fs.writeFileSync(noteFile, JSON.stringify(notes, null, 2), 'utf-8')
+  }
+  return notes
+})
+
 ipcMain.handle('delete-quick-note', async (event, id) => {
   const noteFile = getQuickNotesPath()
   if (fs.existsSync(noteFile)) {
@@ -961,6 +981,31 @@ ipcMain.handle('delete-quick-note', async (event, id) => {
     return notes
   }
   return []
+})
+
+function getQuickNotesCategoriesPath() {
+  const config = loadConfig()
+  const dir = path.join(config.workspacePath, '_quick_notes')
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+  return path.join(dir, 'categories.json')
+}
+
+ipcMain.handle('get-quick-note-categories', async () => {
+  const catFile = getQuickNotesCategoriesPath()
+  if (fs.existsSync(catFile)) {
+    try {
+      return JSON.parse(fs.readFileSync(catFile, 'utf-8'))
+    } catch (e) {
+      return []
+    }
+  }
+  return []
+})
+
+ipcMain.handle('save-quick-note-categories', async (event, categories) => {
+  const catFile = getQuickNotesCategoriesPath()
+  fs.writeFileSync(catFile, JSON.stringify(categories, null, 2), 'utf-8')
+  return categories
 })
 
 // 7. 智能全文检索 & 关键字精准行定位 (秒搜 .txt, .md, .sql)

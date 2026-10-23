@@ -1,6 +1,6 @@
 <template>
   <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-    <div class="bg-slate-900 border border-slate-700/80 w-full max-w-4xl h-[660px] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-100">
+    <div class="app-modal-dialog bg-slate-900 border border-slate-700/80 w-full max-w-4xl h-[660px] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-100">
       
       <!-- 弹窗顶栏 -->
       <div class="h-14 px-6 border-b border-slate-800 flex items-center justify-between bg-slate-950 flex-shrink-0 select-none">
@@ -531,7 +531,7 @@
                 <h3 class="text-base font-bold text-white flex items-center gap-2">
                   DevOrbit
                   <span class="text-xs font-normal px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800">
-                    v1.1.1 稳定版
+                    v1.2.0 稳定版
                   </span>
                 </h3>
                 <p class="text-xs text-slate-400 mt-0.5">星轨 · 专为后端与全栈研发打造的高效离线开发任务工作台与资产管理套件</p>
@@ -562,7 +562,7 @@
                     <Sparkles class="w-4 h-4" />
                     <span>🎉 发现 DevOrbit 新版本 {{ updateResult.latestVersion }}！</span>
                   </div>
-                  <span class="text-[10px] text-slate-400 font-mono">当前: v1.1.0</span>
+                  <span class="text-[10px] text-slate-400 font-mono">当前: v1.2.0</span>
                 </div>
                 <div class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 text-xs text-slate-300 whitespace-pre-line max-h-32 overflow-y-auto custom-scrollbar">
                   {{ updateResult.releaseNotes }}
@@ -582,7 +582,7 @@
 
               <div v-else-if="updateResult.success" class="flex items-center gap-2 text-xs text-emerald-400">
                 <CheckCircle2 class="w-4 h-4" />
-                <span>当前已是最新版本 (v1.1.0)，暂无新更新发布。</span>
+                <span>当前已是最新版本 (v1.2.0)，暂无新更新发布。</span>
               </div>
 
               <div v-else class="flex items-center justify-between text-xs text-rose-300">
@@ -861,7 +861,7 @@ async function checkForUpdates() {
     if (res.hasUpdate) {
       emit('toast', `🎉 发现 DevOrbit 新版本 ${res.latestVersion}！`, 'info')
     } else if (res.success) {
-      emit('toast', '当前已是最新版本 (v' + (res.currentVersion || '1.1.1') + ')', 'success')
+      emit('toast', '当前已是最新版本 (v' + (res.currentVersion || '1.2.0') + ')', 'success')
     } else {
       emit('toast', res.message || '检查更新失败', 'error')
     }

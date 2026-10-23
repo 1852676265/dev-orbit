@@ -1,6 +1,6 @@
 <template>
   <div v-if="isOpen" class="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-    <div class="bg-slate-800 border border-slate-700 w-full max-w-lg rounded-xl shadow-2xl p-6 text-slate-100 animate-in fade-in zoom-in-95 duration-150">
+    <div class="app-modal-dialog bg-slate-800 border border-slate-700 w-full max-w-lg rounded-xl shadow-2xl p-6 text-slate-100 animate-in fade-in zoom-in-95 duration-150">
       <div class="flex items-center justify-between pb-4 border-b border-slate-700/80">
         <h3 class="text-lg font-semibold flex items-center gap-2">
           <FolderPlus class="w-5 h-5 text-emerald-400" />

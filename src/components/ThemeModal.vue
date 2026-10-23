@@ -1,6 +1,6 @@
 <template>
   <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-in fade-in duration-150">
-    <div class="bg-slate-900/95 border border-slate-700/80 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden text-slate-100 flex flex-col backdrop-blur-xl">
+    <div class="app-modal-dialog bg-slate-900/95 border border-slate-700/80 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden text-slate-100 flex flex-col backdrop-blur-xl">
       
       <!-- 弹窗顶栏 -->
       <div class="h-14 px-6 border-b border-slate-800/80 flex items-center justify-between bg-slate-950/70 flex-shrink-0 select-none">

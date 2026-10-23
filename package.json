@@ -1,11 +1,11 @@
 {
   "name": "dev-orbit",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "DevOrbit - 个人开发者工作台：本地任务归档、SQL发布跟踪与资产管理",
   "main": "electron/main.js",
   "author": "LiSB",
   "scripts": {
-    "dev": "concurrently -k \"vite\" \"electron .\"",
+    "dev": "concurrently -k \"vite\" \"electron . --dev\"",
     "build": "vite build",
     "pack:exe": "vite build && electron-packager . DevOrbit --platform=win32 --arch=x64 --out=release --overwrite --ignore=\"^(src|release|.git)\""
   },

@@ -6,7 +6,7 @@
     @dragleave.prevent="handleDragLeave"
     @drop.prevent="handleDropFiles"
   >
-    <div class="bg-slate-800 border border-slate-700 w-full max-w-5xl h-[88vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-100 animate-in fade-in zoom-in-95 duration-150 relative">
+    <div class="app-modal-dialog bg-slate-800 border border-slate-700 w-full max-w-5xl h-[88vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-100 animate-in fade-in zoom-in-95 duration-150 relative">
       
       <!-- 拖拽文件进入时的高亮发光提示蒙层 -->
       <div
@@ -617,7 +617,7 @@
 
     <!-- ==================== 内置弹层：软件内直接查看与编辑文件 (支持文件内容搜索定位) ==================== -->
     <div v-if="editorModal.visible" class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-      <div class="bg-slate-900 border border-slate-700 w-full max-w-4xl h-[86vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-100 animate-in fade-in zoom-in-95 duration-150">
+      <div class="app-modal-dialog bg-slate-900 border border-slate-700 w-full max-w-4xl h-[86vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-100 animate-in fade-in zoom-in-95 duration-150">
         
         <!-- 编辑器顶栏 -->
         <div class="px-5 py-3 bg-slate-950 border-b border-slate-800 flex items-center justify-between flex-shrink-0 flex-wrap gap-2">
@@ -813,7 +813,7 @@
 
     <!-- ==================== 内置：新建文件弹窗 ==================== -->
     <div v-if="newFileModal.visible" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div class="bg-slate-800 border border-slate-700 rounded-xl w-full max-w-md p-5 text-slate-100">
+      <div class="app-modal-dialog bg-slate-800 border border-slate-700 rounded-xl w-full max-w-md p-5 text-slate-100">
         <h4 class="font-bold text-sm mb-3 flex items-center gap-2">
           <PlusCircle class="w-4 h-4 text-emerald-400" />
           {{ newFileModal.title }}

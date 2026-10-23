@@ -1,6 +1,6 @@
 <template>
   <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-    <div class="bg-slate-900 border border-slate-700 w-full max-w-5xl h-[86vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-100">
+    <div class="app-modal-dialog bg-slate-900 border border-slate-700 w-full max-w-5xl h-[86vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-100">
       
       <!-- 搜索输入框 -->
       <div class="p-4 bg-slate-800/90 border-b border-slate-700/80 flex items-center gap-3 flex-shrink-0">

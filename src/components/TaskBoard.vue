@@ -145,7 +145,7 @@
               type="button"
               @click="setTransparencyMode('crystal')"
               class="px-2 py-1 rounded-lg transition flex items-center gap-1"
-              :class="transparencyMode === 'crystal' ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40 shadow-sm' : 'app-filter-btn'"
+              :class="transparencyMode === 'crystal' ? (isLight ? 'bg-white text-slate-900 font-bold border border-slate-300 shadow-sm' : 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40 shadow-sm') : 'app-filter-btn'"
               title="💎 超透直透 (0模糊，文字悬浮，背景100%清晰)"
             >
               <Sparkles class="w-3 h-3 text-emerald-400" />
@@ -155,7 +155,7 @@
               type="button"
               @click="setTransparencyMode('soft')"
               class="px-2 py-1 rounded-lg transition"
-              :class="transparencyMode === 'soft' ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40 shadow-sm' : 'app-filter-btn'"
+              :class="transparencyMode === 'soft' ? (isLight ? 'bg-white text-slate-900 font-bold border border-slate-300 shadow-sm' : 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40 shadow-sm') : 'app-filter-btn'"
               title="🌫️ 轻磨砂 (微透浮层)"
             >
               <span>轻磨砂</span>
@@ -164,7 +164,7 @@
               type="button"
               @click="setTransparencyMode('solid')"
               class="px-2 py-1 rounded-lg transition"
-              :class="transparencyMode === 'solid' ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40 shadow-sm' : 'app-filter-btn'"
+              :class="transparencyMode === 'solid' ? (isLight ? 'bg-white text-slate-900 font-bold border border-slate-300 shadow-sm' : 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40 shadow-sm') : 'app-filter-btn'"
               title="🛡️ 深色/实色 (高对比度)"
             >
               <span>{{ isLight ? '实色' : '深色' }}</span>
@@ -177,7 +177,7 @@
               type="button"
               @click="setLayoutAlign('full')"
               class="p-1.5 rounded-lg transition"
-              :class="layoutAlign === 'full' ? 'bg-emerald-500/20 text-emerald-300 font-bold shadow-sm' : 'app-filter-btn'"
+              :class="layoutAlign === 'full' ? (isLight ? 'bg-white text-slate-900 font-bold shadow-sm' : 'bg-emerald-500/20 text-emerald-300 font-bold shadow-sm') : 'app-filter-btn'"
               title="全屏宽景排布"
             >
               <Maximize2 class="w-3.5 h-3.5" />
@@ -186,7 +186,7 @@
               type="button"
               @click="setLayoutAlign('left')"
               class="p-1.5 rounded-lg transition"
-              :class="layoutAlign === 'left' ? 'bg-emerald-500/20 text-emerald-300 font-bold shadow-sm' : 'app-filter-btn'"
+              :class="layoutAlign === 'left' ? (isLight ? 'bg-white text-slate-900 font-bold shadow-sm' : 'bg-emerald-500/20 text-emerald-300 font-bold shadow-sm') : 'app-filter-btn'"
               title="靠左避让 (右侧全景留白给雕像/风景)"
             >
               <AlignLeft class="w-3.5 h-3.5" />
@@ -195,7 +195,7 @@
               type="button"
               @click="setLayoutAlign('right')"
               class="p-1.5 rounded-lg transition"
-              :class="layoutAlign === 'right' ? 'bg-emerald-500/20 text-emerald-300 font-bold shadow-sm' : 'app-filter-btn'"
+              :class="layoutAlign === 'right' ? (isLight ? 'bg-white text-slate-900 font-bold shadow-sm' : 'bg-emerald-500/20 text-emerald-300 font-bold shadow-sm') : 'app-filter-btn'"
               title="靠右避让 (左侧全景留白)"
             >
               <AlignRight class="w-3.5 h-3.5" />
@@ -208,7 +208,7 @@
               type="button"
               @click="setViewMode('grid')"
               class="p-1.5 rounded-lg transition"
-              :class="viewMode === 'grid' ? 'bg-emerald-500/20 text-emerald-300 font-bold shadow-sm' : 'app-filter-btn'"
+              :class="viewMode === 'grid' ? (isLight ? 'bg-white text-slate-900 font-bold shadow-sm' : 'bg-emerald-500/20 text-emerald-300 font-bold shadow-sm') : 'app-filter-btn'"
               title="大卡片网格模式"
             >
               <LayoutGrid class="w-3.5 h-3.5" />
@@ -217,7 +217,7 @@
               type="button"
               @click="setViewMode('compact')"
               class="p-1.5 rounded-lg transition"
-              :class="viewMode === 'compact' ? 'bg-emerald-500/20 text-emerald-300 font-bold shadow-sm' : 'app-filter-btn'"
+              :class="viewMode === 'compact' ? (isLight ? 'bg-white text-slate-900 font-bold shadow-sm' : 'bg-emerald-500/20 text-emerald-300 font-bold shadow-sm') : 'app-filter-btn'"
               title="极简单行紧凑模式 (遮挡减少 80%)"
             >
               <List class="w-3.5 h-3.5" />
@@ -250,31 +250,36 @@
       <!-- 年份分层切换栏 -->
       <div class="flex items-center gap-2 border-b pb-3 flex-shrink-0 overflow-x-auto" style="border-color: var(--filter-bar-border)">
         <span class="text-xs app-page-muted font-medium flex items-center gap-1 mr-1">
-          <Calendar class="w-3.5 h-3.5 text-amber-400" />
+          <Calendar class="w-3.5 h-3.5 text-amber-500" />
           归属年份:
         </span>
 
         <button
           @click="selectedYear = 'all'"
-          class="px-3 py-1 rounded-xl text-xs font-medium transition backdrop-blur-sm border"
-          :class="selectedYear === 'all'
-            ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 font-semibold shadow-sm'
-            : 'app-year-pill'"
+          class="px-3 py-1.5 rounded-xl text-xs font-medium transition backdrop-blur-sm border flex items-center gap-1.5 select-none"
+          :style="selectedYear === 'all' ? activePillStyle : inactivePillStyle"
         >
-          全部年份 ({{ projectScopedTasksCount }})
+          <span>全部年份</span>
+          <span
+            class="text-[10px] px-1.5 py-0.2 rounded-full font-mono transition"
+            :style="selectedYear === 'all' ? activeBadgeStyle : inactiveBadgeStyle"
+          >
+            {{ projectScopedTasksCount }}
+          </span>
         </button>
 
         <button
           v-for="yr in years"
           :key="yr"
           @click="selectedYear = yr"
-          class="px-3 py-1 rounded-xl text-xs font-medium transition flex items-center gap-1.5 backdrop-blur-sm border"
-          :class="selectedYear === yr
-            ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 font-semibold shadow-sm'
-            : 'app-year-pill'"
+          class="px-3 py-1.5 rounded-xl text-xs font-medium transition flex items-center gap-1.5 backdrop-blur-sm border select-none"
+          :style="selectedYear === yr ? activePillStyle : inactivePillStyle"
         >
           <span>📁 {{ yr }} 年</span>
-          <span class="text-[10px] px-1.5 py-0.2 rounded-full font-mono opacity-80" :class="isLight ? 'bg-slate-200/80 text-slate-700' : 'bg-slate-950/60'">
+          <span
+            class="text-[10px] px-1.5 py-0.2 rounded-full font-mono transition"
+            :style="selectedYear === yr ? activeBadgeStyle : inactiveBadgeStyle"
+          >
             {{ getYearCount(yr) }}
           </span>
         </button>
@@ -314,7 +319,12 @@
               <!-- 顶部标签与状态 -->
               <div class="flex items-center justify-between gap-2 mb-2.5">
                 <div class="flex items-center gap-1.5 flex-wrap">
-                  <span class="px-2 py-0.5 text-[11px] font-mono rounded-md bg-amber-500/15 text-amber-400 border border-amber-500/25 flex items-center gap-1">
+                  <span
+                    @click.stop="selectedYear = task.year"
+                    class="px-2 py-0.5 text-[11px] font-mono rounded-md border flex items-center gap-1 cursor-pointer transition hover:scale-105 active:scale-95"
+                    :class="isLight ? 'bg-amber-100 hover:bg-amber-200 text-amber-800 border-amber-300' : 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border-amber-500/25'"
+                    :title="`点击筛选 ${task.year} 年任务`"
+                  >
                     📁 {{ task.year }}年
                   </span>
                   <!-- 点击项目徽章快速过滤该项目 -->
@@ -322,8 +332,8 @@
                     @click.stop="selectProject(task.project || '常规项目')"
                     class="px-2 py-0.5 rounded-md text-[11px] font-medium transition cursor-pointer"
                     :class="(task.project || '常规项目') === selectedProject
-                      ? 'bg-emerald-950 text-emerald-300 border border-emerald-700'
-                      : 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/25'"
+                      ? (isLight ? 'bg-slate-800 text-white border border-slate-700 shadow-sm' : 'bg-emerald-950 text-emerald-300 border border-emerald-700')
+                      : (isLight ? 'bg-slate-200/90 hover:bg-slate-300/90 text-slate-700 border border-slate-300' : 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/25')"
                     title="点击在左侧筛选该项目"
                   >
                     {{ task.project || '常规项目' }}
@@ -372,13 +382,13 @@
                 <div
                   v-else
                   class="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-0.5 rounded-md font-medium border"
-                  :class="task.prodPendingCount > 0
-                    ? 'text-amber-400 bg-amber-500/15 border-amber-500/30'
-                    : 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30'"
+                  :class="isLight
+                    ? (task.prodPendingCount > 0 ? 'text-amber-800 bg-amber-100 border-amber-300' : 'text-emerald-800 bg-emerald-100 border-emerald-300')
+                    : (task.prodPendingCount > 0 ? 'text-amber-400 bg-amber-500/15 border-amber-500/30' : 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30')"
                 >
                   <Database
                     class="w-3 h-3 flex-shrink-0"
-                    :class="task.prodPendingCount > 0 ? 'text-amber-400' : 'text-emerald-400'"
+                    :class="task.prodPendingCount > 0 ? 'text-amber-500' : 'text-emerald-500'"
                   />
                   <span>{{ task.sqlCount }} 份 SQL ({{ task.prodPendingCount > 0 ? `产线待发 ${task.prodPendingCount}` : '已全发布' }})</span>
                 </div>
@@ -426,15 +436,20 @@
           >
             <!-- 左侧：年份、项目与需求名称 -->
             <div class="flex items-center gap-2.5 min-w-0 flex-1">
-              <span class="px-2 py-0.5 text-[11px] font-mono rounded bg-amber-500/15 text-amber-400 border border-amber-500/25 flex-shrink-0">
+              <span
+                @click.stop="selectedYear = task.year"
+                class="px-2 py-0.5 text-[11px] font-mono rounded border flex-shrink-0 cursor-pointer transition hover:scale-105 active:scale-95"
+                :class="isLight ? 'bg-amber-100 hover:bg-amber-200 text-amber-800 border-amber-300' : 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border-amber-500/25'"
+                :title="`点击筛选 ${task.year} 年任务`"
+              >
                 📁 {{ task.year }}
               </span>
               <span
                 @click.stop="selectProject(task.project || '常规项目')"
                 class="px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer flex-shrink-0"
                 :class="(task.project || '常规项目') === selectedProject
-                  ? 'bg-emerald-950 text-emerald-300 border border-emerald-700'
-                  : 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/25'"
+                  ? (isLight ? 'bg-slate-800 text-white border border-slate-700 shadow-sm' : 'bg-emerald-950 text-emerald-300 border border-emerald-700')
+                  : (isLight ? 'bg-slate-200/90 hover:bg-slate-300/90 text-slate-700 border border-slate-300' : 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/25')"
               >
                 {{ task.project || '常规项目' }}
               </span>
@@ -455,11 +470,11 @@
               <div
                 v-else
                 class="text-[11px] px-2 py-0.5 rounded font-medium border flex items-center gap-1"
-                :class="task.prodPendingCount > 0
-                  ? 'text-amber-400 bg-amber-500/15 border-amber-500/30'
-                  : 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30'"
+                :class="isLight
+                  ? (task.prodPendingCount > 0 ? 'text-amber-800 bg-amber-100 border-amber-300' : 'text-emerald-800 bg-emerald-100 border-emerald-300')
+                  : (task.prodPendingCount > 0 ? 'text-amber-400 bg-amber-500/15 border-amber-500/30' : 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30')"
               >
-                <Database class="w-3 h-3" :class="task.prodPendingCount > 0 ? 'text-amber-400' : 'text-emerald-400'" />
+                <Database class="w-3 h-3" :class="task.prodPendingCount > 0 ? 'text-amber-500' : 'text-emerald-500'" />
                 <span>{{ task.sqlCount }} 份 SQL</span>
               </div>
 
@@ -505,7 +520,7 @@
     <Teleport to="body">
       <div
         v-if="contextMenu.visible"
-        class="fixed z-50 bg-slate-900/95 border border-slate-700/80 rounded-xl shadow-2xl backdrop-blur-md py-1.5 min-w-[210px] text-xs text-slate-200 divide-y divide-slate-800 animate-in fade-in zoom-in-95 duration-100 select-none"
+        class="app-context-menu fixed z-50 bg-slate-900/95 border border-slate-700/80 rounded-xl shadow-2xl backdrop-blur-md py-1.5 min-w-[210px] text-xs text-slate-200 divide-y divide-slate-800 animate-in fade-in zoom-in-95 duration-100 select-none"
         :style="{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }"
         @click.stop
       >
@@ -757,6 +772,75 @@ const cardCustomStyle = computed(() => {
       borderColor: 'var(--card-border, rgba(255, 255, 255, 0.1))',
       backdropFilter: 'blur(12px)',
       WebkitBackdropFilter: 'blur(12px)'
+    }
+  }
+})
+
+// 年份胶囊高亮与未高亮动态样式
+const activePillStyle = computed(() => {
+  if (props.isLight) {
+    return {
+      backgroundColor: 'var(--theme-primary, #0f172a)',
+      color: '#ffffff',
+      borderColor: 'var(--theme-primary, #0f172a)',
+      fontWeight: '700',
+      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.18)'
+    }
+  } else {
+    return {
+      backgroundColor: 'rgba(var(--theme-primary-rgb, 16, 185, 129), 0.25)',
+      color: 'var(--theme-primary, #34d399)',
+      borderColor: 'var(--theme-primary, #10b981)',
+      fontWeight: '700',
+      boxShadow: '0 2px 10px rgba(var(--theme-primary-rgb, 16, 185, 129), 0.25)'
+    }
+  }
+})
+
+const activeBadgeStyle = computed(() => {
+  if (props.isLight) {
+    return {
+      backgroundColor: 'rgba(255, 255, 255, 0.28)',
+      color: '#ffffff',
+      fontWeight: '700'
+    }
+  } else {
+    return {
+      backgroundColor: 'rgba(var(--theme-primary-rgb, 16, 185, 129), 0.35)',
+      color: '#ffffff',
+      fontWeight: '700'
+    }
+  }
+})
+
+const inactivePillStyle = computed(() => {
+  if (props.isLight) {
+    return {
+      backgroundColor: 'rgba(255, 255, 255, 0.55)',
+      color: '#475569',
+      borderColor: 'rgba(203, 213, 225, 0.85)',
+      fontWeight: '500'
+    }
+  } else {
+    return {
+      backgroundColor: 'rgba(15, 23, 42, 0.55)',
+      color: '#94a3b8',
+      borderColor: 'rgba(255, 255, 255, 0.1)',
+      fontWeight: '500'
+    }
+  }
+})
+
+const inactiveBadgeStyle = computed(() => {
+  if (props.isLight) {
+    return {
+      backgroundColor: 'rgba(0, 0, 0, 0.08)',
+      color: '#475569'
+    }
+  } else {
+    return {
+      backgroundColor: 'rgba(0, 0, 0, 0.45)',
+      color: '#94a3b8'
     }
   }
 })
