@@ -600,7 +600,7 @@
                 </span>
                 <button
                   type="button"
-                  @click="openDownloadUrl('https://github.com/' + (form.githubRepo || 'LiSB/dev-orbit'))"
+                  @click="openDownloadUrl('https://github.com/' + (form.githubRepo || '1852676265/dev-orbit'))"
                   class="text-[11px] text-emerald-400 hover:underline flex items-center gap-1"
                 >
                   <span>访问 GitHub 仓库</span>
@@ -611,7 +611,7 @@
                 <input
                   v-model="form.githubRepo"
                   type="text"
-                  placeholder="例如: LiSB/dev-orbit"
+                  placeholder="例如: 1852676265/dev-orbit"
                   class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-emerald-500"
                 />
               </div>
@@ -744,7 +744,7 @@ const form = reactive({
   defaultProject: 'MZ',
   defaultYear: '2026',
   useTrashCan: true,
-  githubRepo: 'LiSB/dev-orbit',
+  githubRepo: '1852676265/dev-orbit',
   themeSettings: {
     colorTheme: 'emerald',
     customPrimaryColor: '#10b981'

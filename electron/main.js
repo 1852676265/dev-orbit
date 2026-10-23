@@ -29,7 +29,7 @@ const DEFAULT_CONFIG = {
   defaultProject: 'MZ',
   defaultYear: '2026',
   useTrashCan: true,
-  githubRepo: 'LiSB/dev-orbit',
+  githubRepo: '1852676265/dev-orbit',
   themeSettings: {
     colorTheme: 'emerald',
     customPrimaryColor: '#10b981',

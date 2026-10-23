@@ -39,7 +39,7 @@
 
 ### 1. 克隆代码仓库
 ```bash
-git clone https://github.com/LiSB/dev-orbit.git
+git clone https://github.com/1852676265/dev-orbit.git
 cd dev-orbit
 ```
 
