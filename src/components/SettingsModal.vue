@@ -562,13 +562,18 @@
                     <Sparkles class="w-4 h-4" />
                     <span>🎉 发现 DevOrbit 新版本 {{ updateResult.latestVersion }}！</span>
                   </div>
-                  <span class="text-[10px] text-slate-400 font-mono">当前: v1.2.0</span>
+                  <span class="text-[10px] text-slate-400 font-mono">当前: v{{ updateResult.currentVersion || '1.2.0' }}</span>
                 </div>
                 <div class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 text-xs text-slate-300 whitespace-pre-line max-h-32 overflow-y-auto custom-scrollbar">
                   {{ updateResult.releaseNotes }}
                 </div>
                 <div class="flex items-center justify-between pt-1">
-                  <span class="text-[10px] text-slate-400">点击立即前往 GitHub Releases 页面下载安装包</span>
+                  <span class="text-[10px] text-slate-400">
+                    发布包: {{ updateResult.assets?.[0]?.name || 'DevOrbit-Windows-x64.zip' }}
+                    <span v-if="updateResult.assets?.[0]?.size" class="text-slate-500">
+                      ({{ (updateResult.assets[0].size / (1024 * 1024)).toFixed(1) }} MB)
+                    </span>
+                  </span>
                   <button
                     type="button"
                     @click="openDownloadUrl(updateResult.releaseUrl)"
@@ -580,19 +585,35 @@
                 </div>
               </div>
 
-              <div v-else-if="updateResult.success" class="flex items-center gap-2 text-xs text-emerald-400">
-                <CheckCircle2 class="w-4 h-4" />
-                <span>当前已是最新版本 (v1.2.0)，暂无新更新发布。</span>
+              <div v-else-if="updateResult.success" class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2 text-xs text-emerald-400 font-medium">
+                    <CheckCircle2 class="w-4 h-4" />
+                    <span>当前已是最新版本 (v{{ updateResult.currentVersion || '1.2.0' }})，暂无更高版本。</span>
+                  </div>
+                  <span v-if="updateResult.isPrivateAuthorized" class="text-[10px] text-emerald-400/90 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800/80 flex items-center gap-1">
+                    <Lock class="w-2.5 h-2.5 text-emerald-400" /> 私密鉴权连接成功
+                  </span>
+                </div>
+                <div class="text-[11px] text-slate-400 flex flex-wrap items-center gap-3 pt-1 border-t border-slate-800/60">
+                  <span>云端最新: {{ updateResult.latestVersion }} ({{ updateResult.releaseName }})</span>
+                  <span v-if="updateResult.publishedAt">发布时间: {{ formatDate(updateResult.publishedAt) }}</span>
+                </div>
               </div>
 
-              <div v-else class="flex items-center justify-between text-xs text-rose-300">
-                <span>检查更新失败: {{ updateResult.message || '网络连接异常' }}</span>
-                <span class="text-[10px] opacity-70">请确认已连接互联网或 GitHub 仓库地址正确</span>
+              <div v-else class="space-y-1.5 text-xs text-rose-300">
+                <div class="flex items-center gap-2 font-medium">
+                  <AlertCircle class="w-4 h-4 text-rose-400 flex-shrink-0" />
+                  <span>检查更新失败: {{ updateResult.message || '网络连接异常' }}</span>
+                </div>
+                <p class="text-[10px] text-slate-400 pl-6 leading-relaxed">
+                  若仓库已设为私密 (Private)，请在下方填入具有 repo 权限的 GitHub Token，或在系统终端登录 GitHub CLI (`gh auth login`)。
+                </p>
               </div>
             </div>
 
-            <!-- GitHub 开源仓库配置 -->
-            <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+            <!-- GitHub 源码仓库与私密鉴权配置 -->
+            <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
               <div class="flex items-center justify-between">
                 <span class="text-xs font-medium text-slate-200 flex items-center gap-1.5">
                   <ExternalLink class="w-3.5 h-3.5 text-emerald-400" />
@@ -607,17 +628,50 @@
                   <ExternalLink class="w-3 h-3" />
                 </button>
               </div>
-              <div class="flex items-center gap-2">
-                <input
-                  v-model="form.githubRepo"
-                  type="text"
-                  placeholder="例如: 1852676265/dev-orbit"
-                  class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-emerald-500"
-                />
+              <input
+                v-model="form.githubRepo"
+                type="text"
+                placeholder="例如: 1852676265/dev-orbit"
+                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-emerald-500"
+              />
+
+              <!-- 私密仓库 Token 配置 -->
+              <div class="pt-2 border-t border-slate-800/80 space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-medium text-slate-200 flex items-center gap-1.5">
+                    <Key class="w-3.5 h-3.5 text-amber-400" />
+                    GitHub 访问令牌 (Personal Access Token)
+                  </span>
+                  <span class="text-[10px] text-slate-400">私密仓库鉴权用 (可选)</span>
+                </div>
+                <div class="relative flex items-center">
+                  <input
+                    v-model="form.githubToken"
+                    :type="showToken ? 'text' : 'password'"
+                    placeholder="ghp_xxxx 或留空以自动复用本地 GitHub CLI"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-3 pr-10 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-emerald-500"
+                  />
+                  <button
+                    type="button"
+                    @click="showToken = !showToken"
+                    class="absolute right-2.5 text-slate-400 hover:text-slate-200 transition"
+                  >
+                    <EyeOff v-if="showToken" class="w-3.5 h-3.5" />
+                    <Eye v-else class="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <!-- 本地 GitHub CLI 智能检测状态提示 -->
+                <div v-if="localCliAuth.available" class="flex items-center gap-2 p-2 rounded-lg bg-emerald-950/40 border border-emerald-800/50 text-[11px] text-emerald-300">
+                  <ShieldCheck class="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                  <span class="flex-1">
+                    已自动识别本地 GitHub CLI 登录凭证（账号：<b class="text-emerald-200 font-mono">{{ localCliAuth.user }}</b>）。即使仓库私密，也支持免密自动检查更新！
+                  </span>
+                </div>
+                <div v-else class="text-[10px] text-slate-500 leading-relaxed">
+                  提示：如果仓库是私密 (Private) 仓库，建议填入一个具有 <code class="text-slate-400 font-mono">repo</code> 权限的 GitHub Token，或者本机在终端运行过 <code class="text-slate-400 font-mono">gh auth login</code>。
+                </div>
               </div>
-              <p class="text-[10px] text-slate-500 leading-relaxed">
-                上传至 GitHub 后，其他用户运行此软件会自动通过该仓库的 Releases 检查新版本并提醒更新。
-              </p>
             </div>
 
             <div class="space-y-3">
@@ -703,7 +757,8 @@ import {
   Settings, FolderGit2, Laptop, Sliders, BookmarkCheck,
   FolderOpen, ExternalLink, HardDrive, Code2, Terminal,
   Database, Shield, FileCode, Check, X, Play, Palette,
-  RefreshCw, Sparkles, Download, CheckCircle2
+  RefreshCw, Sparkles, Download, CheckCircle2,
+  Key, Eye, EyeOff, Lock, ShieldCheck, AlertCircle
 } from 'lucide-vue-next'
 import ColorThemeDropdown from './ColorThemeDropdown.vue'
 
@@ -724,6 +779,8 @@ const isOpen = ref(false)
 const activeTab = ref('workspace')
 const isCheckingUpdate = ref(false)
 const updateResult = ref(null)
+const showToken = ref(false)
+const localCliAuth = ref({ available: false, hasToken: false, user: '' })
 
 const tabs = [
   { id: 'workspace', label: '工作区管理', icon: FolderGit2 },
@@ -745,6 +802,7 @@ const form = reactive({
   defaultYear: '2026',
   useTrashCan: true,
   githubRepo: '1852676265/dev-orbit',
+  githubToken: '',
   themeSettings: {
     colorTheme: 'emerald',
     customPrimaryColor: '#10b981'
@@ -786,6 +844,14 @@ async function open(defaultTab = 'workspace') {
   } catch (err) {
     console.error('获取设置失败', err)
   }
+
+  // 异步检测本地 GitHub CLI 凭证状态
+  try {
+    localCliAuth.value = await window.electronAPI.detectGitHubCliAuth()
+  } catch (e) {
+    localCliAuth.value = { available: false, hasToken: false }
+  }
+
   isOpen.value = true
 }
 
@@ -852,16 +918,26 @@ async function testLaunchTerminal() {
   }
 }
 
+function formatDate(str) {
+  if (!str) return ''
+  try {
+    const d = new Date(str)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  } catch (e) {
+    return str
+  }
+}
+
 async function checkForUpdates() {
   isCheckingUpdate.value = true
   updateResult.value = null
   try {
-    const res = await window.electronAPI.checkGitHubUpdate(form.githubRepo)
+    const res = await window.electronAPI.checkGitHubUpdate(form.githubRepo, form.githubToken)
     updateResult.value = res
     if (res.hasUpdate) {
       emit('toast', `🎉 发现 DevOrbit 新版本 ${res.latestVersion}！`, 'info')
     } else if (res.success) {
-      emit('toast', '当前已是最新版本 (v' + (res.currentVersion || '1.3.0') + ')', 'success')
+      emit('toast', '当前已是最新版本 (云端最新: ' + (res.latestVersion || 'v1.3.0') + ')', 'success')
     } else {
       emit('toast', res.message || '检查更新失败', 'error')
     }

@@ -31,6 +31,7 @@ const DEFAULT_CONFIG = {
   useTrashCan: true,
   githubRepo: '1852676265/dev-orbit',
   svnWordPath: '',
+  githubToken: '',
   themeSettings: {
     colorTheme: 'emerald',
     customPrimaryColor: '#10b981',
@@ -203,25 +204,117 @@ function compareSemver(v1, v2) {
   return 0
 }
 
-// 检查 GitHub 仓库最新 Release 版本
-ipcMain.handle('check-github-update', async (event, customRepo) => {
+// 获取有效 GitHub Token（支持用户自定义配置、环境变量以及自动复用本地 GitHub CLI 登录态）
+async function getGitHubToken(customToken) {
+  if (customToken && customToken.trim()) return customToken.trim()
+  const config = loadConfig()
+  if (config.githubToken && config.githubToken.trim()) return config.githubToken.trim()
+  if (process.env.GITHUB_TOKEN && process.env.GITHUB_TOKEN.trim()) return process.env.GITHUB_TOKEN.trim()
+  if (process.env.GH_TOKEN && process.env.GH_TOKEN.trim()) return process.env.GH_TOKEN.trim()
+
+  return new Promise((resolve) => {
+    const { execFile } = require('child_process')
+    const possible = ['C:\\Program Files\\GitHub CLI\\gh.exe', 'gh']
+    let settled = false
+
+    const tryNext = (idx) => {
+      if (idx >= possible.length) {
+        if (!settled) { settled = true; resolve('') }
+        return
+      }
+      const p = possible[idx]
+      if (p.includes('\\') && !fs.existsSync(p)) {
+        return tryNext(idx + 1)
+      }
+      execFile(p, ['auth', 'token'], { encoding: 'utf-8', timeout: 5000 }, (err, stdout) => {
+        if (settled) return
+        if (!err && stdout && stdout.trim()) {
+          settled = true
+          resolve(stdout.trim())
+        } else {
+          tryNext(idx + 1)
+        }
+      })
+    }
+
+    tryNext(0)
+    setTimeout(() => {
+      if (!settled) { settled = true; resolve('') }
+    }, 6000)
+  })
+}
+
+// 检测本地 GitHub CLI 登录状态
+ipcMain.handle('detect-github-cli-auth', async () => {
+  return new Promise((resolve) => {
+    const { execFile } = require('child_process')
+    const possible = ['C:\\Program Files\\GitHub CLI\\gh.exe', 'gh']
+    let settled = false
+
+    const tryNext = (idx) => {
+      if (idx >= possible.length) {
+        if (!settled) { settled = true; resolve({ available: false, hasToken: false }) }
+        return
+      }
+      const p = possible[idx]
+      if (p.includes('\\') && !fs.existsSync(p)) {
+        return tryNext(idx + 1)
+      }
+      execFile(p, ['auth', 'token'], { encoding: 'utf-8', timeout: 5000 }, (err, tokenOut) => {
+        if (settled) return
+        if (!err && tokenOut && tokenOut.trim()) {
+          execFile(p, ['auth', 'status'], { encoding: 'utf-8', timeout: 5000 }, (sErr, statusOut) => {
+            const text = (statusOut || '') + (sErr ? sErr.stderr || '' : '')
+            const match = text.match(/Logged in to [^ ]+ account ([^ (\r\n]+)/)
+            settled = true
+            resolve({
+              available: true,
+              hasToken: true,
+              user: match ? match[1] : '已认证用户',
+              token: tokenOut.trim()
+            })
+          })
+        } else {
+          tryNext(idx + 1)
+        }
+      })
+    }
+
+    tryNext(0)
+    setTimeout(() => {
+      if (!settled) { settled = true; resolve({ available: false, hasToken: false }) }
+    }, 6000)
+  })
+})
+
+// 检查 GitHub 仓库最新 Release 版本（支持私密仓库鉴权）
+ipcMain.handle('check-github-update', async (event, customRepo, customToken) => {
   const config = loadConfig()
   const repo = (customRepo || config.githubRepo || '1852676265/dev-orbit').trim()
   let currentVersion = '1.3.0'
   try {
     currentVersion = require('../package.json').version || '1.3.0'
   } catch (e) {}
+
+  const token = await getGitHubToken(customToken)
+
   return new Promise((resolve) => {
     const https = require('https')
+    const headers = {
+      'User-Agent': 'DevOrbit-Desktop-App',
+      'Accept': 'application/vnd.github.v3+json'
+    }
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+
     const options = {
       hostname: 'api.github.com',
       path: `/repos/${repo}/releases/latest`,
-      headers: {
-        'User-Agent': 'DevOrbit-Desktop-App',
-        'Accept': 'application/vnd.github.v3+json'
-      },
-      timeout: 8000
+      headers,
+      timeout: 10000
     }
+
     const req = https.get(options, (res) => {
       let data = ''
       res.on('data', chunk => data += chunk)
@@ -234,8 +327,10 @@ ipcMain.handle('check-github-update', async (event, customRepo) => {
             resolve({
               success: true,
               hasUpdate,
+              isPrivateAuthorized: !!token,
               currentVersion,
               latestVersion: release.tag_name || latestTag,
+              releaseName: release.name || release.tag_name,
               releaseNotes: release.body || '新版本功能迭代与体验优化',
               releaseUrl: release.html_url || `https://github.com/${repo}/releases`,
               publishedAt: release.published_at,
@@ -247,11 +342,20 @@ ipcMain.handle('check-github-update', async (event, customRepo) => {
             })
           } else if (res.statusCode === 404) {
             resolve({
-              success: true,
+              success: false,
               hasUpdate: false,
               currentVersion,
-              latestVersion: currentVersion,
-              message: '暂无公开的 Release 版本'
+              isPrivateAuthorized: !!token,
+              message: token
+                ? `未找到云端 Release (HTTP 404)，请确认仓库 ${repo} 是否已在云端发布 Release。`
+                : `未找到 Release (HTTP 404)。当前仓库若已设为私密 (Private)，需配置 GitHub 访问令牌 (Token) 或授权本地 GitHub CLI。`
+            })
+          } else if (res.statusCode === 401 || res.statusCode === 403) {
+            resolve({
+              success: false,
+              currentVersion,
+              isPrivateAuthorized: !!token,
+              message: `GitHub 鉴权失败或访问受限 (HTTP ${res.statusCode})，请检查 Token 权限或稍后再试。`
             })
           } else {
             resolve({
@@ -265,6 +369,7 @@ ipcMain.handle('check-github-update', async (event, customRepo) => {
         }
       })
     })
+
     req.on('error', (err) => {
       resolve({ success: false, currentVersion, message: err.message })
     })

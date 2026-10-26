@@ -73,8 +73,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   copyToClipboard: (text) => ipcRenderer.invoke('copy-to-clipboard', text),
 
   // GitHub 在线版本检测与更新
-  checkGitHubUpdate: (repo) => ipcRenderer.invoke('check-github-update', repo),
+  checkGitHubUpdate: (repo, token) => ipcRenderer.invoke('check-github-update', repo, token),
+  detectGitHubCliAuth: () => ipcRenderer.invoke('detect-github-cli-auth'),
   openExternalUrl: (url) => ipcRenderer.invoke('open-external-url', url),
+
   // SVN Word 服务器账号与凭据速查
   getSvnDocConfig: () => ipcRenderer.invoke('get-svn-doc-config'),
   saveSvnDocPath: (docPath) => ipcRenderer.invoke('save-svn-doc-path', docPath),
@@ -82,5 +84,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   updateSvnDoc: (targetFile) => ipcRenderer.invoke('update-svn-doc', targetFile),
   parseWordCredentials: (filePath) => ipcRenderer.invoke('parse-word-credentials', filePath),
   openSvnWordFile: (filePath) => ipcRenderer.invoke('open-svn-word-file', filePath),
-  openSvnWordDir: (filePath) => ipcRenderer.invoke('open-svn-word-dir', filePath),
+  openSvnWordDir: (filePath) => ipcRenderer.invoke('open-svn-word-dir', filePath)
 })
