@@ -51,6 +51,14 @@
           <BookMarked class="w-3.5 h-3.5" />
           <span>随手记 & 常用命令</span>
         </button>
+        <button
+          @click="currentView = 'servers'"
+          class="flex items-center gap-2 px-4 py-1.5 rounded-lg text-xs font-semibold transition"
+          :class="currentView === 'servers' ? 'app-nav-tab-active' : 'app-nav-tab-inactive'"
+        >
+          <Server class="w-3.5 h-3.5" />
+          <span>服务器与凭据速查</span>
+        </button>
       </div>
 
       <!-- 右侧：工作区路径、外观设置与系统配置 -->
@@ -137,6 +145,10 @@
         :is-light="isCurrentThemeLight"
         @toast="showToast"
       />
+      <ServerCredentialsView
+        v-else-if="currentView === 'servers'"
+        @toast="showToast"
+      />
     </main>
 
     <!-- 沉浸壁纸观赏提示浮条 -->
@@ -186,12 +198,13 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import {
-  TerminalSquare, Layers, BookMarked, Search, FolderGit2, Settings, Palette,
+  TerminalSquare, Layers, BookMarked, Server, Search, FolderGit2, Settings, Palette,
   Eye, EyeOff
 } from 'lucide-vue-next'
 
 import TaskBoard from './components/TaskBoard.vue'
 import QuickNotesView from './components/QuickNotesView.vue'
+import ServerCredentialsView from './components/ServerCredentialsView.vue'
 import NewTaskModal from './components/NewTaskModal.vue'
 import TaskDetailModal from './components/TaskDetailModal.vue'
 import GlobalSearchModal from './components/GlobalSearchModal.vue'

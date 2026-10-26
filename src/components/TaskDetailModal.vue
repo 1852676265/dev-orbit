@@ -811,6 +811,16 @@
       </div>
     </div>
 
+    <!-- ==================== 内置：SQL 一键合并导出弹窗 ==================== -->
+    <SqlMergeModal
+      :is-open="isMergeModalOpen"
+      :task="task"
+      :sql-list="sqlList"
+      @close="isMergeModalOpen = false"
+      @updated="loadSqls"
+      @toast="(msg, type) => emit('toast', msg, type)"
+    />
+
     <!-- ==================== 内置：新建文件弹窗 ==================== -->
     <div v-if="newFileModal.visible" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
       <div class="app-modal-dialog bg-slate-800 border border-slate-700 rounded-xl w-full max-w-md p-5 text-slate-100">
@@ -839,11 +849,12 @@
 
 <script setup>
 import { ref, computed, nextTick } from 'vue'
+import SqlMergeModal from './SqlMergeModal.vue'
 import {
   FolderOpen, Code2, Terminal, X, Database, Info,
   RefreshCw, Plus, FileCode2, Copy, Save, PlusCircle,
   ScrollText, BookOpen, FileText, StickyNote, Eye, FileEdit,
-  Trash2, Search, UploadCloud, ExternalLink, FileSpreadsheet, FileArchive, FileImage
+  Trash2, Search, UploadCloud, ExternalLink, FileSpreadsheet, FileArchive, FileImage, Layers
 } from 'lucide-vue-next'
 
 const emit = defineEmits(['updated', 'toast'])
@@ -852,6 +863,7 @@ const isOpen = ref(false)
 const task = ref(null)
 const activeTab = ref('sql') // 'requirement' | 'note' | 'sql'
 const isDragging = ref(false)
+const isMergeModalOpen = ref(false)
 
 // 列表数据
 const sqlList = ref([])

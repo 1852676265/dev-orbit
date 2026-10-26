@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-150">
     <div class="app-modal-dialog bg-slate-900 border border-slate-700/80 w-full max-w-4xl h-[660px] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-100">
       
@@ -881,7 +881,8 @@ function openDownloadUrl(url) {
 
 async function handleSave() {
   try {
-    const saved = await window.electronAPI.saveAppConfig({ ...form })
+    const rawConfig = JSON.parse(JSON.stringify(form))
+    const saved = await window.electronAPI.saveAppConfig(rawConfig)
     emit('saved', saved)
     emit('toast', '设置已成功保存并立即生效！', 'success')
     close()

@@ -8,7 +8,7 @@ Menu.setApplicationMenu(null)
 
 process.on('uncaughtException', (err) => {
   fs.writeFileSync(path.join(app.getPath('userData'), 'crash.txt'), err.stack || err.message)
-  fs.writeFileSync('C:\\Users\\LiSB\\.gemini\\antigravity\\scratch\\dev-task-hub\\crash.txt', err.stack || err.message)
+
 })
 
 let mainWindow = null
@@ -30,6 +30,7 @@ const DEFAULT_CONFIG = {
   defaultYear: '2026',
   useTrashCan: true,
   githubRepo: '1852676265/dev-orbit',
+  svnWordPath: '',
   themeSettings: {
     colorTheme: 'emerald',
     customPrimaryColor: '#10b981',
@@ -44,14 +45,29 @@ const DEFAULT_CONFIG = {
   }
 }
 
+
+function readJsonSafely(filePath, defaultValue = null) {
+  try {
+    if (!fs.existsSync(filePath)) return defaultValue
+    let raw = fs.readFileSync(filePath, 'utf-8')
+    if (raw && raw.charCodeAt(0) === 0xFEFF) {
+      raw = raw.slice(1)
+    }
+    return JSON.parse(raw)
+  } catch (err) {
+    console.error('Failed to read/parse JSON from', filePath, err.message)
+    return defaultValue
+  }
+}
+
 function loadConfig() {
   let loaded = {}
   try {
     if (fs.existsSync(configPath)) {
-      loaded = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+      loaded = readJsonSafely(configPath, {}) || {}
     } else if (fs.existsSync(legacyConfigPath)) {
       // 自动从旧配置文件 devtaskhub_config.json 迁移
-      loaded = JSON.parse(fs.readFileSync(legacyConfigPath, 'utf-8'))
+      loaded = readJsonSafely(legacyConfigPath, {}) || {}
     }
   } catch (e) {
     console.error('Failed to load config', e)
@@ -355,7 +371,7 @@ function parseTaskDir(taskDirPath, fallbackYear) {
 
   if (fs.existsSync(metaFilePath)) {
     try {
-      meta = JSON.parse(fs.readFileSync(metaFilePath, 'utf-8'))
+      meta = readJsonSafely(metaFilePath, null)
     } catch (e) {
       console.error('Error parsing task.json in', dirName, e)
     }
@@ -539,7 +555,7 @@ ipcMain.handle('update-task', async (event, taskDir, updates) => {
   const metaPath = path.join(taskDir, 'task.json')
   let meta = {}
   if (fs.existsSync(metaPath)) {
-    meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
+    meta = readJsonSafely(metaPath, {}) || {}
   }
   const updated = { ...meta, ...updates }
   fs.writeFileSync(metaPath, JSON.stringify(updated, null, 2), 'utf-8')
@@ -630,10 +646,7 @@ ipcMain.handle('open-in-terminal', async (event, targetPath) => {
 ipcMain.handle('get-task-sqls', async (event, taskDir) => {
   const sqlDir = path.join(taskDir, 'sql')
   const metaPath = path.join(taskDir, 'task.json')
-  let meta = {}
-  if (fs.existsSync(metaPath)) {
-    meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
-  }
+  const meta = readJsonSafely(metaPath, {}) || {}
   const records = meta.sqlReleaseRecords || {}
 
   if (!fs.existsSync(sqlDir)) return []
@@ -687,11 +700,8 @@ ipcMain.handle('save-sql-content', async (event, filePath, content) => {
 
 ipcMain.handle('update-sql-status', async (event, taskDir, fileName, env, status, timestamp) => {
   const metaPath = path.join(taskDir, 'task.json')
-  let meta = { sqlReleaseRecords: {} }
-  if (fs.existsSync(metaPath)) {
-    meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'))
-    if (!meta.sqlReleaseRecords) meta.sqlReleaseRecords = {}
-  }
+  const meta = readJsonSafely(metaPath, { sqlReleaseRecords: {} }) || { sqlReleaseRecords: {} }
+  if (!meta.sqlReleaseRecords) meta.sqlReleaseRecords = {}
 
   if (!meta.sqlReleaseRecords[fileName]) {
     meta.sqlReleaseRecords[fileName] = {}
@@ -888,7 +898,7 @@ ipcMain.handle('get-quick-notes', async () => {
   const noteFile = getQuickNotesPath()
   if (fs.existsSync(noteFile)) {
     try {
-      return JSON.parse(fs.readFileSync(noteFile, 'utf-8'))
+      return readJsonSafely(noteFile, []) || []
     } catch (e) {
       return []
     }
@@ -926,7 +936,7 @@ ipcMain.handle('save-quick-note', async (event, note) => {
   let notes = []
   if (fs.existsSync(noteFile)) {
     try {
-      notes = JSON.parse(fs.readFileSync(noteFile, 'utf-8'))
+      notes = readJsonSafely(noteFile, []) || []
     } catch (e) {}
   }
 
@@ -957,7 +967,7 @@ ipcMain.handle('save-quick-notes-batch', async (event, newNotes) => {
   let notes = []
   if (fs.existsSync(noteFile)) {
     try {
-      notes = JSON.parse(fs.readFileSync(noteFile, 'utf-8'))
+      notes = readJsonSafely(noteFile, []) || []
     } catch (e) {}
   }
   if (Array.isArray(newNotes) && newNotes.length > 0) {
@@ -975,7 +985,7 @@ ipcMain.handle('save-quick-notes-batch', async (event, newNotes) => {
 ipcMain.handle('delete-quick-note', async (event, id) => {
   const noteFile = getQuickNotesPath()
   if (fs.existsSync(noteFile)) {
-    let notes = JSON.parse(fs.readFileSync(noteFile, 'utf-8'))
+    let notes = readJsonSafely(noteFile, []) || []
     notes = notes.filter(n => n.id !== id)
     fs.writeFileSync(noteFile, JSON.stringify(notes, null, 2), 'utf-8')
     return notes
@@ -994,7 +1004,7 @@ ipcMain.handle('get-quick-note-categories', async () => {
   const catFile = getQuickNotesCategoriesPath()
   if (fs.existsSync(catFile)) {
     try {
-      return JSON.parse(fs.readFileSync(catFile, 'utf-8'))
+      return readJsonSafely(catFile, []) || []
     } catch (e) {
       return []
     }
@@ -1075,4 +1085,282 @@ ipcMain.handle('read-file-lines', async (event, filePath) => {
 ipcMain.handle('copy-to-clipboard', async (event, text) => {
   clipboard.writeText(text)
   return true
+})
+
+
+// ==================== SVN Word 服务器凭据解析与同步 ====================
+function parseDocxXml(xmlString) {
+  const tables = []
+  const tblRegex = /<w:tbl[\s\S]*?<\/w:tbl>/g
+  let tblMatch
+  while ((tblMatch = tblRegex.exec(xmlString)) !== null) {
+    const tblXml = tblMatch[0]
+    const rows = []
+    const trRegex = /<w:tr[\s\S]*?<\/w:tr>/g
+    let trMatch
+    while ((trMatch = trRegex.exec(tblXml)) !== null) {
+      const trXml = trMatch[0]
+      const cells = []
+      const tcRegex = /<w:tc[\s\S]*?<\/w:tc>/g
+      let tcMatch
+      while ((tcMatch = tcRegex.exec(trXml)) !== null) {
+        const tcXml = tcMatch[0]
+        const cleanCell = tcXml.replace(/<[^>]+>/g, '').trim()
+        cells.push(cleanCell)
+      }
+      if (cells.length > 0) {
+        rows.push(cells)
+      }
+    }
+    if (rows.length > 0) {
+      tables.push(rows)
+    }
+  }
+
+  const servers = []
+  let globalId = 1
+
+  for (const rows of tables) {
+    if (rows.length === 0) continue
+    const firstRow = rows[0]
+    const colMap = {
+      name: -1,
+      ip: -1,
+      port: -1,
+      env: -1,
+      username: -1,
+      password: -1,
+      remark: -1
+    }
+
+    firstRow.forEach((col, idx) => {
+      const c = col.toLowerCase().replace(/\s+/g, '')
+      if (c.includes('ip') || c.includes('主机') || c.includes('地址') || c.includes('host')) {
+        if (colMap.ip === -1) colMap.ip = idx
+      } else if (c.includes('端口') || c.includes('port')) {
+        if (colMap.port === -1) colMap.port = idx
+      } else if (c.includes('密码') || c.includes('口令') || c.includes('pass') || c.includes('pwd')) {
+        if (colMap.password === -1) colMap.password = idx
+      } else if (c.includes('用户') || c.includes('账号') || c.includes('user') || c.includes('登录名')) {
+        if (colMap.username === -1) colMap.username = idx
+      } else if (c.includes('环境') || c.includes('env')) {
+        if (colMap.env === -1) colMap.env = idx
+      } else if (c.includes('名') || c.includes('系统') || c.includes('服务') || c.includes('项目') || c.includes('应用') || c.includes('用途')) {
+        if (colMap.name === -1) colMap.name = idx
+      } else if (c.includes('说明') || c.includes('备注') || c.includes('remark') || c.includes('desc')) {
+        if (colMap.remark === -1) colMap.remark = idx
+      }
+    })
+
+    const hasHeader = (colMap.ip !== -1 || colMap.username !== -1 || colMap.password !== -1)
+    const startIndex = hasHeader ? 1 : 0
+
+    for (let r = startIndex; r < rows.length; r++) {
+      const row = rows[r]
+      if (row.every(c => !c)) continue
+
+      let name = colMap.name !== -1 ? row[colMap.name] : ''
+      let ip = colMap.ip !== -1 ? row[colMap.ip] : ''
+      let port = colMap.port !== -1 ? row[colMap.port] : ''
+      let env = colMap.env !== -1 ? row[colMap.env] : ''
+      let username = colMap.username !== -1 ? row[colMap.username] : ''
+      let password = colMap.password !== -1 ? row[colMap.password] : ''
+      let remark = colMap.remark !== -1 ? row[colMap.remark] : ''
+
+      if (!hasHeader) {
+        row.forEach(cell => {
+          if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/.test(cell)) {
+            ip = cell
+          } else if (/^(root|admin|administrator|oracle|dmdbms|deploy|app)/i.test(cell)) {
+            username = cell
+          } else if (/^(22|3306|5432|1521|5236|6379|8080|9000|80|443)$/.test(cell)) {
+            port = cell
+          } else if (/环境|生产|测试|开发|预发|uat|prod|dev|test/i.test(cell)) {
+            env = cell
+          }
+        })
+      }
+
+      if (!env) {
+        const textToTest = `${name} ${remark}`
+        if (/生产|prod|release/i.test(textToTest)) env = '生产环境'
+        else if (/测试|test|qa|uat/i.test(textToTest)) env = '测试环境'
+        else if (/开发|dev/i.test(textToTest)) env = '开发环境'
+        else if (/数据库|db|oracle|mysql|dm/i.test(textToTest)) env = '数据库/中间件'
+        else env = '常规环境'
+      }
+
+      if (ip && ip.includes(':') && !port) {
+        const parts = ip.split(':')
+        ip = parts[0]
+        port = parts[1]
+      }
+
+      servers.push({
+        id: 'srv_' + (globalId++),
+        name: name || `服务器-${globalId}`,
+        ip: ip || '未标注IP',
+        port: port || '22',
+        env: env || '常规环境',
+        username: username || 'root',
+        password: password || '',
+        remark: remark || ''
+      })
+    }
+  }
+
+  return servers
+}
+
+function parseTextCredentials(rawText) {
+  const lines = rawText.split(/\r?\n/)
+  const servers = []
+  let globalId = 1
+  let current = null
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (!trimmed) continue
+
+    const ipMatch = trimmed.match(/\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?::(\d+))?\b/)
+    if (ipMatch) {
+      if (current) servers.push(current)
+      current = {
+        id: 'srv_' + (globalId++),
+        name: trimmed.split(/[\s:：]/)[0] || `服务器-${globalId}`,
+        ip: ipMatch[1],
+        port: ipMatch[2] || '22',
+        env: /生产|prod/i.test(trimmed) ? '生产环境' : /测试|test/i.test(trimmed) ? '测试环境' : '常规环境',
+        username: 'root',
+        password: '',
+        remark: trimmed
+      }
+      continue
+    }
+
+    if (current) {
+      const userMatch = trimmed.match(/(?:账号|用户|user|username)[：:\s]+(\S+)/i)
+      if (userMatch) current.username = userMatch[1]
+      const pwdMatch = trimmed.match(/(?:密码|口令|password|pwd)[：:\s]+(\S+)/i)
+      if (pwdMatch) current.password = pwdMatch[1]
+    }
+  }
+  if (current) servers.push(current)
+  return servers
+}
+
+ipcMain.handle('get-svn-doc-config', async () => {
+  const cfg = loadConfig()
+  return {
+    svnWordPath: cfg.svnWordPath || ''
+  }
+})
+
+ipcMain.handle('save-svn-doc-path', async (event, docPath) => {
+  const cfg = loadConfig()
+  cfg.svnWordPath = docPath
+  saveConfig(cfg)
+  return { success: true, svnWordPath: docPath }
+})
+
+ipcMain.handle('select-svn-word-file', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: '选择 SVN 上的服务器账号密码 Word 文档 (.docx)',
+    properties: ['openFile'],
+    filters: [
+      { name: 'Word 文档 (*.docx)', extensions: ['docx'] },
+      { name: '所有支持的文件 (*.docx;*.doc;*.txt;*.md)', extensions: ['docx', 'doc', 'txt', 'md'] },
+      { name: '所有文件 (*.*)', extensions: ['*'] }
+    ]
+  })
+  if (result.canceled || result.filePaths.length === 0) return null
+  return result.filePaths[0]
+})
+
+ipcMain.handle('update-svn-doc', async (event, targetFile) => {
+  const cfg = loadConfig()
+  const filePath = targetFile || cfg.svnWordPath
+  if (!filePath || !fs.existsSync(filePath)) {
+    return { success: false, message: '未找到已关联的 Word 文件，请先指定正确的本地文件路径。' }
+  }
+
+  const dir = path.dirname(filePath)
+  const fileName = path.basename(filePath)
+
+  return new Promise((resolve) => {
+    exec(`svn update "${fileName}"`, { cwd: dir }, (error, stdout, stderr) => {
+      if (error) {
+        resolve({
+          success: false,
+          message: `未能在命令行直接调用 svn (或此目录非标准 SVN 工作副本)。如果日常使用 TortoiseSVN，可以直接在资源管理器中右键更新。`
+        })
+      } else {
+        resolve({
+          success: true,
+          message: `SVN 已成功拉取最新！\n${stdout.trim() || '已经是最新版本。'}`
+        })
+      }
+    })
+  })
+})
+
+ipcMain.handle('parse-word-credentials', async (event, targetPath) => {
+  const cfg = loadConfig()
+  const filePath = targetPath || cfg.svnWordPath
+  if (!filePath || !fs.existsSync(filePath)) {
+    return { success: false, message: '请先配置有效的 Word 账号文档路径。' }
+  }
+
+  try {
+    const stats = fs.statSync(filePath)
+    const ext = path.extname(filePath).toLowerCase()
+    let servers = []
+
+    if (ext === '.docx') {
+      const AdmZip = require('adm-zip')
+      const zip = new AdmZip(filePath)
+      const xmlEntry = zip.getEntry('word/document.xml')
+      if (!xmlEntry) {
+        return { success: false, message: '该 Word 文件未包含标准 word/document.xml 内容' }
+      }
+      const xmlString = zip.readAsText(xmlEntry, 'utf-8')
+      servers = parseDocxXml(xmlString)
+    } else {
+      const rawText = fs.readFileSync(filePath, 'utf-8')
+      servers = parseTextCredentials(rawText)
+    }
+
+    return {
+      success: true,
+      filePath,
+      fileName: path.basename(filePath),
+      mtime: stats.mtime.toLocaleString(),
+      servers
+    }
+  } catch (err) {
+    return {
+      success: false,
+      message: '解析失败: ' + err.message
+    }
+  }
+})
+
+ipcMain.handle('open-svn-word-file', async (event, targetPath) => {
+  const cfg = loadConfig()
+  const filePath = targetPath || cfg.svnWordPath
+  if (filePath && fs.existsSync(filePath)) {
+    shell.openPath(filePath)
+    return true
+  }
+  return false
+})
+
+ipcMain.handle('open-svn-word-dir', async (event, targetPath) => {
+  const cfg = loadConfig()
+  const filePath = targetPath || cfg.svnWordPath
+  if (filePath && fs.existsSync(filePath)) {
+    shell.showItemInFolder(filePath)
+    return true
+  }
+  return false
 })
