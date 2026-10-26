@@ -28,7 +28,7 @@
         <div>
           <h1 class="text-sm font-bold tracking-tight flex items-center gap-2">
             DevOrbit
-            <span class="text-[10px] font-medium px-1.5 py-0.2 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800/80">v1.2</span>
+            <span class="text-[10px] font-medium px-1.5 py-0.2 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800/80">v1.3</span>
           </h1>
         </div>
       </div>

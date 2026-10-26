@@ -207,9 +207,9 @@ function compareSemver(v1, v2) {
 ipcMain.handle('check-github-update', async (event, customRepo) => {
   const config = loadConfig()
   const repo = (customRepo || config.githubRepo || '1852676265/dev-orbit').trim()
-  let currentVersion = '1.2.0'
+  let currentVersion = '1.3.0'
   try {
-    currentVersion = require('../package.json').version || '1.2.0'
+    currentVersion = require('../package.json').version || '1.3.0'
   } catch (e) {}
   return new Promise((resolve) => {
     const https = require('https')

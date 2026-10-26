@@ -531,7 +531,7 @@
                 <h3 class="text-base font-bold text-white flex items-center gap-2">
                   DevOrbit
                   <span class="text-xs font-normal px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800">
-                    v1.2.0 稳定版
+                    v1.3.0 (SQL合并 & SVN凭据版)
                   </span>
                 </h3>
                 <p class="text-xs text-slate-400 mt-0.5">星轨 · 专为后端与全栈研发打造的高效离线开发任务工作台与资产管理套件</p>
@@ -861,7 +861,7 @@ async function checkForUpdates() {
     if (res.hasUpdate) {
       emit('toast', `🎉 发现 DevOrbit 新版本 ${res.latestVersion}！`, 'info')
     } else if (res.success) {
-      emit('toast', '当前已是最新版本 (v' + (res.currentVersion || '1.2.0') + ')', 'success')
+      emit('toast', '当前已是最新版本 (v' + (res.currentVersion || '1.3.0') + ')', 'success')
     } else {
       emit('toast', res.message || '检查更新失败', 'error')
     }
