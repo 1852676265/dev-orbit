@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "concurrently -k \"vite\" \"electron . --dev\"",
     "build": "vite build",
-    "pack:exe": "vite build && electron-packager . DevOrbit --platform=win32 --arch=x64 --out=release --overwrite --ignore=\"^(src|release|.git)\""
+    "pack:exe": "vite build && electron-packager . DevOrbit --platform=win32 --arch=x64 --out=release --overwrite --ignore=\"^(src|release|.git)\"",
+    "start": "electron ."
   },
   "dependencies": {
     "adm-zip": "^0.6.1",

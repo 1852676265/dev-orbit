@@ -1023,12 +1023,13 @@ ipcMain.handle('update-sql-status', async (event, taskDir, fileName, env, status
     meta.sqlReleaseRecords[fileName] = {}
   }
 
+  const isReleased = Boolean(status === true || status === 'published');
   if (env === 'test') {
-    meta.sqlReleaseRecords[fileName].testReleased = status
-    meta.sqlReleaseRecords[fileName].testReleasedAt = status ? (timestamp || new Date().toLocaleString()) : null
+    meta.sqlReleaseRecords[fileName].testReleased = isReleased;
+    meta.sqlReleaseRecords[fileName].testReleasedAt = isReleased ? (timestamp || new Date().toLocaleString()) : null;
   } else if (env === 'prod') {
-    meta.sqlReleaseRecords[fileName].prodReleased = status
-    meta.sqlReleaseRecords[fileName].prodReleasedAt = status ? (timestamp || new Date().toLocaleString()) : null
+    meta.sqlReleaseRecords[fileName].prodReleased = isReleased;
+    meta.sqlReleaseRecords[fileName].prodReleasedAt = isReleased ? (timestamp || new Date().toLocaleString()) : null;
   }
 
   fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8')

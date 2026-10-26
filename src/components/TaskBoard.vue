@@ -39,12 +39,12 @@
         </div>
 
         <!-- 胶囊筛选区 (年份下拉框、项目、待发产线) -->
-        <div class="flex items-center gap-2 overflow-x-auto py-1 custom-scrollbar">
+        <div class="flex items-center gap-2 overflow-visible py-1">
           <!-- 年份下拉选择器 (解决年份过多不好显示问题) -->
           <div class="relative flex-shrink-0" ref="yearDropdownRef">
             <button
               type="button"
-              @click.stop="isYearDropdownOpen = !isYearDropdownOpen"
+              @click.stop="toggleYearDropdown"
               class="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-white/10 bg-black/40 hover:bg-white/5 text-xs font-mono font-medium transition cursor-pointer"
               :class="selectedYear !== 'all' ? 'text-teal-300 border-teal-500/40 bg-teal-950/30 font-bold' : 'text-slate-300'"
               :title="`当前年份筛选: ${selectedYear === 'all' ? '全部年份' : selectedYear + ' 年度'}`"
@@ -56,50 +56,6 @@
                 :class="{ 'rotate-180 opacity-100 text-teal-400': isYearDropdownOpen }"
               />
             </button>
-
-            <!-- 年份下拉展开面板 -->
-            <transition
-              enter-active-class="transition duration-150 ease-out"
-              enter-from-class="transform scale-95 opacity-0 -translate-y-1"
-              enter-to-class="transform scale-100 opacity-100 translate-y-0"
-              leave-active-class="transition duration-100 ease-in"
-              leave-from-class="transform scale-100 opacity-100 translate-y-0"
-              leave-to-class="transform scale-95 opacity-0 -translate-y-1"
-            >
-              <div
-                v-if="isYearDropdownOpen"
-                @click.stop
-                class="absolute left-0 mt-1.5 w-36 max-h-64 overflow-y-auto rounded-xl border border-slate-700/80 shadow-2xl py-1 z-50 bg-slate-900/98 backdrop-blur-xl text-xs custom-scrollbar"
-              >
-                <button
-                  type="button"
-                  @click="selectYear('all')"
-                  class="w-full px-3 py-2 flex items-center justify-between text-left transition cursor-pointer"
-                  :class="selectedYear === 'all'
-                    ? 'bg-teal-500/20 text-teal-300 font-bold'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'"
-                >
-                  <span>全部年份</span>
-                  <Check v-if="selectedYear === 'all'" class="w-3.5 h-3.5 text-teal-400" />
-                </button>
-
-                <div class="my-1 border-t border-white/10"></div>
-
-                <button
-                  v-for="yr in availableYears"
-                  :key="yr"
-                  type="button"
-                  @click="selectYear(yr)"
-                  class="w-full px-3 py-2 flex items-center justify-between text-left font-mono transition cursor-pointer"
-                  :class="selectedYear === yr
-                    ? 'bg-teal-500/20 text-teal-300 font-bold'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'"
-                >
-                  <span>{{ yr }} 年</span>
-                  <Check v-if="selectedYear === yr" class="w-3.5 h-3.5 text-teal-400" />
-                </button>
-              </div>
-            </transition>
           </div>
 
           <!-- 项目胶囊 (高频项目 + 全部) -->
@@ -480,12 +436,12 @@
                     type="button"
                     @click="promptToggleProdStatus(sql)"
                     class="px-2.5 py-0.5 rounded text-[10px] font-mono transition flex items-center gap-1 cursor-pointer"
-                    :class="sql.prodStatus === 'published'
+                    :class="sql.prodReleased
                       ? 'bg-teal-950/70 text-teal-300 border border-teal-700/60 font-bold hover:bg-teal-900/60'
                       : 'bg-amber-950/70 text-amber-300 border border-amber-600/60 font-bold animate-pulse hover:bg-amber-900/60'"
-                    :title="`当前产线状态: ${sql.prodStatus === 'published' ? '已发' : '待发'} (点击确认变更)`"
+                    :title="`当前产线状态: ${sql.prodReleased ? '已发' : '待发'} (点击确认变更)`"
                   >
-                    <span>产线: {{ sql.prodStatus === 'published' ? '已发' : '待发' }}</span>
+                    <span>产线: {{ sql.prodReleased ? '已发' : '待发' }}</span>
                   </button>
 
                   <!-- 在资源管理器中定位 -->
@@ -757,7 +713,7 @@
             <div class="flex items-center gap-2.5">
               <div
                 class="w-7 h-7 rounded-lg flex items-center justify-center"
-                :class="sqlConfirmModal.targetStatus === 'published' ? 'bg-teal-500/20 text-teal-400' : 'bg-amber-500/20 text-amber-400'"
+                :class="sqlConfirmModal.targetStatus ? 'bg-teal-500/20 text-teal-400' : 'bg-amber-500/20 text-amber-400'"
               >
                 <Database class="w-4 h-4" />
               </div>
@@ -784,18 +740,18 @@
                 <span>当前状态:</span>
                 <span
                   class="font-mono font-bold px-2 py-0.5 rounded text-[11px]"
-                  :class="sqlConfirmModal.sql?.prodStatus === 'published' ? 'bg-teal-950 text-teal-300 border border-teal-800' : 'bg-amber-950 text-amber-300 border border-amber-800'"
+                  :class="sqlConfirmModal.sql?.prodReleased ? 'bg-teal-950 text-teal-300 border border-teal-800' : 'bg-amber-950 text-amber-300 border border-amber-800'"
                 >
-                  产线: {{ sqlConfirmModal.sql?.prodStatus === 'published' ? '已发' : '待发' }}
+                  产线: {{ sqlConfirmModal.sql?.prodReleased ? '已发' : '待发' }}
                 </span>
               </div>
               <div class="flex items-center justify-between text-slate-400">
                 <span>目标变更为:</span>
                 <span
                   class="font-mono font-bold px-2 py-0.5 rounded text-[11px]"
-                  :class="sqlConfirmModal.targetStatus === 'published' ? 'bg-teal-950 text-teal-300 border border-teal-800' : 'bg-amber-950 text-amber-300 border border-amber-800'"
+                  :class="sqlConfirmModal.targetStatus ? 'bg-teal-950 text-teal-300 border border-teal-800' : 'bg-amber-950 text-amber-300 border border-amber-800'"
                 >
-                  产线: {{ sqlConfirmModal.targetStatus === 'published' ? '已发' : '待发' }}
+                  产线: {{ sqlConfirmModal.targetStatus ? '已发' : '待发' }}
                 </span>
               </div>
             </div>
@@ -819,7 +775,7 @@
               @click="confirmSqlStatusChange"
               :disabled="sqlConfirmModal.loading"
               class="px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md cursor-pointer"
-              :class="sqlConfirmModal.targetStatus === 'published'
+              :class="sqlConfirmModal.targetStatus
                 ? 'bg-teal-600 hover:bg-teal-500 text-white shadow-teal-950/50'
                 : 'bg-amber-600 hover:bg-amber-500 text-white shadow-amber-950/50'"
             >
@@ -828,6 +784,44 @@
             </button>
           </div>
         </div>
+      </div>
+    </Teleport>
+
+    <!-- 年份下拉菜单 (Teleport 挂载到 body，绝不受任何祖先 overflow/z-index 裁剪覆盖) -->
+    <Teleport to="body">
+      <div
+        v-if="isYearDropdownOpen"
+        @click.stop
+        class="fixed z-50 w-36 max-h-64 overflow-y-auto rounded-xl border border-slate-700/80 shadow-2xl py-1 bg-slate-900/98 backdrop-blur-2xl text-xs custom-scrollbar animate-in fade-in duration-100"
+        :style="{ top: `${yearDropdownPos.top}px`, left: `${yearDropdownPos.left}px` }"
+      >
+        <button
+          type="button"
+          @click="selectYear('all')"
+          class="w-full px-3 py-2 flex items-center justify-between text-left transition cursor-pointer"
+          :class="selectedYear === 'all'
+            ? 'bg-teal-500/20 text-teal-300 font-bold'
+            : 'text-slate-300 hover:text-white hover:bg-slate-800/60'"
+        >
+          <span>全部年份</span>
+          <Check v-if="selectedYear === 'all'" class="w-3.5 h-3.5 text-teal-400" />
+        </button>
+
+        <div class="my-1 border-t border-white/10"></div>
+
+        <button
+          v-for="yr in availableYears"
+          :key="yr"
+          type="button"
+          @click="selectYear(yr)"
+          class="w-full px-3 py-2 flex items-center justify-between text-left font-mono transition cursor-pointer"
+          :class="selectedYear === yr
+            ? 'bg-teal-500/20 text-teal-300 font-bold'
+            : 'text-slate-300 hover:text-white hover:bg-slate-800/60'"
+        >
+          <span>{{ yr }} 年</span>
+          <Check v-if="selectedYear === yr" class="w-3.5 h-3.5 text-teal-400" />
+        </button>
       </div>
     </Teleport>
 
@@ -878,6 +872,20 @@ const onlyPendingSql = ref(false)
 // 年份下拉框状态 (解决年份过多不好显示问题)
 const isYearDropdownOpen = ref(false)
 const yearDropdownRef = ref(null)
+const yearDropdownPos = ref({ top: 0, left: 0 })
+
+function toggleYearDropdown() {
+  if (!isYearDropdownOpen.value && yearDropdownRef.value) {
+    const rect = yearDropdownRef.value.getBoundingClientRect()
+    yearDropdownPos.value = {
+      top: rect.bottom + 6,
+      left: rect.left
+    }
+    isYearDropdownOpen.value = true
+  } else {
+    isYearDropdownOpen.value = false
+  }
+}
 
 const availableYears = computed(() => {
   const set = new Set(props.years || [])
@@ -896,13 +904,13 @@ function selectYear(yr) {
 const sqlConfirmModal = ref({
   visible: false,
   sql: null,
-  targetStatus: 'published',
+  targetStatus: true,
   loading: false
 })
 
 function promptToggleProdStatus(sql) {
-  const currentStatus = sql.prodStatus === 'published' ? 'published' : 'pending'
-  const targetStatus = currentStatus === 'published' ? 'pending' : 'published'
+  const isReleased = Boolean(sql.prodReleased)
+  const targetStatus = !isReleased
   sqlConfirmModal.value = {
     visible: true,
     sql,
@@ -934,9 +942,13 @@ async function confirmSqlStatusChange() {
       targetStatus,
       timeStr
     )
+    // 立即就地更新当前 sql 对象的响应式状态，界面零延迟即时变色！
+    sql.prodReleased = targetStatus
+    sql.prodReleasedAt = targetStatus ? timeStr : null
+
     await loadSqlsForTask(currentTask.value.fullPath)
     emit('updated')
-    emit('toast', `已将 [${sql.fileName}] 产线状态变更为: ${targetStatus === 'published' ? '已发' : '待发'}`, 'success')
+    emit('toast', `已将 [${sql.fileName}] 产线状态变更为: ${targetStatus ? '已发' : '待发'}`, 'success')
   } catch (err) {
     emit('toast', '更新产线状态失败: ' + err.message, 'error')
   } finally {
