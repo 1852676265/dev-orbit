@@ -465,66 +465,476 @@
             </div>
           </div>
 
-          <!-- 3. 开发便签 & 接口参数备忘抽屉 (免弹窗即时备忘与一键复制) -->
+          <!-- 3. 开发备忘与接口联调中枢 (卡片流 / 实时搜索 / 标签过滤 / 智能提取) -->
           <div
-            class="p-4 rounded-xl border border-white/5 space-y-3 transition shadow-sm bg-[#121826]/80"
+            class="p-4 rounded-2xl border border-white/10 space-y-3.5 transition-all shadow-xl bg-gradient-to-b from-[#131b2e]/90 to-[#0b101c]/90 backdrop-blur-xl relative overflow-hidden"
           >
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <FileText class="w-4 h-4 text-teal-400" />
-                <h3 class="text-xs font-bold text-slate-100">
-                  开发备忘与接口联调参数小抽屉
-                </h3>
+            <!-- 顶边冷翠微晶微光辉光条 -->
+            <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-teal-400/40 to-transparent"></div>
+
+            <!-- 控制台顶栏 -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <!-- 左侧标题与徽章 -->
+              <div class="flex items-center gap-2.5">
+                <div class="w-7 h-7 rounded-lg bg-teal-500/15 border border-teal-500/30 flex items-center justify-center text-teal-400 shadow-[0_0_12px_rgba(20,184,166,0.25)] flex-shrink-0">
+                  <StickyNote class="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h3 class="text-xs font-bold text-white tracking-wide">
+                      开发备忘与接口联调中枢
+                    </h3>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30">
+                      {{ taskNotes.length }} 条
+                    </span>
+                  </div>
+                  <p class="text-[10px] text-slate-400 font-mono">
+                    条目化卡片流 · 即时检索 · 双向同步 docs/笔记.md
+                  </p>
+                </div>
               </div>
-              <div class="flex items-center gap-2">
+
+              <!-- 右侧视图切换与新建按钮 -->
+              <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                <!-- 视图切换胶囊 -->
+                <div class="flex items-center p-0.5 rounded-lg border border-white/10 bg-black/40 text-[11px] font-medium">
+                  <button
+                    type="button"
+                    @click="setNoteViewMode('cards')"
+                    class="px-2 py-1 rounded-md transition cursor-pointer flex items-center gap-1"
+                    :class="noteViewMode === 'cards' ? 'bg-teal-500/20 text-teal-300 font-bold' : 'text-slate-400 hover:text-white'"
+                    title="卡片流列表模式"
+                  >
+                    <Layers class="w-3 h-3" />
+                    <span>卡片</span>
+                  </button>
+                  <button
+                    type="button"
+                    @click="setNoteViewMode('raw')"
+                    class="px-2 py-1 rounded-md transition cursor-pointer flex items-center gap-1"
+                    :class="noteViewMode === 'raw' ? 'bg-teal-500/20 text-teal-300 font-bold' : 'text-slate-400 hover:text-white'"
+                    title="长文本源码模式"
+                  >
+                    <FileCode class="w-3 h-3" />
+                    <span>源码</span>
+                  </button>
+                </div>
+
+                <!-- 自动保存状态指示 -->
                 <span v-if="isSavingNote" class="text-[10px] text-teal-400 font-mono flex items-center gap-1">
                   <RefreshCw class="w-3 h-3 animate-spin" /> 保存中...
                 </span>
-                <span v-else-if="noteSavedNotice" class="text-[10px] text-teal-400 font-mono">
-                  已自动同步
+                <span v-else-if="noteSavedNotice" class="text-[10px] text-teal-300 font-mono flex items-center gap-1 animate-in fade-in">
+                  <Check class="w-3 h-3 text-teal-400" /> 已同步
                 </span>
+
+                <!-- 新建备忘卡片按钮 -->
                 <button
-                  @click="saveNoteContent"
-                  class="px-2.5 py-1 rounded-lg text-xs font-medium border border-white/10 flex items-center gap-1 transition bg-white/5 hover:bg-white/10 text-teal-300"
-                  title="手动保存便签内容 (Ctrl+S)"
+                  type="button"
+                  v-if="noteViewMode === 'cards'"
+                  @click="toggleAddNotePanel"
+                  class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 text-white shadow-[0_2px_12px_rgba(20,184,166,0.3)] flex items-center gap-1.5 cursor-pointer transition active:scale-95"
                 >
-                  <Save class="w-3.5 h-3.5 text-teal-400" />
-                  <span>保存便签</span>
+                  <Plus class="w-3.5 h-3.5" />
+                  <span>+ 新建条目</span>
                 </button>
               </div>
             </div>
 
             <!-- 智能识别出的可快速复制参数卡片 (如 IP、Token、接口路径) -->
-            <div v-if="parsedParameters.length > 0" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <div
-                v-for="(param, pIdx) in parsedParameters"
-                :key="pIdx"
-                @click="copyParamText(param.value, param.label)"
-                class="p-2.5 rounded-lg border border-white/5 flex items-center justify-between gap-2 cursor-pointer transition hover:border-teal-500/50 group bg-black/30"
-                :title="`点击一键复制: ${param.value}`"
-              >
-                <div class="min-w-0 flex-1">
-                  <span class="text-[10px] text-slate-500 block truncate font-mono">{{ param.label }}</span>
-                  <span
-                    class="font-mono text-xs font-bold truncate block group-hover:text-teal-300 transition text-slate-200"
-                  >
-                    {{ param.value }}
-                  </span>
+            <div v-if="parsedParameters.length > 0" class="space-y-1.5 pt-1">
+              <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 px-0.5">
+                <span class="flex items-center gap-1 text-teal-400">
+                  <Sparkles class="w-3 h-3" /> 智能识别联调参数 (单击一键复制):
+                </span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div
+                  v-for="(param, pIdx) in parsedParameters"
+                  :key="pIdx"
+                  @click="copyParamText(param.value, param.label)"
+                  class="p-2.5 rounded-xl border border-white/10 flex items-center justify-between gap-2 cursor-pointer transition hover:border-teal-500/50 hover:bg-white/[0.04] group bg-black/40 backdrop-blur-md"
+                  :title="`点击一键复制: ${param.value}`"
+                >
+                  <div class="min-w-0 flex-1">
+                    <span class="text-[10px] text-slate-400 block truncate font-mono">{{ param.label }}</span>
+                    <span
+                      class="font-mono text-xs font-bold truncate block group-hover:text-teal-300 transition text-slate-200"
+                    >
+                      {{ param.value }}
+                    </span>
+                  </div>
+                  <Copy class="w-3.5 h-3.5 text-slate-500 group-hover:text-teal-400 flex-shrink-0 transition" />
                 </div>
-                <Copy class="w-3.5 h-3.5 text-slate-500 group-hover:text-teal-400 flex-shrink-0 transition" />
               </div>
             </div>
 
-            <!-- 便签正文就地编辑框 -->
-            <div class="relative">
-              <textarea
-                v-model="currentNoteContent"
-                @keydown.ctrl.s.prevent.stop="saveNoteContent"
-                placeholder="在此快速记录联调参数、测试 Token、接口返回格式、开发备忘等... (支持 Ctrl+S 保存)"
-                rows="4"
-                class="w-full text-xs font-mono p-3 rounded-lg border border-white/5 resize-y focus:outline-none focus:border-teal-500/60 transition bg-black/40 text-slate-200 placeholder-slate-600"
-              ></textarea>
-            </div>
+            <!-- 卡片模式 -->
+            <template v-if="noteViewMode === 'cards'">
+              <!-- 搜索栏与分类标签过滤行 -->
+              <div class="space-y-2 pt-1">
+                <!-- 实时搜索输入框 -->
+                <div class="relative flex items-center bg-black/40 border border-white/10 rounded-xl px-3 py-1.5 focus-within:border-teal-500/60 focus-within:shadow-[0_0_15px_rgba(20,184,166,0.2)] transition">
+                  <Search class="w-3.5 h-3.5 text-slate-400 flex-shrink-0 mr-2" />
+                  <input
+                    v-model="noteSearchQuery"
+                    type="text"
+                    placeholder="按关键词即时检索备忘标题、参数、Token、接口或代码内容..."
+                    class="w-full bg-transparent text-xs text-slate-100 placeholder-slate-500 focus:outline-none font-mono"
+                  />
+                  <button
+                    v-if="noteSearchQuery"
+                    type="button"
+                    @click="noteSearchQuery = ''"
+                    class="p-1 rounded text-slate-400 hover:text-white transition cursor-pointer"
+                    title="清空搜索"
+                  >
+                    <X class="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <!-- 分类标签过滤胶囊 -->
+                <div class="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-0.5 text-xs">
+                  <button
+                    type="button"
+                    @click="selectedNoteCategory = 'all'"
+                    class="px-2.5 py-1 rounded-lg text-[11px] font-medium border transition cursor-pointer flex-shrink-0"
+                    :class="selectedNoteCategory === 'all'
+                      ? 'bg-teal-500/20 text-teal-300 border-teal-500/40 font-bold'
+                      : 'border-white/5 bg-black/20 text-slate-400 hover:text-white hover:border-white/10'"
+                  >
+                    全部 ({{ taskNotes.length }})
+                  </button>
+                  <button
+                    v-for="cat in availableNoteCategories"
+                    :key="cat.key"
+                    type="button"
+                    @click="selectedNoteCategory = cat.key"
+                    class="px-2.5 py-1 rounded-lg text-[11px] font-medium border transition cursor-pointer flex-shrink-0 flex items-center gap-1"
+                    :class="selectedNoteCategory === cat.key
+                      ? cat.borderClass + ' font-bold shadow-sm'
+                      : 'border-white/5 bg-black/20 text-slate-400 hover:text-white hover:border-white/10'"
+                  >
+                    <span>{{ cat.label }}</span>
+                    <span class="text-[10px] opacity-75 font-mono">({{ cat.count }})</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 新建备忘折叠抽屉卡片 -->
+              <div
+                v-if="isAddingNote"
+                class="p-3.5 rounded-xl border border-teal-500/40 bg-[#0d1624] space-y-3 animate-in fade-in slide-in-from-top-2 duration-150 shadow-2xl"
+              >
+                <div class="flex items-center justify-between border-b border-white/10 pb-2">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span>
+                    <h4 class="text-xs font-bold text-white">新建备忘 / 参数卡片</h4>
+                  </div>
+                  <button
+                    type="button"
+                    @click="isAddingNote = false"
+                    class="p-1 rounded text-slate-400 hover:text-white transition cursor-pointer"
+                  >
+                    <X class="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <!-- 分类选择 -->
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="text-[11px] text-slate-400 font-medium mr-1">分类:</span>
+                  <button
+                    v-for="cat in PRESET_CATEGORIES"
+                    :key="cat.key"
+                    type="button"
+                    @click="newNoteForm.category = cat.key"
+                    class="px-2.5 py-1 rounded-md text-[11px] border transition cursor-pointer"
+                    :class="newNoteForm.category === cat.key
+                      ? cat.borderClass + ' font-bold'
+                      : 'border-white/10 bg-black/30 text-slate-400 hover:text-white'"
+                  >
+                    {{ cat.label }}
+                  </button>
+                </div>
+
+                <!-- 标题与置顶 -->
+                <div class="flex items-center gap-2">
+                  <input
+                    v-model="newNoteForm.title"
+                    type="text"
+                    placeholder="备忘标题 (选填，如：网关公钥 / 测试 Token / 接口回调)"
+                    class="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-teal-500/60 font-medium"
+                    @keydown.enter.ctrl.stop="submitNewNote"
+                  />
+                  <button
+                    type="button"
+                    @click="newNoteForm.pinned = !newNoteForm.pinned"
+                    class="px-2.5 py-1.5 rounded-lg border text-xs flex items-center gap-1 transition cursor-pointer"
+                    :class="newNoteForm.pinned
+                      ? 'border-amber-500/50 text-amber-300 bg-amber-500/10 font-bold'
+                      : 'border-white/10 text-slate-400 hover:text-white bg-black/30'"
+                    :title="newNoteForm.pinned ? '已设为置顶' : '点击设为置顶'"
+                  >
+                    <Pin class="w-3 h-3" :class="{ 'fill-amber-400': newNoteForm.pinned }" />
+                    <span>置顶</span>
+                  </button>
+                </div>
+
+                <!-- 内容输入 -->
+                <textarea
+                  v-model="newNoteForm.content"
+                  rows="4"
+                  placeholder="在此输入或粘贴代码段、YAML、Token、公私钥、联调命令等... (支持 Ctrl+Enter 快速保存)"
+                  class="w-full bg-black/50 border border-white/10 rounded-lg p-3 text-xs font-mono text-slate-200 placeholder-slate-600 focus:outline-none focus:border-teal-500/60 custom-scrollbar resize-y"
+                  @keydown.enter.ctrl.stop="submitNewNote"
+                ></textarea>
+
+                <!-- 底部操作按钮 -->
+                <div class="flex items-center justify-between pt-1">
+                  <span class="text-[10px] text-slate-500 font-mono">快捷键: Ctrl + Enter 提交</span>
+                  <div class="flex items-center gap-2">
+                    <button
+                      type="button"
+                      @click="isAddingNote = false"
+                      class="px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-white/5 transition cursor-pointer"
+                    >
+                      取消
+                    </button>
+                    <button
+                      type="button"
+                      @click="submitNewNote"
+                      class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-teal-500 hover:bg-teal-400 text-slate-950 transition cursor-pointer shadow-md"
+                    >
+                      确认添加
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 备忘卡片列表流 -->
+              <div v-if="filteredNotes.length > 0" class="space-y-2.5">
+                <div
+                  v-for="note in filteredNotes"
+                  :key="note.id"
+                  class="p-3.5 rounded-xl border transition-all duration-200 bg-[#090d16]/80 hover:bg-[#0d1424]/90 backdrop-blur-md group relative"
+                  :class="note.pinned
+                    ? 'border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.06)]'
+                    : 'border-white/5 hover:border-teal-500/30 hover:shadow-lg'"
+                >
+                  <!-- 普通展示状态 -->
+                  <template v-if="editingNoteId !== note.id">
+                    <!-- 卡片顶栏 -->
+                    <div class="flex items-start justify-between gap-2 mb-2">
+                      <div class="flex items-center gap-2 min-w-0 flex-1">
+                        <!-- 分类徽章 -->
+                        <span
+                          class="px-2 py-0.5 rounded text-[10px] font-mono font-bold border flex-shrink-0"
+                          :class="getCategoryStyle(note.category)"
+                        >
+                          {{ note.category || '配置参数' }}
+                        </span>
+
+                        <!-- 置顶图标 -->
+                        <Pin
+                          v-if="note.pinned"
+                          class="w-3 h-3 text-amber-400 fill-amber-400 flex-shrink-0"
+                          title="置顶备忘"
+                        />
+
+                        <!-- 标题 -->
+                        <h4 class="text-xs font-bold text-slate-100 truncate group-hover:text-white transition">
+                          {{ note.title || '无标题备忘' }}
+                        </h4>
+                      </div>
+
+                      <!-- 悬浮操作工具条 -->
+                      <div class="flex items-center gap-1 flex-shrink-0">
+                        <span class="text-[10px] text-slate-500 font-mono hidden sm:inline mr-1">
+                          {{ formatNoteTime(note.updatedAt) }}
+                        </span>
+
+                        <!-- 置顶切换 -->
+                        <button
+                          type="button"
+                          @click="togglePinNote(note)"
+                          class="p-1.5 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-white/5 transition cursor-pointer"
+                          :title="note.pinned ? '取消置顶' : '置顶本条'"
+                        >
+                          <Pin class="w-3.5 h-3.5" :class="{ 'fill-amber-400 text-amber-400': note.pinned }" />
+                        </button>
+
+                        <!-- 一键复制 -->
+                        <button
+                          type="button"
+                          @click="copyNoteContent(note)"
+                          class="p-1.5 rounded-lg text-slate-400 hover:text-teal-300 hover:bg-white/5 transition cursor-pointer flex items-center gap-1"
+                          :title="`复制备忘内容`"
+                        >
+                          <Check v-if="copiedNoteId === note.id" class="w-3.5 h-3.5 text-teal-400 animate-in zoom-in-50" />
+                          <Copy v-else class="w-3.5 h-3.5" />
+                        </button>
+
+                        <!-- 编辑 -->
+                        <button
+                          type="button"
+                          @click="startEditNote(note)"
+                          class="p-1.5 rounded-lg text-slate-400 hover:text-teal-300 hover:bg-white/5 transition cursor-pointer"
+                          title="就地编辑此条"
+                        >
+                          <Pencil class="w-3.5 h-3.5" />
+                        </button>
+
+                        <!-- 删除 -->
+                        <button
+                          type="button"
+                          @click="deleteNote(note.id)"
+                          class="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
+                          title="删除此条备忘"
+                        >
+                          <Trash2 class="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- 卡片正文 (等宽代码风格，防撑爆带滚动条) -->
+                    <div
+                      class="p-2.5 rounded-lg bg-black/50 border border-white/5 font-mono text-xs text-slate-300 leading-relaxed whitespace-pre-wrap break-all max-h-48 overflow-y-auto custom-scrollbar select-text selection:bg-teal-500/30 selection:text-white"
+                    >{{ note.content }}</div>
+                  </template>
+
+                  <!-- 原地编辑状态 -->
+                  <template v-else>
+                    <div class="space-y-3 animate-in fade-in duration-100">
+                      <div class="flex items-center justify-between border-b border-white/10 pb-1.5">
+                        <span class="text-xs font-bold text-teal-300">编辑备忘条目</span>
+                        <button
+                          type="button"
+                          @click="cancelEditNote"
+                          class="p-1 rounded text-slate-400 hover:text-white"
+                        >
+                          <X class="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      <!-- 分类单选 -->
+                      <div class="flex items-center gap-1.5 flex-wrap">
+                        <button
+                          v-for="cat in PRESET_CATEGORIES"
+                          :key="cat.key"
+                          type="button"
+                          @click="editingNoteForm.category = cat.key"
+                          class="px-2 py-0.5 rounded text-[11px] border transition cursor-pointer"
+                          :class="editingNoteForm.category === cat.key
+                            ? cat.borderClass + ' font-bold'
+                            : 'border-white/10 bg-black/30 text-slate-400 hover:text-white'"
+                        >
+                          {{ cat.label }}
+                        </button>
+                      </div>
+
+                      <div class="flex items-center gap-2">
+                        <input
+                          v-model="editingNoteForm.title"
+                          type="text"
+                          placeholder="标题"
+                          class="flex-1 bg-black/50 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-teal-500/60 font-medium"
+                          @keydown.ctrl.s.prevent.stop="saveEditNote"
+                        />
+                        <button
+                          type="button"
+                          @click="editingNoteForm.pinned = !editingNoteForm.pinned"
+                          class="px-2.5 py-1.5 rounded-lg border text-xs flex items-center gap-1 transition cursor-pointer"
+                          :class="editingNoteForm.pinned
+                            ? 'border-amber-500/50 text-amber-300 bg-amber-500/10 font-bold'
+                            : 'border-white/10 text-slate-400 hover:text-white bg-black/30'"
+                        >
+                          <Pin class="w-3 h-3" :class="{ 'fill-amber-400': editingNoteForm.pinned }" />
+                          <span>置顶</span>
+                        </button>
+                      </div>
+
+                      <textarea
+                        v-model="editingNoteForm.content"
+                        rows="5"
+                        class="w-full bg-black/60 border border-white/10 rounded-lg p-2.5 text-xs font-mono text-slate-200 focus:outline-none focus:border-teal-500/60 custom-scrollbar resize-y"
+                        @keydown.ctrl.s.prevent.stop="saveEditNote"
+                      ></textarea>
+
+                      <div class="flex items-center justify-between pt-1">
+                        <span class="text-[10px] text-slate-500 font-mono">快捷键: Ctrl + S 保存</span>
+                        <div class="flex items-center gap-2">
+                          <button
+                            type="button"
+                            @click="cancelEditNote"
+                            class="px-3 py-1 rounded-lg text-xs text-slate-400 hover:text-white transition cursor-pointer"
+                          >
+                            取消
+                          </button>
+                          <button
+                            type="button"
+                            @click="saveEditNote"
+                            class="px-3 py-1 rounded-lg text-xs font-semibold bg-teal-500 hover:bg-teal-400 text-slate-950 transition cursor-pointer shadow-md"
+                          >
+                            保存修改
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+
+              <!-- 搜索或列表为空状态 -->
+              <div
+                v-else
+                class="py-8 px-4 rounded-xl border border-dashed border-white/10 text-center space-y-2 bg-black/20"
+              >
+                <div class="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto text-slate-400">
+                  <StickyNote class="w-4 h-4" />
+                </div>
+                <div v-if="noteSearchQuery || selectedNoteCategory !== 'all'" class="space-y-1">
+                  <p class="text-xs text-slate-300 font-medium">未找到符合搜索条件的备忘</p>
+                  <p class="text-[11px] text-slate-500">
+                    关键词: "{{ noteSearchQuery }}" · 分类: "{{ selectedNoteCategory === 'all' ? '全部' : selectedNoteCategory }}"
+                  </p>
+                  <button
+                    type="button"
+                    @click="clearNoteFilter"
+                    class="mt-2 text-xs text-teal-400 hover:underline cursor-pointer inline-flex items-center gap-1"
+                  >
+                    <X class="w-3 h-3" /> 清除搜索条件
+                  </button>
+                </div>
+                <div v-else class="space-y-1">
+                  <p class="text-xs text-slate-300 font-medium">当前任务暂无开发备忘卡片</p>
+                  <p class="text-[11px] text-slate-500">点击右上角「+ 新建条目」添加联调参数、公钥密钥、Token 或随手记</p>
+                </div>
+              </div>
+            </template>
+
+            <!-- 源码长文本模式 (方便大段复制或全局查看) -->
+            <template v-else>
+              <div class="space-y-2 pt-1 animate-in fade-in duration-150">
+                <div class="flex items-center justify-between text-[11px] text-slate-400 font-mono px-0.5">
+                  <span>Markdown 源码视角 (与 docs/笔记.md 实时对应):</span>
+                  <button
+                    type="button"
+                    @click="saveRawNote"
+                    class="px-2.5 py-1 rounded-lg text-xs font-medium border border-teal-500/40 bg-teal-500/10 text-teal-300 hover:bg-teal-500/20 flex items-center gap-1 transition cursor-pointer"
+                  >
+                    <Save class="w-3.5 h-3.5 text-teal-400" />
+                    <span>保存并同步 (Ctrl+S)</span>
+                  </button>
+                </div>
+                <textarea
+                  v-model="rawNoteContent"
+                  @keydown.ctrl.s.prevent.stop="saveRawNote"
+                  rows="10"
+                  class="w-full text-xs font-mono p-3 rounded-xl border border-white/10 resize-y focus:outline-none focus:border-teal-500/60 transition bg-black/60 text-slate-200 placeholder-slate-600 custom-scrollbar leading-relaxed"
+                  placeholder="在此直接编辑全量 Markdown 笔记..."
+                ></textarea>
+              </div>
+            </template>
           </div>
 
           <!-- 4. 需求文档与关联资产 -->
@@ -876,7 +1286,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import {
   Sparkles, X, Plus, RefreshCw, Layers, Database, ChevronRight,
   FolderOpen, Copy, FileText, Save, FolderKanban, Tag, Trash2, Pencil,
-  Calendar, ChevronDown, Check
+  Calendar, ChevronDown, Check, Search, Pin, StickyNote, FileCode
 } from 'lucide-vue-next'
 import SqlMergeModal from './SqlMergeModal.vue'
 
@@ -1038,6 +1448,16 @@ const taskListContainerRef = ref(null)
 const currentSqls = ref([])
 const currentDocs = ref([])
 const currentNoteContent = ref('')
+const taskNotes = ref([])
+const noteSearchQuery = ref('')
+const selectedNoteCategory = ref('all')
+const noteViewMode = ref('cards') // 'cards' | 'raw'
+const rawNoteContent = ref('')
+const isAddingNote = ref(false)
+const newNoteForm = ref({ title: '', category: '配置参数', content: '', pinned: false })
+const editingNoteId = ref(null)
+const editingNoteForm = ref({ title: '', category: '配置参数', content: '', pinned: false })
+const copiedNoteId = ref(null)
 const loadingSqls = ref(false)
 const isSavingNote = ref(false)
 const noteSavedNotice = ref(false)
@@ -1106,27 +1526,86 @@ const currentTask = computed(() => {
   return filteredTasks.value[idx] || null
 })
 
-const parsedParameters = computed(() => {
-  if (!currentNoteContent.value) return []
-  const text = currentNoteContent.value
-  const list = []
+const PRESET_CATEGORIES = [
+  { key: '配置参数', label: '配置参数', borderClass: 'border-teal-500/50 text-teal-300 bg-teal-500/15' },
+  { key: '接口联调', label: '接口联调', borderClass: 'border-sky-500/50 text-sky-300 bg-sky-500/15' },
+  { key: '账号密钥', label: '账号密钥', borderClass: 'border-amber-500/50 text-amber-300 bg-amber-500/15' },
+  { key: '踩坑记录', label: '踩坑记录', borderClass: 'border-purple-500/50 text-purple-300 bg-purple-500/15' },
+  { key: '常规便签', label: '常规便签', borderClass: 'border-slate-500/50 text-slate-300 bg-slate-500/15' }
+]
 
-  const ipMatches = text.match(/\b(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?\b/g)
+function getCategoryStyle(cat) {
+  const found = PRESET_CATEGORIES.find(c => c.key === cat)
+  return found ? found.borderClass : 'border-white/10 bg-black/30 text-slate-300'
+}
+
+const availableNoteCategories = computed(() => {
+  const counts = {}
+  for (const n of taskNotes.value) {
+    const k = n.category || '配置参数'
+    counts[k] = (counts[k] || 0) + 1
+  }
+  return PRESET_CATEGORIES.map(cat => ({
+    ...cat,
+    count: counts[cat.key] || 0
+  })).filter(cat => cat.count > 0)
+})
+
+const filteredNotes = computed(() => {
+  let list = [...taskNotes.value]
+  if (selectedNoteCategory.value !== 'all') {
+    list = list.filter(n => (n.category || '配置参数') === selectedNoteCategory.value)
+  }
+  const q = noteSearchQuery.value.trim().toLowerCase()
+  if (q) {
+    list = list.filter(n =>
+      (n.title && n.title.toLowerCase().includes(q)) ||
+      (n.content && n.content.toLowerCase().includes(q)) ||
+      (n.category && n.category.toLowerCase().includes(q))
+    )
+  }
+  // Sort: pinned first, then updatedAt desc
+  list.sort((a, b) => {
+    if (a.pinned && !b.pinned) return -1
+    if (!a.pinned && b.pinned) return 1
+    return (b.updatedAt || '').localeCompare(a.updatedAt || '')
+  })
+  return list
+})
+
+const parsedParameters = computed(() => {
+  const allTexts = [rawNoteContent.value, ...taskNotes.value.map(n => (n.content || '') + ' ' + (n.title || ''))].join('\n')
+  if (!allTexts.trim()) return []
+  const list = []
+  const seen = new Set()
+
+  const ipMatches = allTexts.match(/\b(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?\b/g)
   if (ipMatches) {
-    for (const ip of ipMatches.slice(0, 2)) {
-      list.push({ label: '服务节点 / IP 地址', value: ip })
+    for (const ip of ipMatches) {
+      if (!seen.has(ip) && list.length < 4) {
+        seen.add(ip)
+        list.push({ label: '服务节点 / IP 地址', value: ip })
+      }
     }
   }
 
-  const tokenMatch = text.match(/Bearer\s+[A-Za-z0-9._-]+/i) || text.match(/[a-zA-Z0-9_-]{32,}/)
-  if (tokenMatch) {
-    list.push({ label: '认证 Token / 鉴权密钥', value: tokenMatch[0] })
+  const tokenMatches = allTexts.match(/Bearer\s+[A-Za-z0-9._-]+/ig) || allTexts.match(/[a-zA-Z0-9_-]{32,}/g)
+  if (tokenMatches) {
+    for (const tk of tokenMatches) {
+      if (!seen.has(tk) && list.length < 4) {
+        seen.add(tk)
+        list.push({ label: '认证 Token / 密钥', value: tk })
+      }
+    }
   }
 
-  const apiMatches = text.match(/\/(?:api|v1|v2|mz|sys)\/[a-zA-Z0-9_\-/]+/g)
+  const apiMatches = allTexts.match(/\/(?:api|v1|v2|mz|sys)\/[a-zA-Z0-9_\-/]+/g)
   if (apiMatches) {
-    for (const api of apiMatches.slice(0, 2)) {
-      list.push({ label: '接口 Endpoint', value: api })
+    for (const api of apiMatches) {
+      if (!seen.has(api) && list.length < 4) {
+        seen.add(api)
+        list.push({ label: '接口 Endpoint', value: api })
+      }
     }
   }
 
@@ -1146,6 +1625,8 @@ watch(currentTask, async (newTask) => {
     currentSqls.value = []
     currentDocs.value = []
     currentNoteContent.value = ''
+    taskNotes.value = []
+    rawNoteContent.value = ''
     return
   }
   await Promise.all([
@@ -1178,9 +1659,41 @@ async function loadSqlsForTask(taskPath) {
 async function loadNoteForTask(taskPath) {
   if (!window.electronAPI || !taskPath) return
   try {
-    const content = await window.electronAPI.getTaskFile(taskPath, 'note')
-    currentNoteContent.value = content || ''
+    let notes = []
+    if (typeof window.electronAPI.getTaskNotes === 'function') {
+      notes = await window.electronAPI.getTaskNotes(taskPath)
+    }
+
+    if (!Array.isArray(notes) || notes.length === 0) {
+      const content = await window.electronAPI.getTaskFile(taskPath, 'note')
+      if (content && content.trim()) {
+        notes = [{
+          id: 'note_' + Date.now(),
+          title: '配置参数与公私钥',
+          category: '配置参数',
+          content: content.trim(),
+          updatedAt: new Date().toLocaleString(),
+          pinned: true
+        }]
+      } else {
+        notes = []
+      }
+    }
+
+    taskNotes.value = notes
+
+    let mdText = ''
+    for (const n of notes) {
+      mdText += `### [${n.category || '配置参数'}] ${n.title || '无标题备忘'}\n`
+      if (n.updatedAt) mdText += `> 更新时间: ${n.updatedAt}\n\n`
+      mdText += `${n.content || ''}\n\n---\n\n`
+    }
+    rawNoteContent.value = mdText.trim()
+    currentNoteContent.value = rawNoteContent.value
   } catch (err) {
+    console.error('加载备忘异常:', err)
+    taskNotes.value = []
+    rawNoteContent.value = ''
     currentNoteContent.value = ''
   }
 }
@@ -1195,16 +1708,172 @@ async function loadDocsForTask(taskPath) {
   }
 }
 
-async function saveNoteContent() {
+function toggleAddNotePanel() {
+  isAddingNote.value = !isAddingNote.value
+  if (isAddingNote.value) {
+    newNoteForm.value = {
+      title: '',
+      category: '配置参数',
+      content: '',
+      pinned: false
+    }
+  }
+}
+
+async function submitNewNote() {
+  if (!newNoteForm.value.content?.trim() && !newNoteForm.value.title?.trim()) {
+    emit('toast', '请先填写备忘标题或正文内容', 'warning')
+    return
+  }
+
+  const content = (newNoteForm.value.content || '').trim()
+  let title = (newNoteForm.value.title || '').trim()
+  if (!title) {
+    title = content.split('\n')[0].slice(0, 24) || '新建备忘'
+  }
+
+  const newCard = {
+    id: 'note_' + Date.now(),
+    title,
+    category: newNoteForm.value.category || '配置参数',
+    content,
+    pinned: !!newNoteForm.value.pinned,
+    updatedAt: new Date().toLocaleString()
+  }
+
+  if (newCard.pinned) {
+    taskNotes.value.unshift(newCard)
+  } else {
+    taskNotes.value.push(newCard)
+  }
+
+  isAddingNote.value = false
+  await persistNotes()
+  emit('toast', '备忘卡片已新增！', 'success')
+}
+
+function startEditNote(note) {
+  editingNoteId.value = note.id
+  editingNoteForm.value = { ...note }
+}
+
+function cancelEditNote() {
+  editingNoteId.value = null
+}
+
+async function saveEditNote() {
+  if (!editingNoteId.value) return
+  const idx = taskNotes.value.findIndex(n => n.id === editingNoteId.value)
+  if (idx !== -1) {
+    taskNotes.value[idx] = {
+      ...taskNotes.value[idx],
+      title: editingNoteForm.value.title || taskNotes.value[idx].title,
+      category: editingNoteForm.value.category || '配置参数',
+      content: editingNoteForm.value.content || '',
+      pinned: !!editingNoteForm.value.pinned,
+      updatedAt: new Date().toLocaleString()
+    }
+  }
+  editingNoteId.value = null
+  await persistNotes()
+  emit('toast', '备忘条目已更新！', 'success')
+}
+
+async function togglePinNote(note) {
+  note.pinned = !note.pinned
+  await persistNotes()
+  emit('toast', note.pinned ? '已置顶该条备忘' : '已取消置顶', 'info')
+}
+
+async function deleteNote(noteId) {
+  taskNotes.value = taskNotes.value.filter(n => n.id !== noteId)
+  await persistNotes()
+  emit('toast', '已删除备忘条目', 'info')
+}
+
+function copyNoteContent(note) {
+  const text = note.content || note.title
+  if (!text) return
+  if (window.electronAPI && window.electronAPI.copyToClipboard) {
+    window.electronAPI.copyToClipboard(text)
+  } else if (navigator.clipboard) {
+    navigator.clipboard.writeText(text)
+  }
+  copiedNoteId.value = note.id
+  setTimeout(() => {
+    if (copiedNoteId.value === note.id) copiedNoteId.value = null
+  }, 1800)
+  emit('toast', `已复制「${note.title || '备忘内容'}」`, 'success')
+}
+
+function clearNoteFilter() {
+  noteSearchQuery.value = ''
+  selectedNoteCategory.value = 'all'
+}
+
+function setNoteViewMode(mode) {
+  noteViewMode.value = mode
+}
+
+function formatNoteTime(timeStr) {
+  if (!timeStr) return ''
+  try {
+    const d = new Date(timeStr)
+    if (isNaN(d.getTime())) return timeStr
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    const h = String(d.getHours()).padStart(2, '0')
+    const min = String(d.getMinutes()).padStart(2, '0')
+    return `${m}-${day} ${h}:${min}`
+  } catch (e) {
+    return timeStr
+  }
+}
+
+async function persistNotes() {
   if (!currentTask.value || !window.electronAPI) return
   isSavingNote.value = true
   try {
-    await window.electronAPI.saveTaskFile(currentTask.value.fullPath, 'note', currentNoteContent.value)
+    if (typeof window.electronAPI.saveTaskNotes === 'function') {
+      await window.electronAPI.saveTaskNotes(currentTask.value.fullPath, taskNotes.value)
+    } else {
+      let mdText = `# 开发备忘与接口联调参数\n\n`
+      for (const n of taskNotes.value) {
+        mdText += `### [${n.category || '配置参数'}] ${n.title}\n${n.content}\n\n---\n\n`
+      }
+      await window.electronAPI.saveTaskFile(currentTask.value.fullPath, 'note', mdText)
+    }
+
+    let mdText = ''
+    for (const n of taskNotes.value) {
+      mdText += `### [${n.category || '配置参数'}] ${n.title || '无标题备忘'}\n`
+      if (n.updatedAt) mdText += `> 更新时间: ${n.updatedAt}\n\n`
+      mdText += `${n.content || ''}\n\n---\n\n`
+    }
+    rawNoteContent.value = mdText.trim()
+    currentNoteContent.value = rawNoteContent.value
+
     noteSavedNotice.value = true
     setTimeout(() => { noteSavedNotice.value = false }, 2000)
-    emit('toast', '开发备忘已成功保存！', 'success')
   } catch (err) {
+    console.error('保存备忘失败:', err)
     emit('toast', '保存备忘失败: ' + err.message, 'error')
+  } finally {
+    isSavingNote.value = false
+  }
+}
+
+async function saveRawNote() {
+  if (!currentTask.value || !window.electronAPI) return
+  isSavingNote.value = true
+  try {
+    await window.electronAPI.saveTaskFile(currentTask.value.fullPath, 'note', rawNoteContent.value)
+    await loadNoteForTask(currentTask.value.fullPath)
+    noteSavedNotice.value = true
+    setTimeout(() => { noteSavedNotice.value = false }, 2000)
+    emit('toast', '源码笔记已保存并同步至卡片！', 'success')
+  } catch (err) {
+    emit('toast', '保存失败: ' + err.message, 'error')
   } finally {
     isSavingNote.value = false
   }

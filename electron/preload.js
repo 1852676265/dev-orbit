@@ -54,6 +54,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 任务文档与笔记 (需求.md / 笔记.md)
   getTaskFile: (taskDir, type) => ipcRenderer.invoke('get-task-file', taskDir, type),
   saveTaskFile: (taskDir, type, content) => ipcRenderer.invoke('save-task-file', taskDir, type, content),
+  getTaskNotes: (taskDir) => ipcRenderer.invoke('get-task-notes', taskDir),
+  saveTaskNotes: (taskDir, notes) => ipcRenderer.invoke('save-task-notes', taskDir, safeClone(notes)),
   getTaskDoc: (taskDir) => ipcRenderer.invoke('get-task-doc', taskDir),
   saveTaskDoc: (taskDir, content) => ipcRenderer.invoke('save-task-doc', taskDir, content),
 

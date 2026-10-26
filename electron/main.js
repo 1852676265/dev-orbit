@@ -1186,6 +1186,91 @@ ipcMain.handle('save-task-file', async (event, taskDir, type, content) => {
   return true
 })
 
+// 备忘录条目化管理 (支持多条目卡片、置顶、检索与笔记.md双向同步)
+ipcMain.handle('get-task-notes', async (event, taskDir) => {
+  if (!taskDir || !fs.existsSync(taskDir)) return []
+  const metaPath = path.join(taskDir, 'task.json')
+  let meta = readJsonSafely(metaPath, {}) || {}
+  if (Array.isArray(meta.notes) && meta.notes.length > 0) {
+    return meta.notes
+  }
+
+  // 智能向下兼容：读取 docs/笔记.md
+  const docsDir = path.join(taskDir, 'docs')
+  const notePath = path.join(docsDir, '笔记.md')
+  if (fs.existsSync(notePath)) {
+    const rawContent = fs.readFileSync(notePath, 'utf-8').trim()
+    if (rawContent) {
+      const cards = []
+      const sections = rawContent.split(/\n\s*---\s*\n/)
+      if (sections.length > 1) {
+        sections.forEach((sec, idx) => {
+          const trimmed = sec.trim()
+          if (!trimmed) return
+          // 匹配 ### [分类] 标题
+          const headerMatch = trimmed.match(/^###\s*(?:\[(.*?)\])?\s*([^\n]+)/)
+          let category = '配置参数'
+          let title = '联调备忘 #' + (idx + 1)
+          let body = trimmed
+          if (headerMatch) {
+            category = headerMatch[1] || '配置参数'
+            title = headerMatch[2].trim()
+            body = trimmed.substring(headerMatch[0].length).replace(/^>\s*更新时间:[^\n]*\n+/i, '').trim()
+          }
+          cards.push({
+            id: 'note_' + (Date.now() + idx),
+            title,
+            category,
+            content: body,
+            updatedAt: new Date().toLocaleString(),
+            pinned: idx === 0
+          })
+        })
+      }
+
+      if (cards.length === 0) {
+        cards.push({
+          id: 'note_' + Date.now(),
+          title: '配置参数与公私钥',
+          category: '配置参数',
+          content: rawContent,
+          updatedAt: new Date().toLocaleString(),
+          pinned: true
+        })
+      }
+
+      meta.notes = cards
+      fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8')
+      return cards
+    }
+  }
+  return []
+})
+
+ipcMain.handle('save-task-notes', async (event, taskDir, notes) => {
+  if (!taskDir || !fs.existsSync(taskDir)) return false
+  const metaPath = path.join(taskDir, 'task.json')
+  let meta = readJsonSafely(metaPath, {}) || {}
+  meta.notes = Array.isArray(notes) ? notes : []
+  fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8')
+
+  // 同时同步写入 docs/笔记.md，保证外部编辑器与 Git 视图干净整洁
+  const docsDir = path.join(taskDir, 'docs')
+  if (!fs.existsSync(docsDir)) fs.mkdirSync(docsDir, { recursive: true })
+  const notePath = path.join(docsDir, '笔记.md')
+
+  let mdText = '# 开发备忘与接口联调参数\n\n> 本文件由 DevTaskHub 自动双向同步\n\n'
+  for (const n of meta.notes) {
+    mdText += '### [' + (n.category || '配置参数') + '] ' + (n.title || '无标题备忘') + '\n'
+    if (n.updatedAt) {
+      mdText += '> 更新时间: ' + n.updatedAt + '\n\n'
+    }
+    mdText += (n.content || '') + '\n\n---\n\n'
+  }
+  fs.writeFileSync(notePath, mdText, 'utf-8')
+  return true
+})
+
 // 兼容旧接口
 ipcMain.handle('get-task-doc', async (event, taskDir) => {
   const docPath = path.join(taskDir, 'docs', 'README.md')
