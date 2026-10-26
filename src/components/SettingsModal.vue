@@ -582,14 +582,23 @@
                       ({{ (updateResult.assets[0].size / (1024 * 1024)).toFixed(1) }} MB)
                     </span>
                   </span>
-                  <button
-                    type="button"
-                    @click="openDownloadUrl(updateResult.releaseUrl)"
-                    class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold shadow-md transition"
-                  >
-                    <Download class="w-3.5 h-3.5" />
-                    <span>前往下载更新</span>
-                  </button>
+                  <div class="flex items-center gap-2">
+                    <button
+                      type="button"
+                      @click="openDownloadUrl(updateResult.releaseUrl)"
+                      class="text-[11px] text-slate-400 hover:text-slate-200 underline"
+                    >
+                      网页下载
+                    </button>
+                    <button
+                      type="button"
+                      @click="emit('open-update-center'); close()"
+                      class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold shadow-md transition"
+                    >
+                      <Download class="w-3.5 h-3.5" />
+                      <span>直接在软件内更新 (DBX模式)</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
