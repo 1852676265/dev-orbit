@@ -72,8 +72,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 剪贴板
   copyToClipboard: (text) => ipcRenderer.invoke('copy-to-clipboard', text),
 
-  // GitHub 在线版本检测与更新
+  // GitHub 在线版本检测与更新中心 (DBX 同款无感热更新)
   checkGitHubUpdate: (repo, token) => ipcRenderer.invoke('check-github-update', repo, token),
+  downloadUpdate: (payload) => ipcRenderer.invoke('download-update', safeClone(payload)),
+  applyUpdateAndRestart: () => ipcRenderer.invoke('apply-update-and-restart'),
+  onUpdateDownloadProgress: (callback) => {
+    const handler = (e, data) => callback(data)
+    ipcRenderer.on('update-download-progress', handler)
+    return () => ipcRenderer.removeListener('update-download-progress', handler)
+  },
   detectGitHubCliAuth: () => ipcRenderer.invoke('detect-github-cli-auth'),
   openExternalUrl: (url) => ipcRenderer.invoke('open-external-url', url),
 

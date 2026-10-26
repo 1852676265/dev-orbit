@@ -335,6 +335,7 @@ ipcMain.handle('check-github-update', async (event, customRepo, customToken) => 
               releaseUrl: release.html_url || `https://github.com/${repo}/releases`,
               publishedAt: release.published_at,
               assets: (release.assets || []).map(a => ({
+                id: a.id,
                 name: a.name,
                 downloadUrl: a.browser_download_url,
                 size: a.size
@@ -379,6 +380,216 @@ ipcMain.handle('check-github-update', async (event, customRepo, customToken) => 
     })
   })
 })
+
+// 更新缓存状态
+let updateCache = {
+  zipPath: '',
+  extractDir: '',
+  version: '',
+  ready: false
+}
+
+// 通用流式下载文件（自动跟随 301/302/307 重定向）
+function streamDownload(url, destPath, token, onProgress) {
+  return new Promise((resolve, reject) => {
+    const https = require('https')
+    const http = require('http')
+    const client = url.startsWith('https:') ? https : http
+    const headers = {
+      'User-Agent': 'DevOrbit-Desktop-App',
+      'Accept': 'application/octet-stream'
+    }
+    // 仅在请求 api.github.com 时传递 Token，重定向至 AWS S3 / objects.githubusercontent 时不带 Token
+    if (token && url.includes('api.github.com')) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+
+    const req = client.get(url, { headers }, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        return streamDownload(res.headers.location, destPath, '', onProgress).then(resolve).catch(reject)
+      }
+
+      if (res.statusCode !== 200) {
+        return reject(new Error(`下载失败，HTTP 响应码: ${res.statusCode}`))
+      }
+
+      const total = parseInt(res.headers['content-length'] || '0', 10)
+      let transferred = 0
+      let lastTime = Date.now()
+      let lastTransferred = 0
+      let speed = 0
+
+      const fileStream = fs.createWriteStream(destPath)
+
+      res.on('data', (chunk) => {
+        transferred += chunk.length
+        const now = Date.now()
+        if (now - lastTime >= 400) {
+          speed = (transferred - lastTransferred) / ((now - lastTime) / 1000)
+          lastTime = now
+          lastTransferred = transferred
+        }
+        if (onProgress && total > 0) {
+          onProgress({
+            transferred,
+            total,
+            percent: Math.min(100, Math.round((transferred / total) * 100)),
+            speed
+          })
+        }
+      })
+
+      res.pipe(fileStream)
+
+      fileStream.on('finish', () => {
+        fileStream.close(() => resolve(destPath))
+      })
+
+      fileStream.on('error', (err) => {
+        try { fs.unlinkSync(destPath) } catch (e) {}
+        reject(err)
+      })
+    })
+
+    req.on('error', (err) => {
+      try { fs.unlinkSync(destPath) } catch (e) {}
+      reject(err)
+    })
+    req.setTimeout(60000, () => {
+      req.destroy()
+      try { fs.unlinkSync(destPath) } catch (e) {}
+      reject(new Error('下载超时，请检查网络连接'))
+    })
+  })
+}
+
+// 软件内一键后台下载并自动解压 (DBX 同款无感热更新引擎)
+ipcMain.handle('download-update', async (event, payload = {}) => {
+  const { assetId, downloadUrl, assetName, version, customToken } = payload
+  const token = await getGitHubToken(customToken)
+  const tempDir = path.join(app.getPath('temp'), 'devorbit-update')
+  const extractDir = path.join(tempDir, 'extracted')
+
+  try {
+    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true })
+    if (fs.existsSync(extractDir)) fs.rmSync(extractDir, { recursive: true, force: true })
+    fs.mkdirSync(extractDir, { recursive: true })
+
+    const zipName = assetName || `DevOrbit-update.zip`
+    const zipPath = path.join(tempDir, zipName)
+
+    // 优先通过 GitHub API / assetId 下载（支持私密仓库鉴权）
+    const downloadTargetUrl = (assetId && token)
+      ? `https://api.github.com/repos/1852676265/dev-orbit/releases/assets/${assetId}`
+      : (downloadUrl || `https://github.com/1852676265/dev-orbit/releases/download/${version}/${zipName}`)
+
+    await streamDownload(downloadTargetUrl, zipPath, token, (progress) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update-download-progress', progress)
+      }
+    })
+
+    // 下载完成后自动调用 Windows 内置极速 tar 或 PowerShell Expand-Archive 解压
+    const { execFileSync } = require('child_process')
+    try {
+      execFileSync('tar.exe', ['-xf', zipPath, '-C', extractDir], { timeout: 30000 })
+    } catch (tarErr) {
+      execFileSync('powershell.exe', [
+        '-NoProfile',
+        '-Command',
+        `Expand-Archive -Path "${zipPath}" -DestinationPath "${extractDir}" -Force`
+      ], { timeout: 60000 })
+    }
+
+    // 自动寻找解压后 DevOrbit.exe 所在的根目录
+    let finalSourceDir = extractDir
+    if (!fs.existsSync(path.join(extractDir, 'DevOrbit.exe'))) {
+      const subDirs = fs.readdirSync(extractDir, { withFileTypes: true }).filter(d => d.isDirectory())
+      for (const d of subDirs) {
+        const candidate = path.join(extractDir, d.name)
+        if (fs.existsSync(path.join(candidate, 'DevOrbit.exe'))) {
+          finalSourceDir = candidate
+          break
+        }
+      }
+    }
+
+    updateCache = {
+      zipPath,
+      extractDir: finalSourceDir,
+      version: version || 'latest',
+      ready: true
+    }
+
+    return {
+      success: true,
+      message: '更新包已下载并准备就绪',
+      version
+    }
+  } catch (err) {
+    console.error('下载或解压更新包失败:', err)
+    return {
+      success: false,
+      message: err.message || '下载更新包失败'
+    }
+  }
+})
+
+// 一键「重启并更新」（DBX 同款：释放文件锁、静默覆盖、自动唤起新版本）
+ipcMain.handle('apply-update-and-restart', async () => {
+  if (!updateCache.ready || !updateCache.extractDir) {
+    return { success: false, message: '尚未下载完成更新包' }
+  }
+
+  const sourceDir = updateCache.extractDir
+  const currentExe = process.execPath
+  const currentAppDir = path.dirname(currentExe)
+
+  // 如果是在开发模式下（npm run dev）
+  if (!app.isPackaged) {
+    dialog.showMessageBoxSync(mainWindow, {
+      type: 'info',
+      title: 'DevOrbit 开发环境提示',
+      message: '检测到当前处于开发环境。\n新版本更新包已拉取完毕，现在将自动为您重新启动应用。',
+      buttons: ['立即重启']
+    })
+    app.relaunch()
+    app.exit(0)
+    return { success: true }
+  }
+
+  // 生产环境绿色便携包一键静默覆盖
+  const batPath = path.join(app.getPath('temp'), 'devorbit-apply-update.bat')
+  const batContent = `@echo off
+chcp 65001 >nul
+title DevOrbit 自动升级中...
+echo 正在等待原程序安全退出...
+timeout /t 1 /nobreak >nul
+taskkill /f /pid ${process.pid} >nul 2>&1
+timeout /t 1 /nobreak >nul
+
+echo 正在无感替换最新核心文件...
+robocopy "${sourceDir}" "${currentAppDir}" /E /IS /IT /NP /NJH /NJS /R:5 /W:1 >nul
+
+echo 升级完成，正在启动新版本...
+start "" "${currentExe}"
+timeout /t 1 /nobreak >nul
+del "%~f0"
+exit
+`
+  fs.writeFileSync(batPath, batContent, 'utf-8')
+
+  const { spawn } = require('child_process')
+  const child = spawn('cmd.exe', ['/c', batPath], {
+    detached: true,
+    stdio: 'ignore'
+  })
+  child.unref()
+
+  app.exit(0)
+  return { success: true }
+})
+
 
 ipcMain.handle('open-external-url', async (event, url) => {
   if (url && (url.startsWith('https://') || url.startsWith('http://'))) {

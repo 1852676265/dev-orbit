@@ -539,6 +539,14 @@
 
               <button
                 type="button"
+                @click="emit('open-update-center'); close()"
+                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium transition border border-slate-700"
+              >
+                <Sparkles class="w-3.5 h-3.5 text-emerald-400" />
+                <span>打开更新中心</span>
+              </button>
+              <button
+                type="button"
                 @click="checkForUpdates"
                 :disabled="isCheckingUpdate"
                 class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-medium transition shadow-md shadow-emerald-950/40"
@@ -773,7 +781,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['saved', 'workspace-changed', 'toast', 'open-theme'])
+const emit = defineEmits(['saved', 'workspace-changed', 'toast', 'open-theme', 'open-update-center'])
 
 const isOpen = ref(false)
 const activeTab = ref('workspace')

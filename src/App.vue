@@ -25,11 +25,20 @@
         <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-950/60 border border-emerald-400/30">
           <TerminalSquare class="w-4 h-4 text-white" />
         </div>
-        <div>
+        <div class="flex items-center gap-2.5">
           <h1 class="text-sm font-bold tracking-tight flex items-center gap-2">
             DevOrbit
             <span class="text-[10px] font-medium px-1.5 py-0.2 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800/80">v1.3</span>
           </h1>
+          <button
+            type="button"
+            @click="openUpdateCenter"
+            class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/90 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition shadow-sm"
+            title="打开更新中心 (DBX 同款无感热更新)"
+          >
+            <RefreshCw class="w-2.5 h-2.5 text-emerald-500" />
+            <span>更新中心</span>
+          </button>
         </div>
       </div>
 
@@ -188,8 +197,10 @@
       @saved="onSettingsSaved"
       @workspace-changed="onWorkspaceChanged"
       @open-theme="openThemeModal"
+      @open-update-center="openUpdateCenter"
       @toast="showToast"
     />
+    <UpdateCenterModal ref="updateCenterModalRef" @toast="showToast" />
     <Toast ref="toastRef" />
 
   </div>
@@ -198,8 +209,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import {
-  TerminalSquare, Layers, BookMarked, Server, Search, FolderGit2, Settings, Palette,
-  Eye, EyeOff
+  TerminalSquare, Layers, BookMarked, Server, Search, FolderGit2, Settings, Palette, Eye, EyeOff, RefreshCw
 } from 'lucide-vue-next'
 
 import TaskBoard from './components/TaskBoard.vue'
@@ -210,6 +220,7 @@ import TaskDetailModal from './components/TaskDetailModal.vue'
 import GlobalSearchModal from './components/GlobalSearchModal.vue'
 import ThemeModal from './components/ThemeModal.vue'
 import SettingsModal from './components/SettingsModal.vue'
+import UpdateCenterModal from './components/UpdateCenterModal.vue'
 import Toast from './components/Toast.vue'
 import ColorThemeDropdown from './components/ColorThemeDropdown.vue'
 import { getThemeConfig } from './constants/colorThemes'
@@ -225,6 +236,7 @@ const taskDetailModalRef = ref(null)
 const globalSearchModalRef = ref(null)
 const themeModalRef = ref(null)
 const settingsModalRef = ref(null)
+const updateCenterModalRef = ref(null)
 const toastRef = ref(null)
 
 // 主题外观与配色主题状态 (默认经典青绿高透，绝不遮挡壁纸美景)
@@ -489,6 +501,10 @@ function openSearchModal() {
 
 function openSettingsModal() {
   settingsModalRef.value?.open()
+}
+
+function openUpdateCenter() {
+  updateCenterModalRef.value?.open()
 }
 
 function onSettingsSaved(newConfig) {
