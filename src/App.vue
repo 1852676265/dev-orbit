@@ -5,23 +5,24 @@
     data-theme-accent="emerald"
   >
     
-    <!-- 动态背景画布层 (深邃黑曜钛金底色) -->
+    <!-- 动态背景画布层 (支持自定义壁纸与系统预设渐变) -->
     <div
       class="absolute inset-0 z-0 pointer-events-none transition-all duration-700 bg-center bg-cover"
       :style="backgroundStyle"
     ></div>
 
-    <!-- 遮罩层 (深色半透明) -->
+    <!-- 遮罩层 (与【个性化外观设置】的背景暗度遮罩实时无缝联动) -->
     <div
-      class="absolute inset-0 z-0 pointer-events-none transition-opacity duration-300 bg-[#090B10]/75"
+      class="absolute inset-0 z-0 pointer-events-none transition-opacity duration-300"
+      :style="overlayStyle"
     ></div>
 
     <!-- ===================================================================== -->
-    <!-- 全局架构一：左侧 54px 极窄神经轨 (Neural Rail)                         -->
+    <!-- 全局架构一：左侧 54px 极窄神经轨 (Neural Rail - 优雅毛玻璃)            -->
     <!-- ===================================================================== -->
     <aside
-      class="w-14 border-r flex flex-col items-center py-3.5 flex-shrink-0 z-30 space-y-4 backdrop-blur-2xl bg-[#0B0E17]/90 border-white/5 shadow-2xl"
-      style="box-shadow: 4px 0 24px rgba(0, 0, 0, 0.45);"
+      class="w-14 border-r border-white/10 flex flex-col items-center py-3.5 flex-shrink-0 z-30 space-y-4 backdrop-blur-2xl transition-all duration-300"
+      style="background: rgba(11, 14, 23, 0.78); box-shadow: 4px 0 24px rgba(0, 0, 0, 0.45);"
     >
       <!-- 神经轨 Logo (DO / DevOrbit) -->
       <div
@@ -40,7 +41,7 @@
           @click="currentView = 'tasks'"
           class="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 relative group"
           :class="currentView === 'tasks'
-            ? 'bg-teal-500/20 text-teal-300 border border-teal-500/40 shadow-lg shadow-teal-950/60 ring-1 ring-teal-500/30'
+            ? 'bg-teal-500/25 text-teal-300 border border-teal-500/40 shadow-lg shadow-teal-950/60 ring-1 ring-teal-500/30'
             : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'"
           title="开发任务中枢与 SQL 上线工作台"
         >
@@ -67,7 +68,7 @@
           @click="currentView = 'notes'"
           class="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 relative group"
           :class="currentView === 'notes'
-            ? 'bg-teal-500/20 text-teal-300 border border-teal-500/40 shadow-lg shadow-teal-950/60 ring-1 ring-teal-500/30'
+            ? 'bg-teal-500/25 text-teal-300 border border-teal-500/40 shadow-lg shadow-teal-950/60 ring-1 ring-teal-500/30'
             : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'"
           title="随手记 & 常用命令军火库"
         >
@@ -82,7 +83,7 @@
           @click="currentView = 'servers'"
           class="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 relative group"
           :class="currentView === 'servers'
-            ? 'bg-teal-500/20 text-teal-300 border border-teal-500/40 shadow-lg shadow-teal-950/60 ring-1 ring-teal-500/30'
+            ? 'bg-teal-500/25 text-teal-300 border border-teal-500/40 shadow-lg shadow-teal-950/60 ring-1 ring-teal-500/30'
             : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'"
           title="服务器矩阵与 SVN 凭据速查"
         >
@@ -122,17 +123,17 @@
     </aside>
 
     <!-- ===================================================================== -->
-    <!-- 右侧：全息矩阵主舞台与 Omni-Bar 流光控制中枢                           -->
+    <!-- 右侧：全息矩阵主舞台 (通透架构，透出底层自定义壁纸)                      -->
     <!-- ===================================================================== -->
-    <div class="flex-1 flex flex-col overflow-hidden relative z-10 bg-[#090B10]">
+    <div class="flex-1 flex flex-col overflow-hidden relative z-10 bg-transparent">
 
-      <!-- 1. 顶层 Omni-Bar 流光状态条 (统一纯黑曜钛金质感) -->
+      <!-- 1. 顶层 Omni-Bar 流光状态条 (半透毛玻璃) -->
       <header
-        class="h-12 border-b px-5 flex items-center justify-between flex-shrink-0 z-20 backdrop-blur-xl bg-[#0D111A]/85 border-white/5"
+        class="h-12 border-b border-white/10 px-5 flex items-center justify-between flex-shrink-0 z-20 backdrop-blur-xl"
+        style="background: rgba(13, 17, 26, 0.72);"
       >
         <!-- 模块标识与工作区路径 -->
         <div class="flex items-center gap-3">
-          <!-- 模块指示胶囊 -->
           <span
             class="px-2.5 py-0.5 rounded-md font-mono text-[11px] font-bold border transition-colors shadow-sm bg-teal-950/70 text-teal-300 border-teal-700/60"
           >
@@ -148,7 +149,7 @@
           <!-- 当前工作区目录 (点击可更换) -->
           <div
             @click="changeWorkspace"
-            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs cursor-pointer max-w-[280px] transition group border border-transparent hover:border-slate-700 hover:bg-slate-900/80 text-slate-400 hover:text-slate-200"
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs cursor-pointer max-w-[280px] transition group border border-transparent hover:border-slate-700 hover:bg-white/5 text-slate-400 hover:text-slate-200"
             title="点击更换工作区根目录"
           >
             <FolderGit2 class="w-3.5 h-3.5 text-teal-400 flex-shrink-0" />
@@ -170,7 +171,7 @@
           <!-- 全局搜索入口 (Ctrl+K) -->
           <button
             @click="openSearchModal"
-            class="flex items-center gap-2 px-3 py-1 rounded-xl text-xs font-mono transition border bg-slate-900/80 hover:bg-slate-800 text-slate-300 border-white/5"
+            class="flex items-center gap-2 px-3 py-1 rounded-xl text-xs font-mono transition border bg-black/40 hover:bg-white/5 text-slate-300 border-white/10"
             title="全局搜索任务、SQL与命令 (快捷键 Ctrl+K)"
           >
             <Search class="w-3.5 h-3.5 text-teal-400 opacity-80" />
@@ -194,15 +195,15 @@
             class="p-1.5 rounded-xl border transition"
             :class="isZenMode
               ? 'bg-teal-950 text-teal-300 border-teal-600'
-              : 'bg-slate-900 text-slate-400 border-white/5 hover:text-slate-200'"
-            title="沉浸壁纸模式 (按 Esc 退出)"
+              : 'bg-black/40 text-slate-400 border-white/10 hover:text-slate-200'"
+            title="沉浸壁纸模式 (隐藏卡片观赏背景，按 Esc 退出)"
           >
             <Eye class="w-3.5 h-3.5" />
           </button>
         </div>
       </header>
 
-      <!-- 2. 主舞台区 (统一全息黑曜背景) -->
+      <!-- 2. 主舞台区 (沉浸壁纸模式时淡出，平时通透悬浮) -->
       <main
         class="flex-1 overflow-hidden relative transition-all duration-300"
         :class="isZenMode ? 'opacity-0 pointer-events-none scale-98' : 'opacity-100 scale-100'"
@@ -212,7 +213,7 @@
           :tasks="tasks"
           :years="years"
           :is-light="false"
-          :card-opacity="18"
+          :card-opacity="currentTheme.overlayOpacity ?? 20"
           :card-glass="true"
           @open-new-task="openNewTaskModal"
           @select-task="handleSelectTask"
@@ -232,7 +233,8 @@
 
       <!-- 3. 底部全局极客状态条 (Status Bar) -->
       <footer
-        class="h-7 border-t px-5 flex items-center justify-between text-[11px] font-mono select-none flex-shrink-0 backdrop-blur-xl bg-[#0B0E17]/90 border-white/5 text-slate-400"
+        class="h-7 border-t border-white/10 px-5 flex items-center justify-between text-[11px] font-mono select-none flex-shrink-0 backdrop-blur-xl"
+        style="background: rgba(11, 14, 23, 0.78); color: #94a3b8;"
       >
         <div class="flex items-center gap-3">
           <span class="flex items-center gap-1.5 text-teal-400 font-bold">
@@ -353,15 +355,26 @@ const totalPendingProdSqls = computed(() => {
 const currentTheme = ref({
   colorTheme: 'emerald',
   customPrimaryColor: '#14b8a6',
-  type: 'preset',
+  type: 'custom',
   presetId: 'aurora',
   customBg: '',
-  overlayOpacity: 35,
-  blurLevel: 'sm',
+  customBgName: '',
+  overlayOpacity: 20,
+  blurLevel: 'none',
   cardGlass: true,
   cardOpacity: 18
 })
 
+// 预设背景定义
+const presetGradients = {
+  aurora: 'radial-gradient(at 0% 0%, #059669 0px, transparent 60%), radial-gradient(at 100% 100%, #4338ca 0px, transparent 60%), #020617',
+  cyber: 'radial-gradient(at 20% 20%, #7c3aed 0px, transparent 60%), radial-gradient(at 80% 80%, #db2777 0px, transparent 60%), #030712',
+  obsidian: 'radial-gradient(circle at 50% 0%, #1e293b 0px, transparent 70%), #020617',
+  nebula: 'radial-gradient(at 0% 100%, #0284c7 0px, transparent 60%), radial-gradient(at 100% 0%, #2563eb 0px, transparent 60%), #020617',
+  sunset: 'radial-gradient(at 20% 0%, #b45309 0px, transparent 60%), radial-gradient(at 80% 100%, #9f1239 0px, transparent 60%), #030712'
+}
+
+// 动态背景样式
 const backgroundStyle = computed(() => {
   if (currentTheme.value.type === 'custom' && currentTheme.value.customBg) {
     return {
@@ -369,13 +382,33 @@ const backgroundStyle = computed(() => {
       backgroundSize: 'cover',
       backgroundPosition: 'center',
       backgroundRepeat: 'no-repeat',
-      filter: 'blur(8px)'
+      filter: getBlurFilter(currentTheme.value.blurLevel)
     }
   }
+
+  const pid = currentTheme.value.presetId || 'aurora'
+  const grad = presetGradients[pid] || presetGradients.aurora
   return {
-    background: 'linear-gradient(135deg, #090B10 0%, #0E121B 100%)'
+    background: grad,
+    filter: getBlurFilter(currentTheme.value.blurLevel)
   }
 })
+
+// 遮罩层样式 (动态应用用户的暗度遮罩百分比)
+const overlayStyle = computed(() => {
+  let op = currentTheme.value.overlayOpacity ?? 20
+  return {
+    opacity: op / 100,
+    backgroundColor: '#000000'
+  }
+})
+
+function getBlurFilter(blur) {
+  if (blur === 'sm') return 'blur(4px)'
+  if (blur === 'md') return 'blur(12px)'
+  if (blur === 'lg') return 'blur(20px)'
+  return 'none'
+}
 
 onMounted(async () => {
   workspacePath.value = await window.electronAPI.getWorkspacePath()

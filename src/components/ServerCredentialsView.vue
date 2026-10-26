@@ -5,8 +5,8 @@
     <!-- 极客全息矩阵中枢 (统一双翼骨架 - 服务器矩阵与凭据速查中枢)               -->
     <!-- ===================================================================== -->
     <div
-      class="flex-1 flex flex-col rounded-2xl overflow-hidden border border-white/10 shadow-2xl transition-all duration-300 bg-[#0E131F]/85"
-      style="backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); box-shadow: 0 10px 40px rgba(0,0,0,0.5);"
+      class="flex-1 flex flex-col rounded-2xl overflow-hidden border border-white/10 shadow-2xl transition-all duration-300"
+      style="background: rgba(14, 19, 31, 0.72); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 10px 40px rgba(0,0,0,0.5);"
     >
 
       <!-- 1. 顶层速战一体指挥栏 (Command Bar) -->
