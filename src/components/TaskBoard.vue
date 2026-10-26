@@ -38,21 +38,68 @@
           </kbd>
         </div>
 
-        <!-- 胶囊筛选区 (年份、项目、待发产线) -->
+        <!-- 胶囊筛选区 (年份下拉框、项目、待发产线) -->
         <div class="flex items-center gap-2 overflow-x-auto py-1 custom-scrollbar">
-          <!-- 年份胶囊 -->
-          <div class="flex items-center p-0.5 rounded-xl border border-white/10 bg-black/40 text-xs">
+          <!-- 年份下拉选择器 (解决年份过多不好显示问题) -->
+          <div class="relative flex-shrink-0" ref="yearDropdownRef">
             <button
-              v-for="yr in ['all', ...years]"
-              :key="yr"
-              @click="selectedYear = yr"
-              class="px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition"
-              :class="selectedYear === yr
-                ? 'bg-teal-500/20 text-teal-300 font-bold border border-teal-500/40 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'"
+              type="button"
+              @click.stop="isYearDropdownOpen = !isYearDropdownOpen"
+              class="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-white/10 bg-black/40 hover:bg-white/5 text-xs font-mono font-medium transition cursor-pointer"
+              :class="selectedYear !== 'all' ? 'text-teal-300 border-teal-500/40 bg-teal-950/30 font-bold' : 'text-slate-300'"
+              :title="`当前年份筛选: ${selectedYear === 'all' ? '全部年份' : selectedYear + ' 年度'}`"
             >
-              {{ yr === 'all' ? '全部年份' : yr }}
+              <Calendar class="w-3.5 h-3.5 text-teal-400" />
+              <span>{{ selectedYear === 'all' ? '全部年份' : selectedYear + ' 年' }}</span>
+              <ChevronDown
+                class="w-3.5 h-3.5 opacity-60 transition-transform duration-200"
+                :class="{ 'rotate-180 opacity-100 text-teal-400': isYearDropdownOpen }"
+              />
             </button>
+
+            <!-- 年份下拉展开面板 -->
+            <transition
+              enter-active-class="transition duration-150 ease-out"
+              enter-from-class="transform scale-95 opacity-0 -translate-y-1"
+              enter-to-class="transform scale-100 opacity-100 translate-y-0"
+              leave-active-class="transition duration-100 ease-in"
+              leave-from-class="transform scale-100 opacity-100 translate-y-0"
+              leave-to-class="transform scale-95 opacity-0 -translate-y-1"
+            >
+              <div
+                v-if="isYearDropdownOpen"
+                @click.stop
+                class="absolute left-0 mt-1.5 w-36 max-h-64 overflow-y-auto rounded-xl border border-slate-700/80 shadow-2xl py-1 z-50 bg-slate-900/98 backdrop-blur-xl text-xs custom-scrollbar"
+              >
+                <button
+                  type="button"
+                  @click="selectYear('all')"
+                  class="w-full px-3 py-2 flex items-center justify-between text-left transition cursor-pointer"
+                  :class="selectedYear === 'all'
+                    ? 'bg-teal-500/20 text-teal-300 font-bold'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'"
+                >
+                  <span>全部年份</span>
+                  <Check v-if="selectedYear === 'all'" class="w-3.5 h-3.5 text-teal-400" />
+                </button>
+
+                <div class="my-1 border-t border-white/10"></div>
+
+                <button
+                  v-for="yr in availableYears"
+                  :key="yr"
+                  type="button"
+                  @click="selectYear(yr)"
+                  class="w-full px-3 py-2 flex items-center justify-between text-left font-mono transition cursor-pointer"
+                  :class="selectedYear === yr
+                    ? 'bg-teal-500/20 text-teal-300 font-bold'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'"
+                >
+                  <span>{{ yr }} 年</span>
+                  <Check v-if="selectedYear === yr" class="w-3.5 h-3.5 text-teal-400" />
+                </button>
+              </div>
+            </transition>
           </div>
 
           <!-- 项目胶囊 (高频项目 + 全部) -->
@@ -174,8 +221,9 @@
               :key="task.fullPath"
               :id="`task-item-${idx}`"
               @click="setFocusedTask(idx)"
-              @dblclick="openFullTaskDetail(task)"
+              @dblclick="openInExplorer(task.fullPath)"
               @contextmenu.prevent.stop="openTaskContextMenu($event, task)"
+              :title="`单击查看详情 · 双击在资源管理器打开 · 右键管理`"
               class="p-2.5 rounded-xl border transition-all duration-150 cursor-pointer flex items-center justify-between gap-3 group relative select-none"
               :class="focusedTaskIndex === idx
                 ? 'bg-teal-950/40 border-teal-500/70 shadow-lg shadow-teal-950/40 ring-1 ring-teal-500/30 text-white'
@@ -324,53 +372,25 @@
               </div>
             </div>
 
-            <!-- 一键唤醒工具操作栏 -->
+            <!-- 工具操作栏 (仅保留资源管理器与快捷复制路径，移除 IDE/终端/详情弹窗) -->
             <div class="flex items-center gap-2 flex-shrink-0 flex-wrap">
-              <!-- 在 IDE 打开 -->
-              <button
-                @click="openInIDE(currentTask.fullPath)"
-                class="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-sm border bg-white/5 hover:bg-white/10 text-teal-300 border-white/10"
-                title="在 VS Code / 设定编辑器中打开任务工作区 (Ctrl+O)"
-              >
-                <Code2 class="w-3.5 h-3.5" />
-                <span>IDE 打开</span>
-              </button>
-
-              <!-- 在资源管理器打开 -->
+              <!-- 在资源管理器打开 (唯一打开操作) -->
               <button
                 @click="openInExplorer(currentTask.fullPath)"
-                class="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-sm border bg-white/5 hover:bg-white/10 text-amber-300 border-white/10"
+                class="px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-sm border bg-teal-500/15 hover:bg-teal-500/25 text-teal-300 border-teal-500/40 ring-1 ring-teal-500/20 cursor-pointer"
                 title="在 Windows 资源管理器中打开此文件夹 (Ctrl+E)"
               >
-                <FolderOpen class="w-3.5 h-3.5" />
-                <span>文件目录</span>
-              </button>
-
-              <!-- 打开终端 -->
-              <button
-                @click="openInTerminal(currentTask.fullPath)"
-                class="p-2 rounded-xl text-xs transition border bg-white/5 hover:bg-white/10 text-slate-300 border-white/10"
-                title="在当前任务目录打开命令行终端"
-              >
-                <Terminal class="w-3.5 h-3.5" />
+                <FolderOpen class="w-3.5 h-3.5 text-teal-400" />
+                <span>打开资源管理器</span>
               </button>
 
               <!-- 复制路径 -->
               <button
                 @click="copyTaskPath(currentTask.fullPath)"
-                class="p-2 rounded-xl text-xs transition border bg-white/5 hover:bg-white/10 text-slate-300 border-white/10"
+                class="p-2 rounded-xl text-xs transition border bg-white/5 hover:bg-white/10 text-slate-300 border-white/10 cursor-pointer"
                 title="一键复制当前任务绝对路径"
               >
                 <Copy class="w-3.5 h-3.5" />
-              </button>
-
-              <!-- 更多详情模态框 -->
-              <button
-                @click="openFullTaskDetail(currentTask)"
-                class="p-2 rounded-xl text-xs transition border bg-white/5 hover:bg-white/10 text-slate-300 border-white/10"
-                title="打开任务完整管理弹窗 (Enter)"
-              >
-                <ExternalLink class="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -443,9 +463,8 @@
                 <div class="flex items-center gap-2 min-w-0 flex-1">
                   <Database class="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
                   <span
-                    @click="openInIDE(sql.filePath)"
-                    class="font-mono font-bold truncate cursor-pointer transition text-slate-200 hover:text-teal-300"
-                    :title="`在编辑器打开: ${sql.fileName}`"
+                    class="font-mono font-bold truncate text-slate-200"
+                    :title="sql.fileName"
                   >
                     {{ sql.fileName }}
                   </span>
@@ -454,36 +473,36 @@
                   </span>
                 </div>
 
-                <!-- 发布状态切换胶囊 -->
+                <!-- 发布状态操作区 (仅保留生产状态，点击弹窗确认，不直接改状态) -->
                 <div class="flex items-center gap-2 flex-shrink-0">
-                  <!-- 测试环境 -->
+                  <!-- 产线环境状态徽章 (点击打开二次确认弹窗) -->
                   <button
-                    @click="toggleSqlStatus(sql, 'test')"
-                    class="px-2 py-0.5 rounded text-[10px] font-mono transition"
-                    :class="sql.testStatus === 'published'
-                      ? 'bg-teal-950/70 text-teal-300 border border-teal-700/60 font-bold'
-                      : 'bg-black/40 text-slate-500 border border-white/5'"
-                    title="点击切换测试环境发布状态"
+                    type="button"
+                    @click="promptToggleProdStatus(sql)"
+                    class="px-2.5 py-0.5 rounded text-[10px] font-mono transition flex items-center gap-1 cursor-pointer"
+                    :class="sql.prodStatus === 'published'
+                      ? 'bg-teal-950/70 text-teal-300 border border-teal-700/60 font-bold hover:bg-teal-900/60'
+                      : 'bg-amber-950/70 text-amber-300 border border-amber-600/60 font-bold animate-pulse hover:bg-amber-900/60'"
+                    :title="`当前产线状态: ${sql.prodStatus === 'published' ? '已发' : '待发'} (点击确认变更)`"
                   >
-                    测试: {{ sql.testStatus === 'published' ? '已发' : '未发' }}
+                    <span>产线: {{ sql.prodStatus === 'published' ? '已发' : '待发' }}</span>
                   </button>
 
-                  <!-- 产线环境 -->
+                  <!-- 在资源管理器中定位 -->
                   <button
-                    @click="toggleSqlStatus(sql, 'prod')"
-                    class="px-2 py-0.5 rounded text-[10px] font-mono transition"
-                    :class="sql.prodStatus === 'published'
-                      ? 'bg-teal-950/70 text-teal-300 border border-teal-700/60 font-bold'
-                      : 'bg-amber-950/70 text-amber-300 border border-amber-600/60 font-bold animate-pulse'"
-                    title="点击切换产线环境发布状态"
+                    type="button"
+                    @click="showInFolder(sql.filePath)"
+                    class="p-1 rounded opacity-60 hover:opacity-100 transition text-slate-400 hover:text-teal-300 cursor-pointer"
+                    title="在 Windows 资源管理器中定位此 SQL 脚本"
                   >
-                    产线: {{ sql.prodStatus === 'published' ? '已发' : '待发' }}
+                    <FolderOpen class="w-3 h-3" />
                   </button>
 
                   <!-- 复制 SQL 路径 -->
                   <button
+                    type="button"
                     @click="copyTaskPath(sql.filePath)"
-                    class="p-1 rounded opacity-60 hover:opacity-100 transition text-slate-400 hover:text-white"
+                    class="p-1 rounded opacity-60 hover:opacity-100 transition text-slate-400 hover:text-white cursor-pointer"
                     title="复制 SQL 脚本绝对路径"
                   >
                     <Copy class="w-3 h-3" />
@@ -617,10 +636,8 @@
         </div>
 
         <div class="flex items-center gap-3">
-          <span class="hidden sm:inline">↑↓ 切换</span>
-          <span class="hidden sm:inline">↵ 详情</span>
-          <span class="hidden sm:inline">Ctrl+O IDE</span>
-          <span class="hidden sm:inline">Ctrl+E 目录</span>
+          <span class="hidden sm:inline">↑↓ 切换任务</span>
+          <span class="hidden sm:inline">Ctrl+E 资源管理器</span>
           <span class="text-teal-400/90 font-bold">⚡ v1.3.0</span>
         </div>
       </div>
@@ -650,33 +667,13 @@
             {{ contextMenu.task.title }}
           </div>
 
-          <button
-            @click="handleMenuAction('open-detail')"
-            class="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-teal-500/20 hover:text-teal-300 text-left transition"
-          >
-            <ExternalLink class="w-3.5 h-3.5" />
-            <span>打开完整详情弹窗</span>
-          </button>
-          <button
-            @click="handleMenuAction('open-ide')"
-            class="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-teal-500/20 hover:text-teal-300 text-left transition"
-          >
-            <Code2 class="w-3.5 h-3.5" />
-            <span>在 IDE (代码编辑器) 中打开</span>
-          </button>
+          <!-- 仅保留资源管理器打开选项 -->
           <button
             @click="handleMenuAction('open-folder')"
-            class="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-teal-500/20 hover:text-teal-300 text-left transition"
+            class="w-full px-3 py-2 flex items-center gap-2.5 hover:bg-teal-500/20 hover:text-teal-300 text-left transition cursor-pointer"
           >
-            <FolderOpen class="w-3.5 h-3.5" />
-            <span>在 Windows 资源管理器中打开</span>
-          </button>
-          <button
-            @click="handleMenuAction('open-terminal')"
-            class="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-teal-500/20 hover:text-teal-300 text-left transition"
-          >
-            <Terminal class="w-3.5 h-3.5" />
-            <span>在当前任务目录打开命令行</span>
+            <FolderOpen class="w-4 h-4 text-teal-400" />
+            <span class="font-medium">在 Windows 资源管理器中打开</span>
           </button>
 
           <div class="my-1 border-t border-white/10"></div>
@@ -745,6 +742,95 @@
       </div>
     </Teleport>
 
+    <!-- 产线 SQL 状态变更二次确认弹窗 (防误触) -->
+    <Teleport to="body">
+      <div
+        v-if="sqlConfirmModal.visible"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-in fade-in duration-150"
+      >
+        <div
+          class="bg-slate-900/95 border border-slate-700/80 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden text-slate-100 flex flex-col backdrop-blur-xl"
+          @click.stop
+        >
+          <!-- 弹窗顶栏 -->
+          <div class="h-12 px-5 border-b border-white/10 flex items-center justify-between bg-slate-950/70 select-none">
+            <div class="flex items-center gap-2.5">
+              <div
+                class="w-7 h-7 rounded-lg flex items-center justify-center"
+                :class="sqlConfirmModal.targetStatus === 'published' ? 'bg-teal-500/20 text-teal-400' : 'bg-amber-500/20 text-amber-400'"
+              >
+                <Database class="w-4 h-4" />
+              </div>
+              <h3 class="text-xs font-bold text-white tracking-wide">
+                产线上线状态变更确认
+              </h3>
+            </div>
+            <button
+              @click="closeSqlConfirmModal"
+              class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+            >
+              <X class="w-4 h-4" />
+            </button>
+          </div>
+
+          <!-- 弹窗主体内容 -->
+          <div class="p-5 space-y-4 text-xs">
+            <div class="p-3.5 rounded-xl border border-white/10 bg-black/40 space-y-2.5">
+              <div class="flex items-center justify-between text-slate-400">
+                <span>SQL 脚本:</span>
+                <span class="font-mono text-slate-200 font-bold truncate max-w-[240px]">{{ sqlConfirmModal.sql?.fileName }}</span>
+              </div>
+              <div class="flex items-center justify-between text-slate-400">
+                <span>当前状态:</span>
+                <span
+                  class="font-mono font-bold px-2 py-0.5 rounded text-[11px]"
+                  :class="sqlConfirmModal.sql?.prodStatus === 'published' ? 'bg-teal-950 text-teal-300 border border-teal-800' : 'bg-amber-950 text-amber-300 border border-amber-800'"
+                >
+                  产线: {{ sqlConfirmModal.sql?.prodStatus === 'published' ? '已发' : '待发' }}
+                </span>
+              </div>
+              <div class="flex items-center justify-between text-slate-400">
+                <span>目标变更为:</span>
+                <span
+                  class="font-mono font-bold px-2 py-0.5 rounded text-[11px]"
+                  :class="sqlConfirmModal.targetStatus === 'published' ? 'bg-teal-950 text-teal-300 border border-teal-800' : 'bg-amber-950 text-amber-300 border border-amber-800'"
+                >
+                  产线: {{ sqlConfirmModal.targetStatus === 'published' ? '已发' : '待发' }}
+                </span>
+              </div>
+            </div>
+
+            <p class="text-slate-400 leading-relaxed text-[11px]">
+              ⚠️ 生产环境上线涉及核心业务数据，请确认该 SQL 脚本已真实在生产数据库执行完毕（或确需回退为待发状态）。
+            </p>
+          </div>
+
+          <!-- 弹窗底栏 -->
+          <div class="h-12 px-5 border-t border-white/10 flex items-center justify-end gap-2.5 bg-slate-950/50">
+            <button
+              type="button"
+              @click="closeSqlConfirmModal"
+              class="px-4 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+            >
+              取消
+            </button>
+            <button
+              type="button"
+              @click="confirmSqlStatusChange"
+              :disabled="sqlConfirmModal.loading"
+              class="px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md cursor-pointer"
+              :class="sqlConfirmModal.targetStatus === 'published'
+                ? 'bg-teal-600 hover:bg-teal-500 text-white shadow-teal-950/50'
+                : 'bg-amber-600 hover:bg-amber-500 text-white shadow-amber-950/50'"
+            >
+              <Check class="w-3.5 h-3.5" />
+              <span>确认变更状态</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
   </div>
 </template>
 
@@ -752,8 +838,8 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import {
   Sparkles, X, Plus, RefreshCw, Layers, Database, ChevronRight,
-  FolderOpen, Code2, Terminal, Copy, ExternalLink, FileText,
-  Save, FolderKanban, Tag, Trash2, Pencil
+  FolderOpen, Copy, FileText, Save, FolderKanban, Tag, Trash2, Pencil,
+  Calendar, ChevronDown, Check
 } from 'lucide-vue-next'
 import SqlMergeModal from './SqlMergeModal.vue'
 
@@ -788,6 +874,75 @@ const searchInputRef = ref(null)
 const selectedYear = ref(props.years[0] || '2026')
 const selectedProject = ref('all')
 const onlyPendingSql = ref(false)
+
+// 年份下拉框状态 (解决年份过多不好显示问题)
+const isYearDropdownOpen = ref(false)
+const yearDropdownRef = ref(null)
+
+const availableYears = computed(() => {
+  const set = new Set(props.years || [])
+  for (const t of props.tasks) {
+    if (t.year) set.add(t.year)
+  }
+  return Array.from(set).sort((a, b) => b.localeCompare(a))
+})
+
+function selectYear(yr) {
+  selectedYear.value = yr
+  isYearDropdownOpen.value = false
+}
+
+// 产线 SQL 状态二次确认弹窗状态 (防误触，不会直接改状态)
+const sqlConfirmModal = ref({
+  visible: false,
+  sql: null,
+  targetStatus: 'published',
+  loading: false
+})
+
+function promptToggleProdStatus(sql) {
+  const currentStatus = sql.prodStatus === 'published' ? 'published' : 'pending'
+  const targetStatus = currentStatus === 'published' ? 'pending' : 'published'
+  sqlConfirmModal.value = {
+    visible: true,
+    sql,
+    targetStatus,
+    loading: false
+  }
+}
+
+function closeSqlConfirmModal() {
+  sqlConfirmModal.value.visible = false
+  sqlConfirmModal.value.sql = null
+}
+
+async function confirmSqlStatusChange() {
+  const { sql, targetStatus } = sqlConfirmModal.value
+  if (!sql || !window.electronAPI || !currentTask.value) {
+    closeSqlConfirmModal()
+    return
+  }
+
+  sqlConfirmModal.value.loading = true
+  const timeStr = new Date().toLocaleString()
+
+  try {
+    await window.electronAPI.updateSqlStatus(
+      currentTask.value.fullPath,
+      sql.fileName,
+      'prod',
+      targetStatus,
+      timeStr
+    )
+    await loadSqlsForTask(currentTask.value.fullPath)
+    emit('updated')
+    emit('toast', `已将 [${sql.fileName}] 产线状态变更为: ${targetStatus === 'published' ? '已发' : '待发'}`, 'success')
+  } catch (err) {
+    emit('toast', '更新产线状态失败: ' + err.message, 'error')
+  } finally {
+    closeSqlConfirmModal()
+  }
+}
 
 // 聚焦选中的任务索引 (左侧列表高亮)
 const focusedTaskIndex = ref(0)
@@ -1060,10 +1215,12 @@ async function copyTaskPath(path) {
   }
 }
 
-function openInIDE(path) {
-  if (window.electronAPI) {
-    window.electronAPI.openInIDE(path)
-    emit('toast', '已调用编辑器打开！')
+function showInFolder(path) {
+  if (window.electronAPI && window.electronAPI.showItemInFolder) {
+    window.electronAPI.showItemInFolder(path)
+    emit('toast', '已在 Windows 资源管理器中定位！')
+  } else {
+    openInExplorer(path)
   }
 }
 
@@ -1072,17 +1229,6 @@ function openInExplorer(path) {
     window.electronAPI.openInExplorer(path)
     emit('toast', '已在文件资源管理器中打开！')
   }
-}
-
-function openInTerminal(path) {
-  if (window.electronAPI) {
-    window.electronAPI.openInTerminal(path)
-    emit('toast', '已在当前目录拉起命令行终端！')
-  }
-}
-
-function openFullTaskDetail(task) {
-  emit('select-task', task)
 }
 
 function formatTaskDate(dateStr) {
@@ -1130,16 +1276,6 @@ function handleGlobalKeydown(e) {
       focusedTaskIndex.value--
       scrollToActiveTask()
     }
-  } else if (e.key === 'Enter') {
-    if (currentTask.value) {
-      e.preventDefault()
-      openFullTaskDetail(currentTask.value)
-    }
-  } else if (e.ctrlKey && e.key === 'o') {
-    if (currentTask.value) {
-      e.preventDefault()
-      openInIDE(currentTask.value.fullPath)
-    }
   } else if (e.ctrlKey && e.key === 'e') {
     if (currentTask.value) {
       e.preventDefault()
@@ -1147,6 +1283,8 @@ function handleGlobalKeydown(e) {
     }
   } else if (e.key === 'Escape') {
     closeContextMenu()
+    closeSqlConfirmModal()
+    isYearDropdownOpen.value = false
   }
 }
 
@@ -1193,17 +1331,8 @@ async function handleMenuAction(action, param = null) {
   closeContextMenu()
 
   switch (action) {
-    case 'open-detail':
-      openFullTaskDetail(task)
-      break
-    case 'open-ide':
-      openInIDE(task.fullPath)
-      break
     case 'open-folder':
       openInExplorer(task.fullPath)
-      break
-    case 'open-terminal':
-      openInTerminal(task.fullPath)
       break
     case 'change-project': {
       const current = task.project || '常规项目'
@@ -1280,14 +1409,21 @@ async function handleProjectMenuAction(action) {
   }
 }
 
+function handleGlobalClick(e) {
+  closeContextMenu()
+  if (isYearDropdownOpen.value && yearDropdownRef.value && !yearDropdownRef.value.contains(e.target)) {
+    isYearDropdownOpen.value = false
+  }
+}
+
 onMounted(() => {
   window.addEventListener('keydown', handleGlobalKeydown)
-  window.addEventListener('click', closeContextMenu)
+  window.addEventListener('click', handleGlobalClick)
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleGlobalKeydown)
-  window.removeEventListener('click', closeContextMenu)
+  window.removeEventListener('click', handleGlobalClick)
 })
 </script>
 
