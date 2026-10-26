@@ -58,30 +58,27 @@
             </button>
           </div>
 
-          <!-- 项目胶囊 (高频项目 + 全部) -->
-          <div class="flex items-center p-0.5 rounded-xl border border-white/10 bg-black/40 text-xs">
+          <!-- 项目下拉选择器 (解决多项目展示拥挤问题) -->
+          <div class="relative flex-shrink-0" ref="projectDropdownRef">
             <button
-              @click="selectedProject = 'all'"
-              class="px-2.5 py-1 rounded-lg text-xs font-medium transition"
-              :class="selectedProject === 'all'
-                ? 'bg-teal-500/20 text-teal-300 font-bold border border-teal-500/40 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'"
+              type="button"
+              @click.stop="toggleProjectDropdown"
+              class="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-white/10 bg-black/40 hover:bg-white/5 text-xs font-medium transition cursor-pointer"
+              :class="selectedProject !== 'all' ? 'text-teal-300 border-teal-500/40 bg-teal-950/30 font-bold' : 'text-slate-300'"
+              :title="`当前项目筛选: ${selectedProject === 'all' ? '全部项目' : selectedProject}`"
             >
-              全部项目
-            </button>
-            <button
-              v-for="proj in topProjects"
-              :key="proj.name"
-              @click="selectedProject = proj.name"
-              @contextmenu.prevent.stop="openProjectContextMenu($event, proj)"
-              class="px-2.5 py-1 rounded-lg text-xs font-medium transition flex items-center gap-1.5"
-              :class="selectedProject === proj.name
-                ? 'bg-teal-500/20 text-teal-300 font-bold border border-teal-500/40 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'"
-              :title="`右键可重命名或删除 [${proj.name}]`"
-            >
-              <span>{{ proj.name }}</span>
-              <span class="text-[10px] font-mono opacity-60">({{ proj.totalCount }})</span>
+              <FolderKanban class="w-3.5 h-3.5 text-teal-400" />
+              <span>{{ selectedProject === 'all' ? '全部项目' : selectedProject }}</span>
+              <span
+                v-if="selectedProject !== 'all' && currentSelectedProjectCount"
+                class="text-[10px] font-mono opacity-70"
+              >
+                ({{ currentSelectedProjectCount }})
+              </span>
+              <ChevronDown
+                class="w-3.5 h-3.5 opacity-60 transition-transform duration-200"
+                :class="{ 'rotate-180 opacity-100 text-teal-400': isProjectDropdownOpen }"
+              />
             </button>
           </div>
 
@@ -825,6 +822,52 @@
       </div>
     </Teleport>
 
+    <!-- 项目下拉菜单 (Teleport 挂载到 body，不遮挡、支持右键管理) -->
+    <Teleport to="body">
+      <div
+        v-if="isProjectDropdownOpen"
+        @click.stop
+        class="fixed z-50 min-w-[170px] max-w-[260px] max-h-72 overflow-y-auto rounded-xl border border-slate-700/80 shadow-2xl py-1 bg-slate-900/98 backdrop-blur-2xl text-xs custom-scrollbar animate-in fade-in duration-100"
+        :style="{ top: `${projectDropdownPos.top}px`, left: `${projectDropdownPos.left}px` }"
+      >
+        <button
+          type="button"
+          @click="selectProject('all')"
+          class="w-full px-3 py-2 flex items-center justify-between text-left transition cursor-pointer"
+          :class="selectedProject === 'all'
+            ? 'bg-teal-500/20 text-teal-300 font-bold'
+            : 'text-slate-300 hover:text-white hover:bg-slate-800/60'"
+        >
+          <span class="truncate">全部项目</span>
+          <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
+            <span class="text-[10px] font-mono opacity-60">({{ props.tasks.length }})</span>
+            <Check v-if="selectedProject === 'all'" class="w-3.5 h-3.5 text-teal-400" />
+          </div>
+        </button>
+
+        <div class="my-1 border-t border-white/10"></div>
+
+        <button
+          v-for="proj in projectList"
+          :key="proj.name"
+          type="button"
+          @click="selectProject(proj.name)"
+          @contextmenu.prevent.stop="openProjectContextMenu($event, proj)"
+          class="w-full px-3 py-2 flex items-center justify-between text-left transition cursor-pointer"
+          :class="selectedProject === proj.name
+            ? 'bg-teal-500/20 text-teal-300 font-bold'
+            : 'text-slate-300 hover:text-white hover:bg-slate-800/60'"
+          :title="`单击选择 · 右键管理 [${proj.name}]`"
+        >
+          <span class="truncate font-medium">{{ proj.name }}</span>
+          <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
+            <span class="text-[10px] font-mono opacity-60">({{ proj.totalCount }})</span>
+            <Check v-if="selectedProject === proj.name" class="w-3.5 h-3.5 text-teal-400" />
+          </div>
+        </button>
+      </div>
+    </Teleport>
+
   </div>
 </template>
 
@@ -882,6 +925,7 @@ function toggleYearDropdown() {
       left: rect.left
     }
     isYearDropdownOpen.value = true
+    isProjectDropdownOpen.value = false
   } else {
     isYearDropdownOpen.value = false
   }
@@ -899,6 +943,36 @@ function selectYear(yr) {
   selectedYear.value = yr
   isYearDropdownOpen.value = false
 }
+
+// 项目下拉框状态 (解决多项目展示拥挤问题)
+const isProjectDropdownOpen = ref(false)
+const projectDropdownRef = ref(null)
+const projectDropdownPos = ref({ top: 0, left: 0 })
+
+function toggleProjectDropdown() {
+  if (!isProjectDropdownOpen.value && projectDropdownRef.value) {
+    const rect = projectDropdownRef.value.getBoundingClientRect()
+    projectDropdownPos.value = {
+      top: rect.bottom + 6,
+      left: rect.left
+    }
+    isProjectDropdownOpen.value = true
+    isYearDropdownOpen.value = false
+  } else {
+    isProjectDropdownOpen.value = false
+  }
+}
+
+function selectProject(projName) {
+  selectedProject.value = projName
+  isProjectDropdownOpen.value = false
+}
+
+const currentSelectedProjectCount = computed(() => {
+  if (selectedProject.value === 'all') return props.tasks.length
+  const found = projectList.value.find(p => p.name === selectedProject.value)
+  return found ? found.totalCount : 0
+})
 
 // 产线 SQL 状态二次确认弹窗状态 (防误触，不会直接改状态)
 const sqlConfirmModal = ref({
@@ -1297,6 +1371,7 @@ function handleGlobalKeydown(e) {
     closeContextMenu()
     closeSqlConfirmModal()
     isYearDropdownOpen.value = false
+    isProjectDropdownOpen.value = false
   }
 }
 
@@ -1425,6 +1500,9 @@ function handleGlobalClick(e) {
   closeContextMenu()
   if (isYearDropdownOpen.value && yearDropdownRef.value && !yearDropdownRef.value.contains(e.target)) {
     isYearDropdownOpen.value = false
+  }
+  if (isProjectDropdownOpen.value && projectDropdownRef.value && !projectDropdownRef.value.contains(e.target)) {
+    isProjectDropdownOpen.value = false
   }
 }
 
