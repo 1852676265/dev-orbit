@@ -81,14 +81,14 @@
       <div
         v-for="(task, idx) in filteredTasks"
         :key="task.fullPath"
-        @click="$emit('select-task', idx)"
+        @click="selectTask(task, idx)"
         @dblclick="$emit('open-in-explorer', task.fullPath)"
         @contextmenu.prevent.stop="$emit('task-contextmenu', $event, task)"
         class="task-card"
-        :class="{ 'is-focused': focusedTaskIndex === idx }"
+        :class="{ 'is-focused': isTaskFocused(task, idx) }"
       >
         <!-- 聚焦微光条 -->
-        <div v-if="focusedTaskIndex === idx" class="active-indicator" />
+        <div v-if="isTaskFocused(task, idx)" class="active-indicator" />
 
         <div class="task-main">
           <!-- 状态呼吸灯 -->
@@ -175,7 +175,8 @@ const props = defineProps({
   projectList: { type: Array, default: () => [] },
   filteredTasks: { type: Array, default: () => [] },
   totalTasksCount: { type: Number, default: 0 },
-  focusedTaskIndex: { type: Number, default: 0 }
+  focusedTaskIndex: { type: Number, default: 0 },
+  currentTask: { type: Object, default: null }
 })
 
 const emit = defineEmits([
@@ -184,6 +185,17 @@ const emit = defineEmits([
   'task-contextmenu',
   'project-contextmenu'
 ])
+
+function isTaskFocused(task, idx) {
+  if (props.currentTask && props.currentTask.fullPath) {
+    return props.currentTask.fullPath === task.fullPath
+  }
+  return props.focusedTaskIndex === idx
+}
+
+function selectTask(task, idx) {
+  emit('select-task', task)
+}
 
 const selectedYear = defineModel('selectedYear', { type: String, default: 'all' })
 const selectedProject = defineModel('selectedProject', { type: String, default: 'all' })

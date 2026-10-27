@@ -218,7 +218,6 @@
             :card-opacity="currentTheme.overlayOpacity ?? 20"
             :card-glass="true"
             @open-new-task="openNewTaskModal"
-            @select-task="handleSelectTask"
             @updated="loadTasks"
             @toast="showToast"
           />
@@ -513,9 +512,6 @@ function onTaskCreated(task) {
   taskDetailModalRef.value?.open(task)
 }
 
-function handleSelectTask(task) {
-  taskDetailModalRef.value?.open(task)
-}
 
 function openSearchModal() {
   globalSearchModalRef.value?.open()

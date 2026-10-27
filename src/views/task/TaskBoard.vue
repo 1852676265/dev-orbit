@@ -12,6 +12,7 @@
         :filtered-tasks="filteredTasks"
         :total-tasks-count="props.tasks.length"
         :focused-task-index="focusedTaskIndex"
+        :current-task="currentTask"
         @select-task="setFocusedTask"
         @open-in-explorer="openInExplorer"
         @task-contextmenu="openTaskContextMenu"
@@ -73,12 +74,6 @@
                 />
               </div>
             </n-tab>
-            <n-tab name="overview">
-              <div class="tab-item-inner">
-                <LayoutDashboard class="icon-small text-slate-400" />
-                <span>全景看板</span>
-              </div>
-            </n-tab>
           </n-tabs>
 
           <!-- 保存状态微提示 -->
@@ -115,20 +110,6 @@
             @open-file="openFilePreview"
             @show-in-folder="showInFolder"
             @doc-contextmenu="openDocContextMenu"
-          />
-
-          <!-- Tab 4: 全景看板 (3合1概览) -->
-          <TaskOverviewTab
-            v-else-if="activeWorkspaceTab === 'overview'"
-            :notes-count="notesState.taskNotes.value.length"
-            :sqls-count="sqlsState.currentSqls.value.length"
-            :pending-sql-count="currentTask.prodPendingCount || 0"
-            :docs-count="docsState.currentDocs.value.length"
-            :enable-smart-params="notesState.enableSmartParams.value"
-            :parsed-parameters="notesState.parsedParameters.value"
-            @switch-tab="switchWorkspaceTab"
-            @open-more-params="notesState.isMoreParamsOpen.value = true"
-            @copy-param="notesState.copyParamText"
           />
         </div>
       </main>
@@ -201,7 +182,6 @@ import TaskHeader from './TaskHeader.vue'
 import TaskNotesTab from './tabs/TaskNotesTab.vue'
 import TaskSqlTab from './tabs/TaskSqlTab.vue'
 import TaskDocsTab from './tabs/TaskDocsTab.vue'
-import TaskOverviewTab from './tabs/TaskOverviewTab.vue'
 import TaskContextMenu from './TaskContextMenu.vue'
 import FilePreviewModal from '@/views/modals/FilePreviewModal.vue'
 import SqlMergeModal from '@/views/modals/SqlMergeModal.vue'
@@ -309,7 +289,7 @@ async function switchWorkspaceTab(tabId) {
 // 4. 监听选中任务变动，联动刷新数据
 watch(currentTask, async (newTask) => {
   if (!newTask) return
-  emit('select-task', newTask)
+  // emit('select-task', newTask)
   await Promise.all([
     notesState.loadNoteForTask(newTask.fullPath),
     sqlsState.loadSqlsForTask(newTask.fullPath),

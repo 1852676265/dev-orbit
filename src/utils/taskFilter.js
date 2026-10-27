@@ -73,18 +73,58 @@ export function useTaskFilter(props, onTaskSwitchCallback) {
     return filteredTasks.value[Math.max(0, safeIdx)]
   })
 
-  // 切换选中的任务
-  async function setFocusedTask(idx) {
-    if (typeof onTaskSwitchCallback === 'function') {
-      await onTaskSwitchCallback()
+  // 同步保持 focusedTaskIndex 与 focusedTaskPath / currentTask 一致
+  watch(
+    [filteredTasks, focusedTaskPath],
+    () => {
+      if (!filteredTasks.value || filteredTasks.value.length === 0) return
+      if (focusedTaskPath.value) {
+        const foundIdx = filteredTasks.value.findIndex(t => t.fullPath === focusedTaskPath.value)
+        if (foundIdx !== -1) {
+          focusedTaskIndex.value = foundIdx
+          return
+        }
+      }
+      if (focusedTaskIndex.value >= filteredTasks.value.length) {
+        focusedTaskIndex.value = 0
+      }
+      const cur = filteredTasks.value[focusedTaskIndex.value]
+      if (cur && cur.fullPath) {
+        focusedTaskPath.value = cur.fullPath
+      }
+    },
+    { immediate: true }
+  )
+
+  // 切换选中的任务 (支持传入任务对象或索引)
+  async function setFocusedTask(target) {
+    let task = null
+    let idx = 0
+
+    if (typeof target === 'number') {
+      idx = target
+      task = filteredTasks.value[idx]
+    } else if (target && typeof target === 'object') {
+      task = target
+      idx = filteredTasks.value.findIndex(t => t.fullPath === task.fullPath)
     }
-    focusedTaskIndex.value = idx
-    const task = filteredTasks.value[idx]
-    if (task && task.fullPath) {
-      focusedTaskPath.value = task.fullPath
+
+    if (!task || !task.fullPath) return
+
+    // 优先立即更新聚焦索引与路径，确保 UI 与激活高亮即时切换
+    focusedTaskIndex.value = Math.max(0, idx)
+    focusedTaskPath.value = task.fullPath
+    try {
+      localStorage.setItem('devorbit_focused_task_path', task.fullPath)
+    } catch (e) {}
+
+    // 触发前置持久化回调（如换任务前自动刷盘备忘），异常时静默捕获不阻断任务切换
+    if (typeof onTaskSwitchCallback === 'function') {
       try {
-        localStorage.setItem('devorbit_focused_task_path', task.fullPath)
-      } catch (e) {}
+        await onTaskSwitchCallback()
+      } catch (err) {
+        console.error('[TaskFilter] autoFlush callback error ignored:', err)
+      }
     }
   }
 
