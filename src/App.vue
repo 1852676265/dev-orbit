@@ -209,7 +209,7 @@
         :class="isZenMode ? 'opacity-0 pointer-events-none scale-98' : 'opacity-100 scale-100'"
       >
         <TaskBoard
-          v-if="currentView === 'tasks'"
+          v-show="currentView === 'tasks'"
           :tasks="tasks"
           :years="years"
           :is-light="false"
@@ -221,12 +221,12 @@
           @toast="showToast"
         />
         <QuickNotesView
-          v-else-if="currentView === 'notes'"
+          v-if="currentView === 'notes'"
           :is-light="false"
           @toast="showToast"
         />
         <ServerCredentialsView
-          v-else-if="currentView === 'servers'"
+          v-if="currentView === 'servers'"
           @toast="showToast"
         />
       </main>
@@ -458,15 +458,17 @@ function openThemeModal() {
 
 async function loadTasks() {
   try {
+    console.log("[App.vue] Requesting getTasks from Electron...")
     const res = await window.electronAPI.getTasks()
+    console.log("[App.vue] loadTasks received:", res ? (res.tasks ? res.tasks.length + " tasks" : Array.isArray(res) ? res.length + " tasks" : "non-array res") : "null res")
     if (res && res.tasks) {
       tasks.value = res.tasks
-      years.value = res.years || ['2026', '2025']
+      years.value = res.years || ["2026", "2025"]
     } else if (Array.isArray(res)) {
       tasks.value = res
     }
   } catch (err) {
-    console.error('加载任务失败', err)
+    console.error("加载任务失败", err)
   }
 }
 

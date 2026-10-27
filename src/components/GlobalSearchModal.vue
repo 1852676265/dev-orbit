@@ -91,13 +91,6 @@
               >
                 <FolderOpen class="w-3.5 h-3.5" />
               </button>
-              <button
-                @click="openInIDE"
-                title="在编辑器中打开此文件"
-                class="p-1 text-slate-400 hover:text-slate-200 rounded hover:bg-slate-800"
-              >
-                <Code2 class="w-3.5 h-3.5" />
-              </button>
             </div>
           </div>
 

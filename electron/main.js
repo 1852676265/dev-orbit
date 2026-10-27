@@ -130,6 +130,11 @@ function createWindow() {
   mainWindow.webContents.on('did-fail-load', (e, code, desc) => {
     dialog.showErrorBox('页面加载错误', `Code: ${code}, Desc: ${desc}`)
   })
+
+  // 转发渲染进程的控制台输出至终端
+  mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    console.log(`[Renderer L${level}] ${message}`)
+  })
 }
 
 app.whenReady().then(() => {
@@ -755,58 +760,77 @@ function parseTaskDir(taskDirPath, fallbackYear) {
 }
 
 ipcMain.handle('get-tasks', async () => {
-  const config = loadConfig()
-  const ws = config.workspacePath
-  if (!fs.existsSync(ws)) return { tasks: [], years: [] }
-
-  const entries = fs.readdirSync(ws, { withFileTypes: true })
-  const tasks = []
-  const yearSet = new Set()
-
-  for (const entry of entries) {
-    if (!entry.isDirectory() || entry.name.startsWith('_') || entry.name.startsWith('.')) {
-      continue
+  try {
+    const config = loadConfig()
+    const ws = config.workspacePath
+    console.log('[Main] get-tasks scanning workspace:', ws)
+    if (!fs.existsSync(ws)) {
+      console.warn('[Main] Workspace does not exist:', ws)
+      return { tasks: [], years: [] }
     }
 
-    const subPath = path.join(ws, entry.name)
+    const entries = fs.readdirSync(ws, { withFileTypes: true })
+    const tasks = []
+    const yearSet = new Set()
 
-    // 判断是否是 4 位数字年份文件夹 (如 2025, 2026)
-    if (/^\d{4}$/.test(entry.name)) {
-      yearSet.add(entry.name)
-      // 遍历年份目录下的所有任务子目录
-      try {
-        const yearEntries = fs.readdirSync(subPath, { withFileTypes: true })
-        for (const yEntry of yearEntries) {
-          if (yEntry.isDirectory() && !yEntry.name.startsWith('_') && !yEntry.name.startsWith('.')) {
-            const taskDirPath = path.join(subPath, yEntry.name)
-            tasks.push(parseTaskDir(taskDirPath, entry.name))
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.name.startsWith('_') || entry.name.startsWith('.')) {
+        continue
+      }
+
+      const subPath = path.join(ws, entry.name)
+
+      // 判断是否是 4 位数字年份文件夹 (如 2025, 2026)
+      if (/^\d{4}$/.test(entry.name)) {
+        yearSet.add(entry.name)
+        // 遍历年份目录下的所有任务子目录
+        try {
+          const yearEntries = fs.readdirSync(subPath, { withFileTypes: true })
+          for (const yEntry of yearEntries) {
+            if (yEntry.isDirectory() && !yEntry.name.startsWith('_') && !yEntry.name.startsWith('.')) {
+              const taskDirPath = path.join(subPath, yEntry.name)
+              try {
+                const taskObj = parseTaskDir(taskDirPath, entry.name)
+                tasks.push(taskObj)
+              } catch (taskErr) {
+                console.error('[Main] Error parsing task folder:', taskDirPath, taskErr)
+              }
+            }
+          }
+        } catch (e) {
+          console.error('[Main] Error scanning year folder', entry.name, e)
+        }
+      } else {
+        // 检查根目录下的直接子目录：如果是任务目录（包含 task.json 或 [TASK- 开头）
+        const hasTaskJson = fs.existsSync(path.join(subPath, 'task.json'))
+        const isTaskNaming = /^\[.*?\]/.test(entry.name)
+        if (hasTaskJson || isTaskNaming) {
+          try {
+            const taskObj = parseTaskDir(subPath, '')
+            tasks.push(taskObj)
+            if (taskObj.year) yearSet.add(taskObj.year)
+          } catch (taskErr) {
+            console.error('[Main] Error parsing root task folder:', subPath, taskErr)
           }
         }
-      } catch (e) {
-        console.error('Error scanning year folder', entry.name, e)
-      }
-    } else {
-      // 检查根目录下的直接子目录：如果是任务目录（包含 task.json 或 [TASK- 开头）
-      const hasTaskJson = fs.existsSync(path.join(subPath, 'task.json'))
-      const isTaskNaming = /^\[.*?\]/.test(entry.name)
-      if (hasTaskJson || isTaskNaming) {
-        const taskObj = parseTaskDir(subPath, '')
-        tasks.push(taskObj)
-        if (taskObj.year) yearSet.add(taskObj.year)
       }
     }
+
+    // 默认加上当前年份
+    const currentYear = new Date().getFullYear().toString()
+    yearSet.add(currentYear)
+
+    // 年份列表倒序排列 (如 2026, 2025, ...)
+    const sortedYears = Array.from(yearSet).sort((a, b) => b.localeCompare(a))
+
+    // 按创建时间倒序
+    tasks.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+    console.log(`[Main] get-tasks loaded ${tasks.length} tasks across years:`, sortedYears)
+    return { tasks, years: sortedYears }
+  } catch (err) {
+    console.error('[Main] Fatal error in get-tasks:', err)
+    return { tasks: [], years: [] }
   }
-
-  // 默认加上当前年份
-  const currentYear = new Date().getFullYear().toString()
-  yearSet.add(currentYear)
-
-  // 年份列表倒序排列 (如 2026, 2025, ...)
-  const sortedYears = Array.from(yearSet).sort((a, b) => b.localeCompare(a))
-
-  // 按创建时间倒序
-  tasks.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
-  return { tasks, years: sortedYears }
 })
 
 ipcMain.handle('create-task', async (event, taskData) => {
@@ -1068,6 +1092,20 @@ ipcMain.handle('save-text-file', async (event, filePath, content) => {
   const dir = path.dirname(filePath)
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
   fs.writeFileSync(filePath, content, 'utf-8')
+
+  // 若保存的文件是 笔记.md，同步更新对应 task.json
+  const baseName = path.basename(filePath)
+  if (baseName === '笔记.md') {
+    const taskDir = path.dirname(dir)
+    const metaPath = path.join(taskDir, 'task.json')
+    if (fs.existsSync(metaPath)) {
+      let meta = readJsonSafely(metaPath, {}) || {}
+      meta.notes = parseMarkdownToNoteCards(content)
+      try {
+        fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8')
+      } catch (e) {}
+    }
+  }
   return true
 })
 
@@ -1176,6 +1214,49 @@ ipcMain.handle('get-task-file', async (event, taskDir, type) => {
   return ''
 })
 
+
+// Markdown 笔记解析为卡片结构的统一引擎
+function parseMarkdownToNoteCards(rawContent) {
+  if (!rawContent || !rawContent.trim()) return []
+  const cards = []
+  const sections = rawContent.split(/\n\s*---\s*\n/)
+  if (sections.length > 1) {
+    sections.forEach((sec, idx) => {
+      const trimmed = sec.trim()
+      if (!trimmed || trimmed.startsWith('# 开发备忘') || trimmed.startsWith('> 本文件由')) return
+      const headerMatch = trimmed.match(/^###\s*(?:\[(.*?)\])?\s*([^\n]+)/)
+      let category = '配置参数'
+      let title = '联调备忘 #' + (idx + 1)
+      let body = trimmed
+      if (headerMatch) {
+        category = headerMatch[1] || '配置参数'
+        title = headerMatch[2].trim()
+        body = trimmed.substring(headerMatch[0].length).replace(/^>\s*更新时间:[^\n]*\n+/i, '').trim()
+      }
+      cards.push({
+        id: 'note_' + (Date.now() + idx),
+        title,
+        category,
+        content: body,
+        updatedAt: new Date().toLocaleString(),
+        pinned: idx === 0
+      })
+    })
+  }
+
+  if (cards.length === 0) {
+    cards.push({
+      id: 'note_' + Date.now(),
+      title: '配置参数与公私钥',
+      category: '配置参数',
+      content: rawContent.replace(/^#\s*[^\n]+\n+/i, '').replace(/^>\s*[^\n]+\n+/i, '').trim(),
+      updatedAt: new Date().toLocaleString(),
+      pinned: true
+    })
+  }
+  return cards
+}
+
 ipcMain.handle('save-task-file', async (event, taskDir, type, content) => {
   const docsDir = path.join(taskDir, 'docs')
   if (!fs.existsSync(docsDir)) fs.mkdirSync(docsDir, { recursive: true })
@@ -1183,6 +1264,18 @@ ipcMain.handle('save-task-file', async (event, taskDir, type, content) => {
   const fileName = type === 'requirement' ? '需求.md' : '笔记.md'
   const filePath = path.join(docsDir, fileName)
   fs.writeFileSync(filePath, content, 'utf-8')
+
+  // 若保存的是笔记.md，同步解析并持久化至 task.json，避免卡片与源码不一致
+  if (type === 'note' && taskDir && fs.existsSync(taskDir)) {
+    const metaPath = path.join(taskDir, 'task.json')
+    let meta = readJsonSafely(metaPath, {}) || {}
+    meta.notes = parseMarkdownToNoteCards(content)
+    try {
+      fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8')
+    } catch (e) {
+      console.error('Failed to sync meta.notes in save-task-file:', e)
+    }
+  }
   return true
 })
 
@@ -1190,59 +1283,35 @@ ipcMain.handle('save-task-file', async (event, taskDir, type, content) => {
 ipcMain.handle('get-task-notes', async (event, taskDir) => {
   if (!taskDir || !fs.existsSync(taskDir)) return []
   const metaPath = path.join(taskDir, 'task.json')
-  let meta = readJsonSafely(metaPath, {}) || {}
-  if (Array.isArray(meta.notes) && meta.notes.length > 0) {
-    return meta.notes
-  }
-
-  // 智能向下兼容：读取 docs/笔记.md
   const docsDir = path.join(taskDir, 'docs')
   const notePath = path.join(docsDir, '笔记.md')
-  if (fs.existsSync(notePath)) {
-    const rawContent = fs.readFileSync(notePath, 'utf-8').trim()
-    if (rawContent) {
-      const cards = []
-      const sections = rawContent.split(/\n\s*---\s*\n/)
-      if (sections.length > 1) {
-        sections.forEach((sec, idx) => {
-          const trimmed = sec.trim()
-          if (!trimmed) return
-          // 匹配 ### [分类] 标题
-          const headerMatch = trimmed.match(/^###\s*(?:\[(.*?)\])?\s*([^\n]+)/)
-          let category = '配置参数'
-          let title = '联调备忘 #' + (idx + 1)
-          let body = trimmed
-          if (headerMatch) {
-            category = headerMatch[1] || '配置参数'
-            title = headerMatch[2].trim()
-            body = trimmed.substring(headerMatch[0].length).replace(/^>\s*更新时间:[^\n]*\n+/i, '').trim()
-          }
-          cards.push({
-            id: 'note_' + (Date.now() + idx),
-            title,
-            category,
-            content: body,
-            updatedAt: new Date().toLocaleString(),
-            pinned: idx === 0
-          })
-        })
-      }
 
-      if (cards.length === 0) {
-        cards.push({
-          id: 'note_' + Date.now(),
-          title: '配置参数与公私钥',
-          category: '配置参数',
-          content: rawContent,
-          updatedAt: new Date().toLocaleString(),
-          pinned: true
-        })
-      }
+  let meta = readJsonSafely(metaPath, {}) || {}
+  const hasMetaNotes = Array.isArray(meta.notes) && meta.notes.length > 0
+  const noteExists = fs.existsSync(notePath)
 
-      meta.notes = cards
-      fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8')
-      return cards
+  if (noteExists) {
+    let noteMtime = 0
+    let metaMtime = 0
+    try { noteMtime = fs.statSync(notePath).mtimeMs } catch (e) {}
+    try { metaMtime = fs.statSync(metaPath).mtimeMs } catch (e) {}
+
+    // 如果 笔记.md 的修改时间更新，或者 task.json 中没有 notes，则以 笔记.md 为准
+    if (!hasMetaNotes || noteMtime > metaMtime) {
+      const rawContent = fs.readFileSync(notePath, 'utf-8').trim()
+      if (rawContent) {
+        const cards = parseMarkdownToNoteCards(rawContent)
+        if (cards.length > 0) {
+          meta.notes = cards
+          try { fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8') } catch (e) {}
+          return cards
+        }
+      }
     }
+  }
+
+  if (hasMetaNotes) {
+    return meta.notes
   }
   return []
 })
@@ -1252,7 +1321,6 @@ ipcMain.handle('save-task-notes', async (event, taskDir, notes) => {
   const metaPath = path.join(taskDir, 'task.json')
   let meta = readJsonSafely(metaPath, {}) || {}
   meta.notes = Array.isArray(notes) ? notes : []
-  fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8')
 
   // 同时同步写入 docs/笔记.md，保证外部编辑器与 Git 视图干净整洁
   const docsDir = path.join(taskDir, 'docs')
@@ -1268,6 +1336,9 @@ ipcMain.handle('save-task-notes', async (event, taskDir, notes) => {
     mdText += (n.content || '') + '\n\n---\n\n'
   }
   fs.writeFileSync(notePath, mdText, 'utf-8')
+
+  // 先写 笔记.md 再写 task.json，确保 metaPath 的 mtime >= notePath 的 mtime，防误触发覆盖
+  fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8')
   return true
 })
 
@@ -1472,6 +1543,28 @@ ipcMain.handle('search-keyword', async (event, query) => {
 })
 
 // 读取文件全部行（供行定位查看器）
+
+// 读取本地文件为 Data URL (支持图片、PDF预览)
+ipcMain.handle('read-file-data-url', async (event, filePath) => {
+  if (!filePath || !fs.existsSync(filePath)) return null
+  try {
+    const ext = path.extname(filePath).toLowerCase()
+    let mime = 'application/octet-stream'
+    if (ext === '.pdf') mime = 'application/pdf'
+    else if (ext === '.png') mime = 'image/png'
+    else if (ext === '.jpg' || ext === '.jpeg') mime = 'image/jpeg'
+    else if (ext === '.gif') mime = 'image/gif'
+    else if (ext === '.svg') mime = 'image/svg+xml'
+    else if (ext === '.webp') mime = 'image/webp'
+    
+    const buffer = fs.readFileSync(filePath)
+    return `data:${mime};base64,${buffer.toString('base64')}`
+  } catch (err) {
+    console.error('Error reading file as data url:', err)
+    return null
+  }
+})
+
 ipcMain.handle('read-file-lines', async (event, filePath) => {
   if (fs.existsSync(filePath)) {
     const content = fs.readFileSync(filePath, 'utf-8')

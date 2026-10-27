@@ -70,6 +70,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 智能全文搜索 & 行定位
   searchKeyword: (query) => ipcRenderer.invoke('search-keyword', query),
   readFileLines: (filePath) => ipcRenderer.invoke('read-file-lines', filePath),
+  readFileDataUrl: (filePath) => ipcRenderer.invoke('read-file-data-url', filePath),
 
   // 剪贴板
   copyToClipboard: (text) => ipcRenderer.invoke('copy-to-clipboard', text),
