@@ -1,5 +1,5 @@
 <template>
-  <div class="sql-tab-container custom-scrollbar">
+  <div class="sql-tab-container hide-scrollbar">
     <!-- 头部工具栏 -->
     <div class="sql-toolbar">
       <div class="toolbar-title-group">
@@ -198,9 +198,18 @@ const pendingCount = computed(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 16px;
-  gap: 14px;
+  padding: 12px 16px;
+  gap: 10px;
   overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sql-tab-container::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 /* 顶部工具栏 */

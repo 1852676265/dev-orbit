@@ -2,6 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 隐藏滚动条并杜绝布局抖动跳动 */
+.hide-scrollbar,
+.no-scrollbar {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.hide-scrollbar::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 /* 极简自定义滚动条 */
 ::-webkit-scrollbar {
   width: 6px;

@@ -1,5 +1,5 @@
 <template>
-  <div class="docs-tab-container custom-scrollbar">
+  <div class="docs-tab-container hide-scrollbar">
     <!-- 头部工具栏 -->
     <div class="docs-toolbar">
       <h3 class="toolbar-title">
@@ -147,9 +147,18 @@ defineEmits(['open-file', 'show-in-folder', 'doc-contextmenu'])
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 16px;
-  gap: 14px;
+  padding: 12px 16px;
+  gap: 10px;
   overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.docs-tab-container::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 /* 头部工具栏 */
@@ -159,7 +168,7 @@ defineEmits(['open-file', 'show-in-folder', 'doc-contextmenu'])
   justify-content: space-between;
   gap: 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  padding-bottom: 12px;
+  padding-bottom: 8px;
   user-select: none;
 }
 
@@ -220,18 +229,18 @@ defineEmits(['open-file', 'show-in-folder', 'doc-contextmenu'])
 .docs-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 10px;
-  flex: 1;
+  gap: 8px;
+  align-content: start;
 }
 @media (min-width: 640px) {
   .docs-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 .doc-card {
-  padding: 12px;
-  border-radius: 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.05);
   background-color: rgba(0, 0, 0, 0.4);
   display: flex;
@@ -241,6 +250,7 @@ defineEmits(['open-file', 'show-in-folder', 'doc-contextmenu'])
   cursor: pointer;
   transition: all 0.15s ease-in-out;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  min-width: 0;
 }
 
 .doc-card:hover {
@@ -251,7 +261,7 @@ defineEmits(['open-file', 'show-in-folder', 'doc-contextmenu'])
 .doc-info {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
   flex: 1;
 }

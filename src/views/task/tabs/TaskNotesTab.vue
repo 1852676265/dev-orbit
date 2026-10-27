@@ -1,5 +1,5 @@
 <template>
-  <div class="notes-tab-container custom-scrollbar">
+  <div class="notes-tab-container hide-scrollbar">
     <!-- 1. 智能提取参数速查栏 -->
     <div
       v-if="notesState.enableSmartParams.value && notesState.parsedParameters.value.length > 0"
@@ -458,9 +458,18 @@ function getParamCapsuleClass(type) {
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 16px;
-  gap: 14px;
+  padding: 12px 16px;
+  gap: 10px;
   overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.notes-tab-container::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 /* 顶部智能参数面板 */
