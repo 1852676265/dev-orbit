@@ -1,9 +1,10 @@
 <template>
-  <div
-    class="h-screen w-screen flex flex-row relative overflow-hidden font-sans select-none bg-[#090B10] text-slate-100"
-    data-theme-mode="dark"
-    data-theme-accent="emerald"
-  >
+  <n-config-provider :theme="darkTheme">
+    <div
+      class="h-screen w-screen flex flex-row relative overflow-hidden font-sans select-none bg-[#090B10] text-slate-100"
+      data-theme-mode="dark"
+      data-theme-accent="emerald"
+    >
     
     <!-- 动态背景画布层 (支持自定义壁纸与系统预设渐变) -->
     <div
@@ -300,10 +301,12 @@
     <Toast ref="toastRef" />
 
   </div>
+  </n-config-provider>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { NConfigProvider, darkTheme } from 'naive-ui'
 import {
   Layers, BookMarked, Server, Search, FolderGit2, Settings, Palette,
   Eye, EyeOff, RefreshCw, Database
