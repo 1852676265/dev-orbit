@@ -1,10 +1,9 @@
 <template>
-  <aside class="w-80 md:w-96 flex-shrink-0 flex flex-col border-r border-white/5 bg-[#0D111A]/95 overflow-hidden">
+  <aside class="sidebar-container">
     <!-- 1. 顶部控制栏 (年份 + 项目筛选) -->
-    <div class="p-3 border-b border-white/5 space-y-2 bg-black/20">
+    <div class="filter-header">
       <!-- 第一行：年份与产线快速开关 -->
-      <div class="flex items-center gap-2">
-        <!-- 年份快速下拉 -->
+      <div class="filter-row">
         <n-select
           v-model:value="selectedYear"
           size="small"
@@ -13,7 +12,6 @@
           placeholder="年份筛选"
         />
 
-        <!-- 待发产线高亮过滤按钮 -->
         <n-button
           size="small"
           :type="onlyPendingSql ? 'warning' : 'default'"
@@ -22,14 +20,14 @@
           title="仅看有待发产线 SQL 的任务"
         >
           <template #icon>
-            <Database class="w-3.5 h-3.5" />
+            <Database class="icon-small text-amber-400" />
           </template>
           <span>待发 SQL</span>
         </n-button>
       </div>
 
       <!-- 第二行：所属项目快速下拉 -->
-      <div class="flex items-center gap-1.5">
+      <div class="filter-row">
         <n-select
           v-model:value="selectedProject"
           size="small"
@@ -45,29 +43,26 @@
           @click="resetAllFilters"
           title="重置全部筛选"
         >
-          <RotateCcw class="w-3.5 h-3.5 text-slate-400" />
+          <RotateCcw class="icon-small text-slate-400" />
         </n-button>
       </div>
 
       <!-- 统计指标与提示 -->
-      <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 px-0.5 pt-0.5">
-        <span>已匹配: <b class="text-teal-400">{{ filteredTasks.length }}</b> / {{ totalTasksCount }} 个任务</span>
-        <span class="text-slate-500">双击定位 · 右键操作</span>
+      <div class="filter-stats">
+        <span>已匹配: <b class="highlight-num">{{ filteredTasks.length }}</b> / {{ totalTasksCount }} 个任务</span>
+        <span class="tip-text">双击定位 · 右键操作</span>
       </div>
     </div>
 
     <!-- 2. 任务卡片列表 -->
-    <div class="flex-1 overflow-y-auto p-2.5 space-y-1.5 custom-scrollbar">
+    <div class="task-list-container custom-scrollbar">
       <!-- 空状态 -->
-      <div
-        v-if="filteredTasks.length === 0"
-        class="h-64 flex flex-col items-center justify-center text-center p-6"
-      >
-        <Layers class="w-10 h-10 text-slate-600 mb-3" />
-        <p class="text-xs font-medium text-slate-300">
+      <div v-if="filteredTasks.length === 0" class="empty-state">
+        <Layers class="empty-icon" />
+        <p class="empty-title">
           {{ totalTasksCount > 0 ? `当前筛选条件下暂无任务 (已加载 ${totalTasksCount} 个)` : "工作区内暂无任务" }}
         </p>
-        <p class="text-[11px] text-slate-500 mt-1">
+        <p class="empty-subtitle">
           {{ totalTasksCount > 0 ? "年份或项目过滤排除了任务" : "可点击右上角新建任务创建" }}
         </p>
         <n-button
@@ -75,7 +70,7 @@
           size="small"
           type="primary"
           secondary
-          class="mt-3.5"
+          class="empty-btn"
           @click="resetAllFilters"
         >
           重置全部筛选条件
@@ -89,75 +84,76 @@
         @click="$emit('select-task', idx)"
         @dblclick="$emit('open-in-explorer', task.fullPath)"
         @contextmenu.prevent.stop="$emit('task-contextmenu', $event, task)"
-        class="p-2.5 rounded-xl border transition-all duration-150 cursor-pointer flex items-center justify-between gap-3 group relative select-none"
-        :class="focusedTaskIndex === idx
-          ? 'bg-teal-950/40 border-teal-500/70 shadow-lg shadow-teal-950/40 ring-1 ring-teal-500/30 text-white'
-          : 'bg-white/[0.02] hover:bg-white/[0.05] border-white/5 text-slate-300'"
+        class="task-card"
+        :class="{ 'is-focused': focusedTaskIndex === idx }"
       >
         <!-- 聚焦微光条 -->
-        <div
-          v-if="focusedTaskIndex === idx"
-          class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4/5 bg-teal-400 rounded-r shadow-md shadow-teal-400"
-        ></div>
+        <div v-if="focusedTaskIndex === idx" class="active-indicator" />
 
-        <div class="flex items-center gap-2.5 overflow-hidden flex-1 min-w-0 pl-1">
+        <div class="task-main">
           <!-- 状态呼吸灯 -->
-          <div
-            class="w-2 h-2 rounded-full flex-shrink-0"
-            :class="task.status === 'archived'
-              ? 'bg-slate-500'
-              : (task.status === 'suspended' ? 'bg-amber-400' : 'bg-teal-400 animate-pulse')"
-          ></div>
+          <span
+            class="status-dot"
+            :class="getStatusDotClass(task.status)"
+          />
 
-          <div class="min-w-0 flex-1">
-            <div class="flex items-center gap-1.5 mb-0.5">
-              <span class="px-1.5 py-0.2 rounded text-[10px] font-mono flex-shrink-0 bg-white/10 text-slate-400">
+          <div class="task-meta">
+            <!-- 标签行 -->
+            <div class="task-tags">
+              <n-tag size="tiny" :bordered="false" class="meta-tag">
                 {{ task.year }}
-              </span>
-              <span
+              </n-tag>
+              <n-tag
                 v-if="task.project"
-                class="px-1.5 py-0.2 rounded text-[10px] font-mono flex-shrink-0 bg-teal-950/60 text-teal-300 border border-teal-800/50 font-bold"
+                size="tiny"
+                type="info"
+                :bordered="false"
+                class="meta-tag project-tag"
               >
                 {{ task.project }}
-              </span>
-              <span class="text-[10px] text-slate-500 font-mono truncate">
+              </n-tag>
+              <span class="task-date">
                 {{ formatTaskDate(task.updatedAt || task.createdAt) }}
               </span>
             </div>
 
             <!-- 任务标题 -->
-            <h3
-              class="text-xs font-semibold leading-snug truncate transition"
-              :class="focusedTaskIndex === idx
-                ? 'text-teal-200 font-bold'
-                : 'text-slate-200 group-hover:text-teal-300'"
-              :title="task.title"
-            >
+            <h3 class="task-title" :title="task.title">
               {{ task.title }}
             </h3>
           </div>
         </div>
 
         <!-- SQL 标签徽章 -->
-        <div class="flex-shrink-0 flex items-center gap-1.5">
-          <span
+        <div class="task-badges">
+          <n-tag
             v-if="task.prodPendingCount > 0"
-            class="text-[10px] px-2 py-0.5 rounded-md font-mono font-bold flex items-center gap-1 shadow-sm bg-amber-950/70 text-amber-300 border border-amber-600/50"
+            size="tiny"
+            type="warning"
+            round
+            class="sql-tag-pending"
           >
-            <Database class="w-3 h-3 text-amber-400 flex-shrink-0" />
-            <span>{{ task.prodPendingCount }} 待发</span>
-          </span>
-          <span
+            <template #icon>
+              <Database class="icon-tiny text-amber-400" />
+            </template>
+            {{ task.prodPendingCount }} 待发
+          </n-tag>
+          <n-tag
             v-else-if="task.sqlCount > 0"
-            class="text-[10px] px-2 py-0.5 rounded-md font-mono flex items-center gap-1 bg-teal-950/40 text-teal-300/90 border border-teal-800/40"
+            size="tiny"
+            type="success"
+            :bordered="false"
+            class="sql-tag-normal"
           >
-            <Database class="w-3 h-3 text-teal-400 flex-shrink-0" />
-            <span>{{ task.sqlCount }} SQL</span>
-          </span>
-          <span v-else class="text-[10px] text-slate-500 font-mono opacity-50 hidden sm:inline">
+            <template #icon>
+              <Database class="icon-tiny text-teal-400" />
+            </template>
+            {{ task.sqlCount }} SQL
+          </n-tag>
+          <span v-else class="no-sql-hint">
             无SQL
           </span>
-          <ChevronRight class="w-3.5 h-3.5 text-slate-600 group-hover:text-teal-400 transition" />
+          <ChevronRight class="arrow-icon" />
         </div>
       </div>
     </div>
@@ -166,7 +162,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { NSelect, NButton } from 'naive-ui'
+import { NSelect, NButton, NTag } from 'naive-ui'
 import {
   Layers,
   Database,
@@ -218,6 +214,12 @@ function resetAllFilters() {
   onlyPendingSql.value = false
 }
 
+function getStatusDotClass(status) {
+  if (status === 'archived') return 'status-dot--archived'
+  if (status === 'suspended') return 'status-dot--suspended'
+  return 'status-dot--active'
+}
+
 function formatTaskDate(dateStr) {
   if (!dateStr) return ''
   try {
@@ -229,3 +231,273 @@ function formatTaskDate(dateStr) {
   }
 }
 </script>
+
+<style scoped>
+/* 侧边栏主体容器 */
+.sidebar-container {
+  width: 320px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  background-color: rgba(13, 17, 26, 0.95);
+  overflow: hidden;
+  user-select: none;
+}
+@media (min-width: 768px) {
+  .sidebar-container {
+    width: 384px;
+  }
+}
+
+/* 顶部过滤控制区 */
+.filter-header {
+  padding: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background-color: rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #94a3b8;
+  padding: 2px 2px 0 2px;
+}
+
+.highlight-num {
+  color: #2dd4bf;
+}
+
+.tip-text {
+  color: #64748b;
+}
+
+/* 任务列表滚动区 */
+.task-list-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* 空状态展示 */
+.empty-state {
+  height: 256px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+}
+
+.empty-icon {
+  width: 40px;
+  height: 40px;
+  color: #475569;
+  margin-bottom: 12px;
+}
+
+.empty-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: #cbd5e1;
+}
+
+.empty-subtitle {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.empty-btn {
+  margin-top: 14px;
+}
+
+/* 单个任务卡片项 */
+.task-card {
+  position: relative;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background-color: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  transition: all 0.15s ease-in-out;
+  color: #cbd5e1;
+}
+
+.task-card:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.task-card.is-focused {
+  background-color: rgba(19, 78, 74, 0.35);
+  border-color: rgba(45, 212, 191, 0.65);
+  box-shadow: 0 4px 16px rgba(13, 148, 136, 0.2);
+  color: #ffffff;
+}
+
+/* 激活指示光条 */
+.active-indicator {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 80%;
+  background-color: #2dd4bf;
+  border-radius: 0 4px 4px 0;
+  box-shadow: 0 0 8px rgba(45, 212, 191, 0.6);
+}
+
+/* 卡片主要内容与状态灯 */
+.task-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+  padding-left: 4px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.status-dot--active {
+  background-color: #2dd4bf;
+  box-shadow: 0 0 6px rgba(45, 212, 191, 0.6);
+  animation: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.status-dot--suspended {
+  background-color: #fbbf24;
+}
+
+.status-dot--archived {
+  background-color: #64748b;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.85); }
+}
+
+/* 卡片元信息 */
+.task-meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.task-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+
+.meta-tag {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.project-tag {
+  font-weight: 700;
+}
+
+.task-date {
+  font-size: 10px;
+  color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.task-title {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+  color: #e2e8f0;
+  transition: color 0.15s ease;
+}
+
+.task-card:hover .task-title {
+  color: #5eead4;
+}
+
+.task-card.is-focused .task-title {
+  color: #99f6e4;
+  font-weight: 700;
+}
+
+/* 右侧徽章状态 */
+.task-badges {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sql-tag-pending {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: bold;
+}
+
+.sql-tag-normal {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.no-sql-hint {
+  font-size: 10px;
+  color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  opacity: 0.6;
+}
+
+.arrow-icon {
+  width: 14px;
+  height: 14px;
+  color: #475569;
+  transition: color 0.15s ease;
+}
+
+.task-card:hover .arrow-icon {
+  color: #2dd4bf;
+}
+
+.icon-small {
+  width: 14px;
+  height: 14px;
+}
+
+.icon-tiny {
+  width: 12px;
+  height: 12px;
+}
+</style>

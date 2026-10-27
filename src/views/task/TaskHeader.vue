@@ -1,42 +1,40 @@
 <template>
-  <header
-    v-if="task"
-    class="p-4 border-b border-white/5 flex flex-col md:flex-row md:items-start justify-between gap-4 transition shadow-sm bg-[#121826]/90 flex-shrink-0 select-none"
-  >
-    <div class="space-y-1.5 flex-1 min-w-0">
+  <header v-if="task" class="task-header-container">
+    <div class="header-main">
       <!-- 属性标签行 -->
-      <div class="flex items-center gap-2 flex-wrap">
-        <n-tag size="small" type="default" :bordered="false" class="font-mono">
+      <div class="meta-row">
+        <n-tag size="small" type="default" :bordered="false" class="meta-tag">
           {{ task.year }} 年
         </n-tag>
-        <n-tag v-if="task.project" size="small" type="info" :bordered="false" class="font-bold">
+        <n-tag v-if="task.project" size="small" type="info" :bordered="false" class="meta-tag project-tag">
           {{ task.project }}
         </n-tag>
         <n-tag size="small" :type="getStatusTagType(task.status)" :bordered="false">
           {{ getStatusText(task.status) }}
         </n-tag>
-        <span class="text-[11px] text-slate-500 font-mono">
+        <span class="update-time">
           更新于: {{ formatDetailDate(task.updatedAt || task.createdAt) }}
         </span>
       </div>
 
-      <!-- 任务标题与路径提示 -->
-      <div class="flex items-center gap-2 group">
-        <h2 class="text-base md:text-lg font-bold text-white tracking-tight truncate" :title="task.title">
+      <!-- 任务标题 -->
+      <div class="title-row">
+        <h2 class="task-title" :title="task.title">
           {{ task.title }}
         </h2>
       </div>
 
-      <div class="flex items-center gap-2 text-[11px] font-mono text-slate-400 truncate">
-        <FolderOpen class="w-3.5 h-3.5 text-teal-400 flex-shrink-0" />
-        <span class="truncate max-w-xl select-all cursor-text text-slate-300" :title="task.fullPath">
+      <!-- 本地路径导航栏 -->
+      <div class="path-row">
+        <FolderOpen class="icon-small text-teal-400" />
+        <span class="path-text" :title="task.fullPath">
           {{ task.fullPath }}
         </span>
       </div>
     </div>
 
-    <!-- 工具操作栏 (仅保留资源管理器与快捷复制路径) -->
-    <div class="flex items-center gap-2 flex-shrink-0 flex-wrap">
+    <!-- 工具操作栏 (系统资源管理器与快捷复制) -->
+    <div class="header-actions">
       <n-button
         type="primary"
         secondary
@@ -45,7 +43,7 @@
         title="在系统资源管理器中打开此任务目录"
       >
         <template #icon>
-          <FolderOpen class="w-3.5 h-3.5" />
+          <FolderOpen class="icon-small" />
         </template>
         <span>打开资源管理器</span>
       </n-button>
@@ -57,7 +55,7 @@
         title="复制此任务的本地绝对路径"
       >
         <template #icon>
-          <Copy class="w-3.5 h-3.5" />
+          <Copy class="icon-small" />
         </template>
         <span>复制路径</span>
       </n-button>
@@ -104,3 +102,104 @@ function formatDetailDate(dateStr) {
   }
 }
 </script>
+
+<style scoped>
+.task-header-container {
+  padding: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  background-color: rgba(18, 24, 38, 0.9);
+  flex-shrink: 0;
+  user-select: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+@media (min-width: 768px) {
+  .task-header-container {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+}
+
+.header-main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.meta-tag {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.project-tag {
+  font-weight: 700;
+}
+
+.update-time {
+  font-size: 11px;
+  color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+
+.path-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #94a3b8;
+  overflow: hidden;
+}
+
+.path-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 600px;
+  user-select: all;
+  cursor: text;
+  color: #cbd5e1;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.icon-small {
+  width: 14px;
+  height: 14px;
+}
+</style>
