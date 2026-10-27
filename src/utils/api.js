@@ -1,6 +1,5 @@
 /**
- * 对 window.electronAPI 的统一安全封装层
- * 统一处理非 Electron 环境下的降级提示与异常捕获
+ * 【逻辑层】底层 Electron 原生 IPC 通信封装
  */
 
 export const electronApi = {
@@ -29,7 +28,6 @@ export const electronApi = {
   },
   saveTaskNotes: async (taskDir, notes) => {
     if (!window.electronAPI) return false
-    // 纯净序列化，防止 Vue 3 响应式 Proxy 跨进程结构化克隆失败
     const plainNotes = JSON.parse(JSON.stringify(notes))
     return await window.electronAPI.saveTaskNotes(taskDir, plainNotes)
   },

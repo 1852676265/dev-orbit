@@ -1,5 +1,8 @@
+/**
+ * 【逻辑层】交付与需求文档资产分类（Word/Excel/代码识别）、直接调用与删除逻辑
+ */
 import { ref } from 'vue'
-import { electronApi } from '../api/electronApi'
+import { electronApi } from './api'
 
 export function useTaskDocs(currentTask, emitToast, emitUpdated) {
   const currentDocs = ref([])

@@ -1,5 +1,8 @@
+/**
+ * 【逻辑层】SQL 脚本扫描、产线状态管理、新建与删除逻辑
+ */
 import { ref } from 'vue'
-import { electronApi } from '../api/electronApi'
+import { electronApi } from './api'
 
 export function useTaskSqls(currentTask, emitToast, emitUpdated) {
   const currentSqls = ref([])

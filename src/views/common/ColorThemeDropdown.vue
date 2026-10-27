@@ -148,7 +148,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ChevronDown, Check, Palette } from 'lucide-vue-next'
-import { COLOR_THEMES, getThemeConfig } from '../constants/colorThemes'
+import { COLOR_THEMES, getThemeConfig } from '@/utils/colorThemes'
 
 const props = defineProps({
   modelValue: {

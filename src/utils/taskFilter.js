@@ -1,3 +1,6 @@
+/**
+ * 【逻辑层】任务过滤、年度/项目筛选与上下键盘切换逻辑
+ */
 import { ref, computed, watch } from 'vue'
 
 export function useTaskFilter(props, onTaskSwitchCallback) {

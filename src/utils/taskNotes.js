@@ -1,5 +1,8 @@
+/**
+ * 【逻辑层】备忘录 CRUD、双向 Markdown 刷盘与核心参数正则提取逻辑
+ */
 import { ref, computed } from 'vue'
-import { electronApi } from '../api/electronApi'
+import { electronApi } from './api'
 
 export function useTaskNotes(currentTask, emitToast, emitUpdated) {
   const taskNotes = ref([])
@@ -179,13 +182,6 @@ export function useTaskNotes(currentTask, emitToast, emitUpdated) {
       const content = await electronApi.getTaskFile(taskPath, 'note')
       currentNoteContent.value = content || ''
       rawNoteContent.value = content || ''
-
-      if (taskNotes.value.length === 0 && rawNoteContent.value) {
-        let mdText = '# 开发备忘与接口联调参数\n\n'
-        for (const n of taskNotes.value) {
-          mdText += `### [${n.category || '配置参数'}] ${n.title || '无标题'}\n${n.content || ''}\n\n---\n\n`
-        }
-      }
     } catch (err) {
       console.error('加载任务备忘录失败', err)
       taskNotes.value = []

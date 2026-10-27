@@ -170,24 +170,24 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { electronApi } from '../api/electronApi'
+import { electronApi } from '@/utils/api'
 
 // 子组件引入
-import TaskSidebar from './task/TaskSidebar.vue'
-import TaskHeader from './task/TaskHeader.vue'
-import TaskNotesTab from './task/tabs/TaskNotesTab.vue'
-import TaskSqlTab from './task/tabs/TaskSqlTab.vue'
-import TaskDocsTab from './task/tabs/TaskDocsTab.vue'
-import TaskOverviewTab from './task/tabs/TaskOverviewTab.vue'
-import TaskContextMenu from './task/TaskContextMenu.vue'
-import FilePreviewModal from './FilePreviewModal.vue'
-import SqlMergeModal from './SqlMergeModal.vue'
+import TaskSidebar from './TaskSidebar.vue'
+import TaskHeader from './TaskHeader.vue'
+import TaskNotesTab from './tabs/TaskNotesTab.vue'
+import TaskSqlTab from './tabs/TaskSqlTab.vue'
+import TaskDocsTab from './tabs/TaskDocsTab.vue'
+import TaskOverviewTab from './tabs/TaskOverviewTab.vue'
+import TaskContextMenu from './TaskContextMenu.vue'
+import FilePreviewModal from '@/views/modals/FilePreviewModal.vue'
+import SqlMergeModal from '@/views/modals/SqlMergeModal.vue'
 
-// 业务 Composables 引入
-import { useTaskFilter } from '../composables/useTaskFilter'
-import { useTaskNotes } from '../composables/useTaskNotes'
-import { useTaskSqls } from '../composables/useTaskSqls'
-import { useTaskDocs } from '../composables/useTaskDocs'
+// 业务逻辑 Hooks 引入
+import { useTaskFilter } from '@/utils/taskFilter'
+import { useTaskNotes } from '@/utils/taskNotes'
+import { useTaskSqls } from '@/utils/taskSqls'
+import { useTaskDocs } from '@/utils/taskDocs'
 
 // 图标引入
 import {

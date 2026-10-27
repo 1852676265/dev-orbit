@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-150">
     <div class="app-modal-dialog bg-slate-900 border border-slate-700/80 w-full max-w-4xl h-[660px] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-100">
       
@@ -777,7 +777,7 @@ import {
   RefreshCw, Sparkles, Download, CheckCircle2,
   Key, Eye, EyeOff, Lock, ShieldCheck, AlertCircle
 } from 'lucide-vue-next'
-import ColorThemeDropdown from './ColorThemeDropdown.vue'
+import ColorThemeDropdown from '@/views/common/ColorThemeDropdown.vue'
 
 const props = defineProps({
   tasks: {

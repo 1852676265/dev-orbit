@@ -333,7 +333,7 @@ import {
   Palette, Sparkles, Layers, Image as ImageIcon,
   Upload, Trash2, Sliders, RotateCcw, Check, X
 } from 'lucide-vue-next'
-import ColorThemeDropdown from './ColorThemeDropdown.vue'
+import ColorThemeDropdown from '@/views/common/ColorThemeDropdown.vue'
 
 const emit = defineEmits(['update-theme', 'toast'])
 

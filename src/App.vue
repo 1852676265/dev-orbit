@@ -312,16 +312,17 @@ import {
   Eye, EyeOff, RefreshCw, Database
 } from 'lucide-vue-next'
 
-import TaskBoard from './components/TaskBoard.vue'
-import QuickNotesView from './components/QuickNotesView.vue'
-import ServerCredentialsView from './components/ServerCredentialsView.vue'
-import NewTaskModal from './components/NewTaskModal.vue'
-import TaskDetailModal from './components/TaskDetailModal.vue'
-import GlobalSearchModal from './components/GlobalSearchModal.vue'
-import ThemeModal from './components/ThemeModal.vue'
-import SettingsModal from './components/SettingsModal.vue'
-import UpdateCenterModal from './components/UpdateCenterModal.vue'
-import Toast from './components/Toast.vue'
+// 视图层 UI 组件引入
+import TaskBoard from '@/views/task/TaskBoard.vue'
+import QuickNotesView from '@/views/notes/QuickNotesView.vue'
+import ServerCredentialsView from '@/views/server/ServerCredentialsView.vue'
+import NewTaskModal from '@/views/modals/NewTaskModal.vue'
+import TaskDetailModal from '@/views/modals/TaskDetailModal.vue'
+import GlobalSearchModal from '@/views/modals/GlobalSearchModal.vue'
+import ThemeModal from '@/views/modals/ThemeModal.vue'
+import SettingsModal from '@/views/modals/SettingsModal.vue'
+import UpdateCenterModal from '@/views/modals/UpdateCenterModal.vue'
+import Toast from '@/views/common/Toast.vue'
 
 const currentView = ref('tasks')
 const workspacePath = ref('')
