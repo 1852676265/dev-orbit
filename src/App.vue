@@ -19,101 +19,102 @@
     ></div>
 
     <!-- ===================================================================== -->
-    <!-- 全局架构一：左侧 54px 极窄神经轨 (Neural Rail - 优雅毛玻璃)            -->
+    <!-- 全局架构一：左侧 54px 极窄神经轨 (采用 Naive UI 组件化规范)             -->
     <!-- ===================================================================== -->
     <aside
       class="w-14 border-r border-white/10 flex flex-col items-center py-3.5 flex-shrink-0 z-30 space-y-4 backdrop-blur-2xl transition-all duration-300"
       style="background: rgba(11, 14, 23, 0.78); box-shadow: 4px 0 24px rgba(0, 0, 0, 0.45);"
     >
       <!-- 神经轨 Logo (DO / DevOrbit) -->
-      <div
-        class="w-9 h-9 rounded-xl bg-gradient-to-tr from-teal-500 via-emerald-500 to-cyan-500 flex items-center justify-center font-bold text-slate-950 shadow-md shadow-emerald-950/50 cursor-pointer transition hover:scale-105"
+      <n-avatar
+        round
+        :size="36"
+        class="bg-gradient-to-tr from-teal-500 via-emerald-500 to-cyan-500 text-slate-950 font-mono font-black text-xs cursor-pointer shadow-md shadow-emerald-950/50"
         title="DevOrbit 开发者星轨 v1.3"
       >
-        <span class="font-mono text-xs font-black tracking-tighter">DO</span>
-      </div>
+        DO
+      </n-avatar>
 
-      <div class="w-6 border-t border-white/10"></div>
+      <n-divider class="my-1 w-6 opacity-20" />
 
       <!-- 核心视图切换主按钮组 (任务 / 随手记 / 服务器) -->
-      <div class="flex-1 flex flex-col space-y-2.5">
+      <div class="flex-1 flex flex-col space-y-3 items-center">
         <!-- 1. 开发任务工作台 -->
-        <button
-          @click="currentView = 'tasks'"
-          class="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 relative group"
-          :class="currentView === 'tasks'
-            ? 'bg-teal-500/25 text-teal-300 border border-teal-500/40 shadow-lg shadow-teal-950/60 ring-1 ring-teal-500/30'
-            : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'"
-          title="开发任务中枢与 SQL 上线工作台"
-        >
-          <Layers class="w-4 h-4" />
-          
-          <!-- 待发 SQL 呼吸红点 -->
-          <span
-            v-if="totalPendingProdSqls > 0"
-            class="absolute top-1 right-1 w-2 h-2 rounded-full bg-amber-400 animate-ping"
-          ></span>
-          <span
-            v-if="totalPendingProdSqls > 0"
-            class="absolute top-1 right-1 w-2 h-2 rounded-full bg-amber-400"
-          ></span>
-
-          <!-- Tooltip 浮动说明 -->
-          <span class="absolute left-13 px-2.5 py-1 rounded-lg bg-slate-950/95 border border-slate-700/80 text-xs text-slate-100 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none z-50 shadow-2xl font-mono">
-            开发任务中枢 ({{ tasks.length }}) · {{ totalPendingProdSqls }} 待发 SQL
-          </span>
-        </button>
+        <n-tooltip placement="right" trigger="hover">
+          <template #trigger>
+            <n-badge :dot="totalPendingProdSqls > 0" type="warning" :offset="[-2, 2]">
+              <n-button
+                quaternary
+                size="medium"
+                :type="currentView === 'tasks' ? 'primary' : 'default'"
+                :class="currentView === 'tasks' ? 'bg-teal-500/20 text-teal-300 ring-1 ring-teal-500/40' : 'text-slate-400'"
+                @click="currentView = 'tasks'"
+              >
+                <template #icon>
+                  <Layers class="w-4 h-4" />
+                </template>
+              </n-button>
+            </n-badge>
+          </template>
+          开发任务中枢 ({{ tasks.length }}) · {{ totalPendingProdSqls }} 待发 SQL
+        </n-tooltip>
 
         <!-- 2. 随手记 & 常用命令军火库 -->
-        <button
-          @click="currentView = 'notes'"
-          class="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 relative group"
-          :class="currentView === 'notes'
-            ? 'bg-teal-500/25 text-teal-300 border border-teal-500/40 shadow-lg shadow-teal-950/60 ring-1 ring-teal-500/30'
-            : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'"
-          title="随手记 & 常用命令军火库"
-        >
-          <BookMarked class="w-4 h-4" />
-          <span class="absolute left-13 px-2.5 py-1 rounded-lg bg-slate-950/95 border border-slate-700/80 text-xs text-slate-100 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none z-50 shadow-2xl font-mono">
-            随手记 & 常用命令军火库
-          </span>
-        </button>
+        <n-tooltip placement="right" trigger="hover">
+          <template #trigger>
+            <n-button
+              quaternary
+              size="medium"
+              :type="currentView === 'notes' ? 'primary' : 'default'"
+              :class="currentView === 'notes' ? 'bg-teal-500/20 text-teal-300 ring-1 ring-teal-500/40' : 'text-slate-400'"
+              @click="currentView = 'notes'"
+            >
+              <template #icon>
+                <BookMarked class="w-4 h-4" />
+              </template>
+            </n-button>
+          </template>
+          随手记 & 常用命令军火库
+        </n-tooltip>
 
         <!-- 3. 服务器矩阵与凭据速查 -->
-        <button
-          @click="currentView = 'servers'"
-          class="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 relative group"
-          :class="currentView === 'servers'
-            ? 'bg-teal-500/25 text-teal-300 border border-teal-500/40 shadow-lg shadow-teal-950/60 ring-1 ring-teal-500/30'
-            : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'"
-          title="服务器矩阵与 SVN 凭据速查"
-        >
-          <Server class="w-4 h-4" />
-          <span class="absolute left-13 px-2.5 py-1 rounded-lg bg-slate-950/95 border border-slate-700/80 text-xs text-slate-100 whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none z-50 shadow-2xl font-mono">
-            服务器与凭据速查 (SVN Word)
-          </span>
-        </button>
+        <n-tooltip placement="right" trigger="hover">
+          <template #trigger>
+            <n-button
+              quaternary
+              size="medium"
+              :type="currentView === 'servers' ? 'primary' : 'default'"
+              :class="currentView === 'servers' ? 'bg-teal-500/20 text-teal-300 ring-1 ring-teal-500/40' : 'text-slate-400'"
+              @click="currentView = 'servers'"
+            >
+              <template #icon>
+                <Server class="w-4 h-4" />
+              </template>
+            </n-button>
+          </template>
+          服务器矩阵与 SVN 凭据速查
+        </n-tooltip>
       </div>
 
       <!-- 神经轨底部功能：外观、设置、工作区心跳指示灯 -->
       <div class="flex flex-col items-center space-y-2.5">
-        <!-- 外观与主题 -->
-        <button
-          @click="openThemeModal"
-          class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-teal-400 hover:bg-white/5 transition"
-          title="个性化外观与自定义壁纸 (🎨)"
-        >
-          <Palette class="w-4 h-4" />
-        </button>
+        <n-tooltip placement="right" trigger="hover">
+          <template #trigger>
+            <n-button quaternary size="small" @click="openThemeModal" class="text-slate-400 hover:text-teal-400">
+              <template #icon><Palette class="w-4 h-4" /></template>
+            </n-button>
+          </template>
+          个性化外观与自定义壁纸
+        </n-tooltip>
 
-        <!-- 系统设置中心 -->
-        <button
-          @click="openSettingsModal"
-          class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-teal-400 hover:bg-white/5 transition"
-          title="系统设置中心 (工作区、开发工具、路线图)"
-        >
-          <Settings class="w-4 h-4" />
-        </button>
+        <n-tooltip placement="right" trigger="hover">
+          <template #trigger>
+            <n-button quaternary size="small" @click="openSettingsModal" class="text-slate-400 hover:text-teal-400">
+              <template #icon><Settings class="w-4 h-4" /></template>
+            </n-button>
+          </template>
+          系统设置中心
+        </n-tooltip>
 
         <!-- 工作区在线心跳指示灯 -->
         <div
@@ -128,18 +129,16 @@
     <!-- ===================================================================== -->
     <div class="flex-1 flex flex-col overflow-hidden relative z-10 bg-transparent">
 
-      <!-- 1. 顶层 Omni-Bar 流光状态条 (半透毛玻璃) -->
+      <!-- 1. 顶层 Omni-Bar 流光状态条 (采用 Naive UI 组件化) -->
       <header
         class="h-12 border-b border-white/10 px-5 flex items-center justify-between flex-shrink-0 z-20 backdrop-blur-xl"
         style="background: rgba(13, 17, 26, 0.72);"
       >
         <!-- 模块标识与工作区路径 -->
         <div class="flex items-center gap-3">
-          <span
-            class="px-2.5 py-0.5 rounded-md font-mono text-[11px] font-bold border transition-colors shadow-sm bg-teal-950/70 text-teal-300 border-teal-700/60"
-          >
+          <n-tag type="primary" size="small" :bordered="false" class="font-mono font-bold">
             {{ currentViewTitle.badge }}
-          </span>
+          </n-tag>
 
           <span class="text-xs font-semibold text-slate-200">
             {{ currentViewTitle.desc }}
@@ -148,59 +147,75 @@
           <span class="text-slate-500 opacity-40">|</span>
 
           <!-- 当前工作区目录 (点击可更换) -->
-          <div
+          <n-button
+            size="small"
+            quaternary
             @click="changeWorkspace"
-            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs cursor-pointer max-w-[280px] transition group border border-transparent hover:border-slate-700 hover:bg-white/5 text-slate-400 hover:text-slate-200"
+            class="font-mono text-xs text-slate-400"
             title="点击更换工作区根目录"
           >
-            <FolderGit2 class="w-3.5 h-3.5 text-teal-400 flex-shrink-0" />
-            <span class="truncate font-mono text-[11px]">{{ workspacePath || '选择工作区' }}</span>
-          </div>
+            <template #icon>
+              <FolderGit2 class="w-3.5 h-3.5 text-teal-400" />
+            </template>
+            <span>{{ workspacePath || '选择工作区' }}</span>
+          </n-button>
         </div>
 
         <!-- 右侧：待发 SQL 胶囊、极速搜索、更新中心与沉浸模式 -->
         <div class="flex items-center gap-2.5 text-xs">
-          <!-- 待发 SQL 预警胶囊 -->
-          <div
+          <!-- 待发 SQL 预警标签 -->
+          <n-tag
             v-if="totalPendingProdSqls > 0"
-            class="px-2.5 py-1 rounded-full font-mono text-[11px] font-bold flex items-center gap-1.5 border shadow-sm bg-amber-950/70 text-amber-300 border-amber-700/60"
+            type="warning"
+            size="small"
+            class="font-mono font-bold"
           >
-            <Database class="w-3 h-3 text-amber-400 flex-shrink-0" />
-            <span>{{ totalPendingProdSqls }} 份产线 SQL 待发布</span>
-          </div>
+            <template #icon>
+              <Database class="w-3 h-3 text-amber-400" />
+            </template>
+            {{ totalPendingProdSqls }} 份产线 SQL 待发布
+          </n-tag>
 
           <!-- 全局搜索入口 (Ctrl+K) -->
-          <button
+          <n-button
+            size="small"
+            secondary
             @click="openSearchModal"
-            class="flex items-center gap-2 px-3 py-1 rounded-xl text-xs font-mono transition border bg-black/40 hover:bg-white/5 text-slate-300 border-white/10"
             title="全局搜索任务、SQL与命令 (快捷键 Ctrl+K)"
           >
-            <Search class="w-3.5 h-3.5 text-teal-400 opacity-80" />
+            <template #icon>
+              <Search class="w-3.5 h-3.5 text-teal-400" />
+            </template>
             <span>全局搜索...</span>
-            <kbd class="px-1.5 py-0.2 text-[10px] rounded bg-black/40 border border-white/10 opacity-70">Ctrl K</kbd>
-          </button>
+            <kbd class="ml-1.5 px-1 py-0.2 text-[10px] rounded bg-black/40 border border-white/10 opacity-70">Ctrl K</kbd>
+          </n-button>
 
           <!-- DBX 同款无感更新中心 -->
-          <button
+          <n-button
+            size="small"
+            type="primary"
+            secondary
             @click="openUpdateCenter"
-            class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-mono font-bold transition border shadow-sm bg-teal-950/80 text-teal-300 border-teal-700/70 hover:bg-teal-900/80"
             title="打开更新中心 (DBX 模式在线自动更新)"
           >
-            <RefreshCw class="w-3 h-3 text-teal-400" />
+            <template #icon>
+              <RefreshCw class="w-3 h-3 text-teal-400" />
+            </template>
             <span>更新中心</span>
-          </button>
+          </n-button>
 
           <!-- 一键沉浸壁纸模式 -->
-          <button
+          <n-button
+            size="small"
+            :type="isZenMode ? 'primary' : 'default'"
+            quaternary
             @click="toggleZenMode"
-            class="p-1.5 rounded-xl border transition"
-            :class="isZenMode
-              ? 'bg-teal-950 text-teal-300 border-teal-600'
-              : 'bg-black/40 text-slate-400 border-white/10 hover:text-slate-200'"
             title="沉浸壁纸模式 (隐藏卡片观赏背景，按 Esc 退出)"
           >
-            <Eye class="w-3.5 h-3.5" />
-          </button>
+            <template #icon>
+              <Eye class="w-3.5 h-3.5" />
+            </template>
+          </n-button>
         </div>
       </header>
 
@@ -306,7 +321,16 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { NConfigProvider, darkTheme } from 'naive-ui'
+import {
+  NConfigProvider,
+  darkTheme,
+  NButton,
+  NTooltip,
+  NBadge,
+  NDivider,
+  NTag,
+  NAvatar
+} from 'naive-ui'
 import {
   Layers, BookMarked, Server, Search, FolderGit2, Settings, Palette,
   Eye, EyeOff, RefreshCw, Database

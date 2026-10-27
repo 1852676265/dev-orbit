@@ -30,29 +30,59 @@
           @copy-path="copyTaskPath"
         />
 
-        <!-- 标签式工作区 (Naive UI 风格现代化选项卡) -->
-        <div class="h-10 px-4 border-b border-white/5 flex items-center justify-between bg-[#0f1420]/80 flex-shrink-0 select-none">
-          <div class="flex items-center gap-1.5 h-full">
-            <button
-              v-for="tab in workspaceTabs"
-              :key="tab.id"
-              @click="switchWorkspaceTab(tab.id)"
-              class="h-full px-3.5 flex items-center gap-2 text-xs font-medium transition-all relative border-b-2 cursor-pointer"
-              :class="activeWorkspaceTab === tab.id
-                ? 'border-teal-400 text-teal-300 font-bold bg-white/[0.03]'
-                : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-white/[0.02]'"
-            >
-              <component :is="tab.icon" class="w-3.5 h-3.5" :class="tab.iconColor" />
-              <span>{{ tab.label }}</span>
-              <span
-                v-if="tab.badge !== undefined"
-                class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold"
-                :class="tab.badgeClass"
-              >
-                {{ tab.badge }}
-              </span>
-            </button>
-          </div>
+        <!-- 标签式工作区 (采用 Naive UI 组件化 n-tabs) -->
+        <div class="px-4 border-b border-white/5 flex items-center justify-between bg-[#0f1420]/80 flex-shrink-0 select-none">
+          <n-tabs
+            :value="activeWorkspaceTab"
+            type="line"
+            size="small"
+            @update:value="switchWorkspaceTab"
+          >
+            <n-tab name="notes">
+              <div class="flex items-center gap-1.5 py-1">
+                <StickyNote class="w-3.5 h-3.5 text-teal-400" />
+                <span>开发备忘与联调参数</span>
+                <n-badge
+                  :value="notesState.taskNotes.value.length"
+                  :max="99"
+                  type="info"
+                  size="small"
+                />
+              </div>
+            </n-tab>
+            <n-tab name="sqls">
+              <div class="flex items-center gap-1.5 py-1">
+                <Database class="w-3.5 h-3.5 text-amber-400" />
+                <span>上线 SQL 资产</span>
+                <n-tag
+                  size="tiny"
+                  :type="currentTask.prodPendingCount > 0 ? 'warning' : 'default'"
+                  :bordered="false"
+                  class="font-mono font-bold"
+                >
+                  {{ currentTask.prodPendingCount > 0 ? `${currentTask.prodPendingCount} 待发` : `${sqlsState.currentSqls.value.length}` }}
+                </n-tag>
+              </div>
+            </n-tab>
+            <n-tab name="docs">
+              <div class="flex items-center gap-1.5 py-1">
+                <FolderKanban class="w-3.5 h-3.5 text-blue-400" />
+                <span>交付与需求文档</span>
+                <n-badge
+                  :value="docsState.currentDocs.value.length"
+                  :max="99"
+                  type="default"
+                  size="small"
+                />
+              </div>
+            </n-tab>
+            <n-tab name="overview">
+              <div class="flex items-center gap-1.5 py-1">
+                <LayoutDashboard class="w-3.5 h-3.5 text-slate-400" />
+                <span>全景看板</span>
+              </div>
+            </n-tab>
+          </n-tabs>
 
           <!-- 保存状态微提示 -->
           <div class="text-[11px] font-mono text-teal-400/90 flex items-center gap-1.5">
@@ -170,6 +200,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { NTabs, NTab, NTag, NBadge } from 'naive-ui'
 import { electronApi } from '@/utils/api'
 
 // 子组件引入

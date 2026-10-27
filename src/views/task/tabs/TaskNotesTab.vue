@@ -271,40 +271,51 @@
               </h4>
             </div>
 
-            <!-- 卡片操作按钮 -->
-            <div class="flex items-center gap-1 opacity-70 group-hover:opacity-100 transition">
-              <button
-                type="button"
+            <!-- 卡片操作按钮 (采用 Naive UI 组件化 n-button 与 n-popconfirm) -->
+            <div class="flex items-center gap-0.5 opacity-70 group-hover:opacity-100 transition">
+              <n-button
+                size="tiny"
+                quaternary
                 @click="notesState.togglePinNote(note)"
-                class="p-1 rounded text-slate-400 hover:text-amber-300 cursor-pointer"
                 :title="note.pinned ? '取消置顶' : '置顶此条'"
               >
-                <Pin class="w-3.5 h-3.5" :class="note.pinned ? 'text-amber-400 fill-amber-400' : ''" />
-              </button>
-              <button
-                type="button"
+                <template #icon>
+                  <Pin class="w-3.5 h-3.5" :class="note.pinned ? 'text-amber-400 fill-amber-400' : 'text-slate-400'" />
+                </template>
+              </n-button>
+              <n-button
+                size="tiny"
+                quaternary
                 @click="notesState.startEditNote(note)"
-                class="p-1 rounded text-slate-400 hover:text-teal-300 cursor-pointer"
                 title="编辑此备忘"
               >
-                <Pencil class="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
+                <template #icon><Pencil class="w-3.5 h-3.5 text-slate-400" /></template>
+              </n-button>
+              <n-button
+                size="tiny"
+                quaternary
                 @click="notesState.copyParamText(note.content, note.title)"
-                class="p-1 rounded text-slate-400 hover:text-white cursor-pointer"
                 title="复制卡片内容"
               >
-                <Copy class="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                @click="notesState.deleteNote(note.id)"
-                class="p-1 rounded text-slate-400 hover:text-rose-400 cursor-pointer"
-                title="删除备忘卡片"
+                <template #icon><Copy class="w-3.5 h-3.5 text-slate-400" /></template>
+              </n-button>
+              <n-popconfirm
+                @positive-click="notesState.deleteNote(note.id)"
+                positive-text="确认删除"
+                negative-text="取消"
               >
-                <Trash2 class="w-3.5 h-3.5" />
-              </button>
+                <template #trigger>
+                  <n-button
+                    size="tiny"
+                    quaternary
+                    type="error"
+                    title="删除备忘卡片"
+                  >
+                    <template #icon><Trash2 class="w-3.5 h-3.5" /></template>
+                  </n-button>
+                </template>
+                确认删除备忘 [{{ note.title }}] 吗？
+              </n-popconfirm>
             </div>
           </div>
 
@@ -379,7 +390,8 @@ import {
   NInput,
   NSelect,
   NCheckbox,
-  NModal
+  NModal,
+  NPopconfirm
 } from 'naive-ui'
 import {
   Sparkles,

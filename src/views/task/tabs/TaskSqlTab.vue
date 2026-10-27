@@ -92,70 +92,78 @@
           </span>
         </div>
 
-        <!-- 操作区 -->
+        <!-- 操作区 (采用 Naive UI 组件化 n-button 与 n-popconfirm) -->
         <div class="flex items-center gap-1.5 flex-shrink-0" @click.stop>
           <!-- 产线状态变更按钮 -->
-          <button
-            type="button"
+          <n-button
+            size="tiny"
+            :type="sql.prodReleased ? 'success' : 'warning'"
+            :secondary="sql.prodReleased"
+            class="font-mono font-bold"
             @click.stop="sqlsState.promptToggleProdStatus(sql)"
-            class="px-2 py-0.5 rounded text-[10px] font-mono transition flex items-center gap-1 cursor-pointer font-bold"
-            :class="sql.prodReleased
-              ? 'bg-teal-950/70 text-teal-300 border border-teal-700/60 hover:bg-teal-900/60'
-              : 'bg-amber-950/70 text-amber-300 border border-amber-600/60 animate-pulse hover:bg-amber-900/60'"
             :title="`当前状态: ${sql.prodReleased ? '已发' : '待发'} (点击确认变更)`"
           >
-            <span>产线: {{ sql.prodReleased ? '已发' : '待发' }}</span>
-          </button>
+            产线: {{ sql.prodReleased ? '已发' : '待发' }}
+          </n-button>
 
           <!-- 弹窗查看源码 (预览) -->
-          <button
-            type="button"
+          <n-button
+            size="tiny"
+            quaternary
             @click.stop="$emit('open-file', sql.filePath, sql.fileName, false)"
-            class="p-1 rounded text-slate-400 hover:text-teal-300 cursor-pointer"
             title="在软件弹框中查看 SQL"
           >
-            <Eye class="w-3.5 h-3.5" />
-          </button>
+            <template #icon><Eye class="w-3.5 h-3.5" /></template>
+          </n-button>
 
           <!-- 弹窗编辑源码 (编辑) -->
-          <button
-            type="button"
+          <n-button
+            size="tiny"
+            quaternary
             @click.stop="$emit('open-file', sql.filePath, sql.fileName, true)"
-            class="p-1 rounded text-slate-400 hover:text-amber-300 cursor-pointer"
             title="在软件弹框中直接编辑 SQL"
           >
-            <Pencil class="w-3.5 h-3.5" />
-          </button>
+            <template #icon><Pencil class="w-3.5 h-3.5 text-amber-400" /></template>
+          </n-button>
 
           <!-- 在资源管理器中定位 -->
-          <button
-            type="button"
+          <n-button
+            size="tiny"
+            quaternary
             @click.stop="$emit('show-in-folder', sql.filePath)"
-            class="p-1 rounded text-slate-400 hover:text-teal-300 cursor-pointer"
             title="在 Windows 资源管理器中定位"
           >
-            <FolderOpen class="w-3 h-3" />
-          </button>
+            <template #icon><FolderOpen class="w-3.5 h-3.5 text-blue-400" /></template>
+          </n-button>
 
           <!-- 复制 SQL 路径 -->
-          <button
-            type="button"
+          <n-button
+            size="tiny"
+            quaternary
             @click.stop="$emit('copy-path', sql.filePath)"
-            class="p-1 rounded text-slate-400 hover:text-white cursor-pointer"
             title="复制绝对路径"
           >
-            <Copy class="w-3 h-3" />
-          </button>
+            <template #icon><Copy class="w-3.5 h-3.5" /></template>
+          </n-button>
 
-          <!-- 删除 SQL 脚本 (移入回收站) -->
-          <button
-            type="button"
-            @click.stop="sqlsState.deleteSqlItem(sql)"
-            class="p-1 rounded text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
-            title="删除此 SQL (移入系统回收站)"
+          <!-- 删除 SQL 脚本 (使用 Naive UI n-popconfirm 气泡确认) -->
+          <n-popconfirm
+            @positive-click="sqlsState.deleteSqlItem(sql)"
+            positive-text="确认删除"
+            negative-text="取消"
           >
-            <Trash2 class="w-3 h-3" />
-          </button>
+            <template #trigger>
+              <n-button
+                size="tiny"
+                quaternary
+                type="error"
+                title="删除此 SQL (移入系统回收站)"
+              >
+                <template #icon><Trash2 class="w-3.5 h-3.5" /></template>
+              </n-button>
+            </template>
+            确认将 SQL 脚本 [{{ sql.fileName }}] 删除并移入 Windows 系统回收站吗？
+          </n-popconfirm>
         </div>
       </div>
     </div>
@@ -164,7 +172,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { NButton, NTag } from 'naive-ui'
+import { NButton, NTag, NPopconfirm } from 'naive-ui'
 import {
   Database,
   Sparkles,

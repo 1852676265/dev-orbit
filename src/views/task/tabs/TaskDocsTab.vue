@@ -48,62 +48,75 @@
           </div>
         </div>
 
-        <!-- 专用操作按钮组 -->
+        <!-- 专用操作按钮组 (采用 Naive UI 组件化) -->
         <div class="flex items-center gap-1.5 flex-shrink-0" @click.stop>
           <!-- Word 专用启动按钮 -->
-          <button
+          <n-button
             v-if="docsState.isWordFile(doc.fileName)"
-            type="button"
+            size="tiny"
+            type="info"
+            secondary
+            class="font-bold"
             @click.stop="docsState.openNativeDoc(doc.filePath)"
-            class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 border border-blue-500/40 transition flex items-center gap-1 cursor-pointer shadow-sm"
             title="使用本机 Microsoft Word 打开"
           >
-            <FileText class="w-3 h-3 text-blue-400" />
+            <template #icon><FileText class="w-3.5 h-3.5" /></template>
             <span>Word打开</span>
-          </button>
+          </n-button>
 
           <!-- Excel 专用启动按钮 -->
-          <button
+          <n-button
             v-else-if="docsState.isExcelFile(doc.fileName)"
-            type="button"
+            size="tiny"
+            type="success"
+            secondary
+            class="font-bold"
             @click.stop="docsState.openNativeDoc(doc.filePath)"
-            class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/40 transition flex items-center gap-1 cursor-pointer shadow-sm"
             title="使用本机 Microsoft Excel 打开"
           >
-            <Sheet class="w-3 h-3 text-emerald-400" />
+            <template #icon><Sheet class="w-3.5 h-3.5" /></template>
             <span>Excel打开</span>
-          </button>
+          </n-button>
 
           <!-- 其他通用打开 -->
-          <button
+          <n-button
             v-else
-            type="button"
+            size="tiny"
+            quaternary
             @click.stop="docsState.openNativeDoc(doc.filePath)"
-            class="p-1.5 rounded-lg text-slate-400 hover:text-teal-300 hover:bg-white/5 transition cursor-pointer"
             title="使用系统默认程序打开"
           >
-            <ExternalLink class="w-3.5 h-3.5" />
-          </button>
+            <template #icon><ExternalLink class="w-3.5 h-3.5" /></template>
+          </n-button>
 
           <!-- 资源管理器定位 -->
-          <button
-            type="button"
+          <n-button
+            size="tiny"
+            quaternary
             @click.stop="$emit('show-in-folder', doc.filePath)"
-            class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition cursor-pointer"
             title="在资源管理器中定位"
           >
-            <FolderOpen class="w-3.5 h-3.5" />
-          </button>
+            <template #icon><FolderOpen class="w-3.5 h-3.5" /></template>
+          </n-button>
 
-          <!-- 删除此文档 -->
-          <button
-            type="button"
-            @click.stop="docsState.deleteDocItem(doc)"
-            class="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition cursor-pointer"
-            title="删除该文档 (移入回收站)"
+          <!-- 删除此文档 (使用 Naive UI n-popconfirm 气泡确认) -->
+          <n-popconfirm
+            @positive-click="docsState.deleteDocItem(doc)"
+            positive-text="确认删除"
+            negative-text="取消"
           >
-            <Trash2 class="w-3.5 h-3.5" />
-          </button>
+            <template #trigger>
+              <n-button
+                size="tiny"
+                quaternary
+                type="error"
+                title="删除该文档 (移入回收站)"
+              >
+                <template #icon><Trash2 class="w-3.5 h-3.5" /></template>
+              </n-button>
+            </template>
+            确认将文档 [{{ doc.fileName }}] 删除并移入 Windows 系统回收站吗？
+          </n-popconfirm>
         </div>
       </div>
     </div>
@@ -111,6 +124,7 @@
 </template>
 
 <script setup>
+import { NButton, NPopconfirm } from 'naive-ui'
 import {
   FolderKanban,
   FileText,
