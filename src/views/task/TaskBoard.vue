@@ -3,62 +3,35 @@
     <!-- 主工作区：左侧边栏 (TaskSidebar) + 右侧行动舱 -->
     <div class="workspace-body">
       <!-- 1. 左侧任务边栏组件 -->
-      <TaskSidebar
-        v-model:selectedYear="selectedYear"
-        v-model:selectedProject="selectedProject"
-        v-model:onlyPendingSql="onlyPendingSql"
-        :years="props.years"
-        :project-list="projectList"
-        :filtered-tasks="filteredTasks"
-        :total-tasks-count="props.tasks.length"
-        :focused-task-index="focusedTaskIndex"
-        :current-task="currentTask"
-        @select-task="setFocusedTask"
-        @open-in-explorer="openInExplorer"
-        @task-contextmenu="openTaskContextMenu"
-        @project-contextmenu="openProjectContextMenu"
-      />
+      <TaskSidebar v-model:selectedYear="selectedYear" v-model:selectedProject="selectedProject"
+        v-model:onlyPendingSql="onlyPendingSql" :years="props.years" :project-list="projectList"
+        :filtered-tasks="filteredTasks" :total-tasks-count="props.tasks.length" :focused-task-index="focusedTaskIndex"
+        :current-task="currentTask" @select-task="setFocusedTask" @open-in-explorer="openInExplorer"
+        @task-contextmenu="openTaskContextMenu" @project-contextmenu="openProjectContextMenu" />
 
       <!-- 2. 右侧全息行动舱 -->
       <main v-if="currentTask" class="workspace-main">
         <!-- 任务头部组件 -->
-        <TaskHeader
-          :task="currentTask"
-          @open-explorer="openInExplorer"
-          @copy-path="copyTaskPath"
-        />
+        <TaskHeader :task="currentTask" @open-explorer="openInExplorer" @copy-path="copyTaskPath" />
 
         <!-- 标签式工作区 (采用 Naive UI 组件化 n-tabs) -->
         <div class="workspace-tabbar">
-          <n-tabs
-            :value="activeWorkspaceTab"
-            type="line"
-            size="small"
-            @update:value="switchWorkspaceTab"
-          >
+          <n-tabs :value="activeWorkspaceTab" type="line" size="small" @update:value="switchWorkspaceTab">
             <n-tab name="notes">
               <div class="tab-item-inner">
                 <StickyNote class="icon-small text-teal-400" />
                 <span>开发备忘与联调参数</span>
-                <n-badge
-                  :value="notesState.taskNotes.value.length"
-                  :max="99"
-                  type="info"
-                  size="small"
-                />
+                <n-badge :value="notesState.taskNotes.value.length" :max="99" type="info" size="small" />
               </div>
             </n-tab>
             <n-tab name="sqls">
               <div class="tab-item-inner">
                 <Database class="icon-small text-amber-400" />
                 <span>上线 SQL 资产</span>
-                <n-tag
-                  size="tiny"
-                  :type="currentTask.prodPendingCount > 0 ? 'warning' : 'default'"
-                  :bordered="false"
-                  class="tag-count"
-                >
-                  {{ currentTask.prodPendingCount > 0 ? `${currentTask.prodPendingCount} 待发` : `${sqlsState.currentSqls.value.length}` }}
+                <n-tag size="tiny" :type="currentTask.prodPendingCount > 0 ? 'warning' : 'default'" :bordered="false"
+                  class="tag-count">
+                  {{ currentTask.prodPendingCount > 0 ? `${currentTask.prodPendingCount} 待发` :
+                    `${sqlsState.currentSqls.value.length}` }}
                 </n-tag>
               </div>
             </n-tab>
@@ -66,12 +39,7 @@
               <div class="tab-item-inner">
                 <FolderKanban class="icon-small text-blue-400" />
                 <span>交付与需求文档</span>
-                <n-badge
-                  :value="docsState.currentDocs.value.length"
-                  :max="99"
-                  type="default"
-                  size="small"
-                />
+                <n-badge :value="docsState.currentDocs.value.length" :max="99" type="default" size="small" />
               </div>
             </n-tab>
           </n-tabs>
@@ -87,30 +55,17 @@
 
         <!-- 标签页主体内容区 -->
         <div class="tab-content-area">
-          <!-- Tab 1: 开发备忘与参数速查 -->
-          <TaskNotesTab
-            v-if="activeWorkspaceTab === 'notes'"
-            :notes-state="notesState"
-          />
-
-          <!-- Tab 2: 上线 SQL 脚本资产 -->
-          <TaskSqlTab
-            v-else-if="activeWorkspaceTab === 'sqls'"
-            :sqls-state="sqlsState"
-            @open-file="openFilePreview"
-            @show-in-folder="showInFolder"
-            @copy-path="copyTaskPath"
-            @sql-contextmenu="openSqlContextMenu"
-          />
 
           <!-- Tab 3: 需求与交付文档资产 -->
-          <TaskDocsTab
-            v-else-if="activeWorkspaceTab === 'docs'"
-            :docs-state="docsState"
-            @open-file="openFilePreview"
-            @show-in-folder="showInFolder"
-            @doc-contextmenu="openDocContextMenu"
-          />
+          <TaskDocsTab v-if="activeWorkspaceTab === 'docs'" :docs-state="docsState" @open-file="openFilePreview"
+            @show-in-folder="showInFolder" @doc-contextmenu="openDocContextMenu" />
+
+          <!-- Tab 2: 上线 SQL 脚本资产 -->
+          <TaskSqlTab v-else-if="activeWorkspaceTab === 'sqls'" :sqls-state="sqlsState" @open-file="openFilePreview"
+            @show-in-folder="showInFolder" @copy-path="copyTaskPath" @sql-contextmenu="openSqlContextMenu" />
+
+          <!-- Tab 1: 开发备忘与参数速查 -->
+          <TaskNotesTab v-else-if="activeWorkspaceTab === 'notes'" :notes-state="notesState" />
         </div>
       </main>
 
@@ -143,37 +98,48 @@
     </footer>
 
     <!-- 通用文件软件内弹窗编辑器 (免任何外部 IDEA/编辑器) -->
-    <FilePreviewModal
-      v-model:visible="filePreviewModal.visible"
-      :file-path="filePreviewModal.filePath"
-      :file-name="filePreviewModal.fileName"
-      :initial-edit="filePreviewModal.initialEdit"
-      @toast="(msg, type) => emit('toast', msg, type)"
-      @file-saved="handleFileSaved"
-    />
+    <FilePreviewModal v-model:visible="filePreviewModal.visible" :file-path="filePreviewModal.filePath"
+      :file-name="filePreviewModal.fileName" :initial-edit="filePreviewModal.initialEdit"
+      @toast="(msg, type) => emit('toast', msg, type)" @file-saved="handleFileSaved" />
 
     <!-- SQL 一键合并弹窗 -->
-    <SqlMergeModal
-      v-if="sqlsState.sqlMergeModalOpen.value"
-      :is-open="sqlsState.sqlMergeModalOpen.value"
-      :task="currentTask"
-      :sql-list="sqlsState.currentSqls.value"
-      @close="sqlsState.sqlMergeModalOpen.value = false"
-      @updated="emit('updated')"
-      @toast="(msg, type) => emit('toast', msg, type)"
-    />
+    <SqlMergeModal v-if="sqlsState.sqlMergeModalOpen.value" :is-open="sqlsState.sqlMergeModalOpen.value"
+      :task="currentTask" :sql-list="sqlsState.currentSqls.value" @close="sqlsState.sqlMergeModalOpen.value = false"
+      @updated="emit('updated')" @toast="(msg, type) => emit('toast', msg, type)" />
 
     <!-- 右键上下文菜单 -->
-    <TaskContextMenu
-      :menu="contextMenu"
-      @action="handleContextMenuAction"
-    />
+    <TaskContextMenu :menu="contextMenu" @action="handleContextMenuAction" />
+
+    <!-- 全局通用输入弹窗 (彻底替代 Electron 不支持的 window.prompt) -->
+    <n-modal
+      v-model:show="promptModal.show"
+      preset="card"
+      :title="promptModal.title"
+      style="width: 440px; max-width: 90vw;"
+      :segmented="{ content: 'soft', action: 'soft' }"
+    >
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <label style="font-size: 12px; color: #cbd5e1; font-weight: 500;">{{ promptModal.label }}</label>
+        <n-input
+          v-model:value="promptModal.value"
+          :placeholder="promptModal.placeholder"
+          autofocus
+          @keyup.enter="handlePromptConfirm"
+        />
+      </div>
+      <template #action>
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+          <n-button size="small" quaternary @click="promptModal.show = false">取消</n-button>
+          <n-button size="small" type="primary" :disabled="!promptModal.value.trim()" @click="handlePromptConfirm">确定</n-button>
+        </div>
+      </template>
+    </n-modal>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { NTabs, NTab, NTag, NBadge } from 'naive-ui'
+import { NTabs, NTab, NTag, NBadge, NModal, NInput, NButton } from 'naive-ui'
 import { electronApi } from '@/utils/api'
 
 // 子组件引入
@@ -283,7 +249,7 @@ async function switchWorkspaceTab(tabId) {
   activeWorkspaceTab.value = tabId
   try {
     localStorage.setItem('devorbit_active_tab', tabId)
-  } catch (e) {}
+  } catch (e) { }
 }
 
 // 4. 监听选中任务变动，联动刷新数据
@@ -324,7 +290,37 @@ async function handleFileSaved() {
   }
 }
 
-// 6. 右键菜单状态
+// 6. 通用输入弹窗状态 (替代 Electron 彻底不支持的 window.prompt)
+const promptModal = ref({
+  show: false,
+  title: '',
+  label: '',
+  placeholder: '',
+  value: '',
+  onConfirm: null
+})
+
+function openPromptModal({ title, label, placeholder = '', defaultValue = '', onConfirm }) {
+  promptModal.value = {
+    show: true,
+    title,
+    label,
+    placeholder,
+    value: defaultValue,
+    onConfirm
+  }
+}
+
+async function handlePromptConfirm() {
+  const cb = promptModal.value.onConfirm
+  const val = promptModal.value.value
+  promptModal.value.show = false
+  if (typeof cb === 'function') {
+    await cb(val)
+  }
+}
+
+// 7. 右键菜单状态
 const contextMenu = ref({
   visible: false,
   x: 0,
@@ -409,12 +405,19 @@ async function handleContextMenuAction(action, payload) {
     case 'change-project': {
       const task = payload
       const current = task.project || '常规项目'
-      const target = prompt(`修改任务 [${task.title}] 所属项目名称：`, current)
-      if (target && target.trim() && target.trim() !== current) {
-        await electronApi.updateTask(task.fullPath, { project: target.trim() })
-        emitUpdated()
-        emitToast(`项目归属已更新为: ${target.trim()}`, 'success')
-      }
+      openPromptModal({
+        title: '修改所属项目名称',
+        label: `修改任务 [${task.title}] 所属项目名称：`,
+        placeholder: '例如: MZ、移动端、财务系统',
+        defaultValue: current,
+        onConfirm: async (val) => {
+          if (val && val.trim() && val.trim() !== current) {
+            await electronApi.updateTask(task.fullPath, { project: val.trim() })
+            emitUpdated()
+            emitToast(`项目归属已更新为: ${val.trim()}`, 'success')
+          }
+        }
+      })
       break
     }
     case 'set-status': {
@@ -441,19 +444,26 @@ async function handleContextMenuAction(action, payload) {
     case 'rename-project': {
       const proj = payload
       const oldName = proj.name
-      const newName = prompt(`请输入项目 [${oldName}] 的新名称:`, oldName)
-      if (newName && newName.trim() && newName.trim() !== oldName) {
-        const cleanNew = newName.trim()
-        const targetTasks = props.tasks.filter(t => (t.project || '常规项目').trim() === oldName)
-        for (const t of targetTasks) {
-          await electronApi.updateTask(t.fullPath, { project: cleanNew })
+      openPromptModal({
+        title: '重命名项目',
+        label: `请输入项目 [${oldName}] 的新名称:`,
+        placeholder: '新项目名称',
+        defaultValue: oldName,
+        onConfirm: async (val) => {
+          if (val && val.trim() && val.trim() !== oldName) {
+            const cleanNew = val.trim()
+            const targetTasks = props.tasks.filter(t => (t.project || '常规项目').trim() === oldName)
+            for (const t of targetTasks) {
+              await electronApi.updateTask(t.fullPath, { project: cleanNew })
+            }
+            if (selectedProject.value === oldName) {
+              selectedProject.value = cleanNew
+            }
+            emitUpdated()
+            emitToast(`已将项目 [${oldName}] 重命名为: ${cleanNew}`, 'success')
+          }
         }
-        if (selectedProject.value === oldName) {
-          selectedProject.value = cleanNew
-        }
-        emitUpdated()
-        emitToast(`已将项目 [${oldName}] 重命名为: ${cleanNew}`, 'success')
-      }
+      })
       break
     }
     case 'delete-project': {
@@ -721,13 +731,16 @@ onUnmounted(() => {
   width: 5px;
   height: 5px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: rgba(20, 184, 166, 0.25);
   border-radius: 9999px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(20, 184, 166, 0.55);
 }

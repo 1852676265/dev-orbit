@@ -59,10 +59,9 @@ export function useTaskSqls(currentTask, emitToast, emitUpdated) {
     }
   }
 
-  async function createNewSqlFile() {
+  async function createNewSqlFile(name) {
     if (!currentTask.value) return
-    const name = prompt('请输入新 SQL 脚本文件名 (如: 02_create_table.sql)：', '')
-    if (!name || !name.trim()) return
+    if (!name || typeof name !== 'string' || !name.trim()) return
 
     let fileName = name.trim()
     if (!fileName.toLowerCase().endsWith('.sql')) fileName += '.sql'

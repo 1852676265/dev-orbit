@@ -42,7 +42,7 @@
         <n-button
           size="small"
           quaternary
-          @click="sqlsState.createNewSqlFile"
+          @click="openNewSqlModal"
         >
           <template #icon>
             <Plus class="icon-small text-teal-400" />
@@ -164,12 +164,55 @@
         </div>
       </div>
     </div>
+
+    <!-- 新建 SQL 脚本弹窗 (替代 Electron 彻底不支持的 window.prompt) -->
+    <n-modal
+      v-model:show="showNewSqlModal"
+      preset="card"
+      title="新建上线 SQL 脚本"
+      class="new-sql-modal"
+      style="width: 480px; max-width: 90vw;"
+      :segmented="{ content: 'soft', action: 'soft' }"
+    >
+      <div class="new-sql-form">
+        <label class="form-label">SQL 脚本名称</label>
+        <n-input
+          v-model:value="newSqlFileName"
+          placeholder="例如: 02_create_table.sql 或 03_init_data"
+          autofocus
+          @keyup.enter="handleCreateSql"
+        >
+          <template #prefix>
+            <Database class="icon-small text-amber-400" />
+          </template>
+        </n-input>
+        <p class="form-hint">
+          * 将自动生成在当前任务目录的 <code>/sql/</code> 下，若未输入 <code>.sql</code> 后缀将自动补全
+        </p>
+      </div>
+
+      <template #action>
+        <div class="modal-actions">
+          <n-button quaternary size="small" @click="showNewSqlModal = false">
+            取消
+          </n-button>
+          <n-button
+            type="primary"
+            size="small"
+            :disabled="!newSqlFileName.trim()"
+            @click="handleCreateSql"
+          >
+            确认创建
+          </n-button>
+        </div>
+      </template>
+    </n-modal>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { NButton, NTag, NPopconfirm } from 'naive-ui'
+import { ref, computed } from 'vue'
+import { NButton, NTag, NPopconfirm, NModal, NInput } from 'naive-ui'
 import {
   Database,
   Sparkles,
@@ -191,6 +234,21 @@ defineEmits(['open-file', 'show-in-folder', 'copy-path', 'sql-contextmenu'])
 const pendingCount = computed(() => {
   return props.sqlsState.currentSqls.value.filter(s => !s.prodReleased).length
 })
+
+const showNewSqlModal = ref(false)
+const newSqlFileName = ref('')
+
+function openNewSqlModal() {
+  newSqlFileName.value = ''
+  showNewSqlModal.value = true
+}
+
+async function handleCreateSql() {
+  const name = newSqlFileName.value.trim()
+  if (!name) return
+  showNewSqlModal.value = false
+  await props.sqlsState.createNewSqlFile(name)
+}
 </script>
 
 <style scoped>
@@ -379,5 +437,40 @@ const pendingCount = computed(() => {
 .icon-small {
   width: 14px;
   height: 14px;
+}
+
+/* 新建 SQL 弹窗表单样式 */
+.new-sql-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-label {
+  font-size: 12px;
+  color: #cbd5e1;
+  font-weight: 500;
+}
+
+.form-hint {
+  font-size: 11px;
+  color: #64748b;
+  margin: 2px 0 0 0;
+  line-height: 1.4;
+}
+
+.form-hint code {
+  color: #2dd4bf;
+  background-color: rgba(45, 212, 191, 0.1);
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
 }
 </style>
