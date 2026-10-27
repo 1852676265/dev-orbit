@@ -1,18 +1,11 @@
 <template>
-  <transition
-    enter-active-class="transform ease-out duration-200 transition"
-    enter-from-class="translate-y-2 opacity-0 sm:translate-y-0 sm:translate-x-2"
-    enter-to-class="translate-y-0 opacity-100 sm:translate-x-0"
-    leave-active-class="transition ease-in duration-150"
-    leave-from-class="opacity-100"
-    leave-to-class="opacity-0"
-  >
+  <transition name="toast-fade">
     <div
       v-if="visible"
-      class="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-lg shadow-xl text-sm font-medium border"
-      :class="typeClasses"
+      class="toast-container"
+      :class="`toast--${type}`"
     >
-      <component :is="iconComponent" class="w-4 h-4 flex-shrink-0" />
+      <component :is="iconComponent" class="toast-icon" />
       <span>{{ message }}</span>
     </div>
   </transition>
@@ -33,12 +26,6 @@ const iconComponent = computed(() => {
   return Info
 })
 
-const typeClasses = computed(() => {
-  if (type.value === 'success') return 'bg-emerald-950/90 text-emerald-200 border-emerald-700/50'
-  if (type.value === 'error') return 'bg-rose-950/90 text-rose-200 border-rose-700/50'
-  return 'bg-slate-800 text-slate-200 border-slate-700'
-})
-
 function show(msg, t = 'success', duration = 2500) {
   message.value = msg
   type.value = t
@@ -51,3 +38,62 @@ function show(msg, t = 'success', duration = 2500) {
 
 defineExpose({ show })
 </script>
+
+<style scoped>
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+  font-size: 13px;
+  font-weight: 500;
+  border-width: 1px;
+  border-style: solid;
+  user-select: none;
+}
+
+.toast--success {
+  background-color: rgba(6, 78, 59, 0.95);
+  color: #a7f3d0;
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.toast--error {
+  background-color: rgba(136, 19, 55, 0.95);
+  color: #fecdd3;
+  border-color: rgba(244, 63, 94, 0.4);
+}
+
+.toast--info {
+  background-color: rgba(15, 23, 42, 0.95);
+  color: #e2e8f0;
+  border-color: rgba(100, 116, 139, 0.4);
+}
+
+.toast-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.toast-fade-enter-active,
+.toast-fade-leave-active {
+  transition: all 0.2s ease;
+}
+
+.toast-fade-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.toast-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+</style>

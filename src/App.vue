@@ -1,287 +1,269 @@
 <template>
   <n-config-provider :theme="darkTheme">
     <div
-      class="h-screen w-screen flex flex-row relative overflow-hidden font-sans select-none bg-[#090B10] text-slate-100"
+      class="app-container"
       data-theme-mode="dark"
       data-theme-accent="emerald"
     >
-    
-    <!-- 动态背景画布层 (支持自定义壁纸与系统预设渐变) -->
-    <div
-      class="absolute inset-0 z-0 pointer-events-none transition-all duration-700 bg-center bg-cover"
-      :style="backgroundStyle"
-    ></div>
+      <!-- 动态背景画布层 (支持自定义壁纸与系统预设渐变) -->
+      <div class="bg-canvas" :style="backgroundStyle" />
 
-    <!-- 遮罩层 (与【个性化外观设置】的背景暗度遮罩实时无缝联动) -->
-    <div
-      class="absolute inset-0 z-0 pointer-events-none transition-opacity duration-300"
-      :style="overlayStyle"
-    ></div>
+      <!-- 遮罩层 (与【个性化外观设置】的背景暗度遮罩实时无缝联动) -->
+      <div class="bg-overlay" :style="overlayStyle" />
 
-    <!-- ===================================================================== -->
-    <!-- 全局架构一：左侧 54px 极窄神经轨 (采用 Naive UI 组件化规范)             -->
-    <!-- ===================================================================== -->
-    <aside
-      class="w-14 border-r border-white/10 flex flex-col items-center py-3.5 flex-shrink-0 z-30 space-y-4 backdrop-blur-2xl transition-all duration-300"
-      style="background: rgba(11, 14, 23, 0.78); box-shadow: 4px 0 24px rgba(0, 0, 0, 0.45);"
-    >
-      <!-- 神经轨 Logo (DO / DevOrbit) -->
-      <n-avatar
-        round
-        :size="36"
-        class="bg-gradient-to-tr from-teal-500 via-emerald-500 to-cyan-500 text-slate-950 font-mono font-black text-xs cursor-pointer shadow-md shadow-emerald-950/50"
-        title="DevOrbit 开发者星轨 v1.3"
-      >
-        DO
-      </n-avatar>
+      <!-- ===================================================================== -->
+      <!-- 全局架构一：左侧 54px 极窄神经轨 (采用 Naive UI 组件化规范)             -->
+      <!-- ===================================================================== -->
+      <aside class="rail-sidebar">
+        <!-- 神经轨 Logo (DO / DevOrbit) -->
+        <n-avatar
+          round
+          :size="36"
+          class="rail-logo-avatar"
+          title="DevOrbit 开发者星轨 v1.3"
+        >
+          DO
+        </n-avatar>
 
-      <n-divider class="my-1 w-6 opacity-20" />
+        <n-divider class="rail-divider" />
 
-      <!-- 核心视图切换主按钮组 (任务 / 随手记 / 服务器) -->
-      <div class="flex-1 flex flex-col space-y-3 items-center">
-        <!-- 1. 开发任务工作台 -->
-        <n-tooltip placement="right" trigger="hover">
-          <template #trigger>
-            <n-badge :dot="totalPendingProdSqls > 0" type="warning" :offset="[-2, 2]">
+        <!-- 核心视图切换主按钮组 (任务 / 随手记 / 服务器) -->
+        <div class="view-switch-group">
+          <!-- 1. 开发任务工作台 -->
+          <n-tooltip placement="right" trigger="hover">
+            <template #trigger>
+              <n-badge :dot="totalPendingProdSqls > 0" type="warning" :offset="[-2, 2]">
+                <n-button
+                  quaternary
+                  size="medium"
+                  :type="currentView === 'tasks' ? 'primary' : 'default'"
+                  :class="{ 'is-active-btn': currentView === 'tasks' }"
+                  @click="currentView = 'tasks'"
+                >
+                  <template #icon>
+                    <Layers class="icon-nav" />
+                  </template>
+                </n-button>
+              </n-badge>
+            </template>
+            开发任务中枢 ({{ tasks.length }}) · {{ totalPendingProdSqls }} 待发 SQL
+          </n-tooltip>
+
+          <!-- 2. 随手记 & 常用命令军火库 -->
+          <n-tooltip placement="right" trigger="hover">
+            <template #trigger>
               <n-button
                 quaternary
                 size="medium"
-                :type="currentView === 'tasks' ? 'primary' : 'default'"
-                :class="currentView === 'tasks' ? 'bg-teal-500/20 text-teal-300 ring-1 ring-teal-500/40' : 'text-slate-400'"
-                @click="currentView = 'tasks'"
+                :type="currentView === 'notes' ? 'primary' : 'default'"
+                :class="{ 'is-active-btn': currentView === 'notes' }"
+                @click="currentView = 'notes'"
               >
                 <template #icon>
-                  <Layers class="w-4 h-4" />
+                  <BookMarked class="icon-nav" />
                 </template>
               </n-button>
-            </n-badge>
-          </template>
-          开发任务中枢 ({{ tasks.length }}) · {{ totalPendingProdSqls }} 待发 SQL
-        </n-tooltip>
+            </template>
+            随手记 & 常用命令军火库
+          </n-tooltip>
 
-        <!-- 2. 随手记 & 常用命令军火库 -->
-        <n-tooltip placement="right" trigger="hover">
-          <template #trigger>
+          <!-- 3. 服务器矩阵与凭据速查 -->
+          <n-tooltip placement="right" trigger="hover">
+            <template #trigger>
+              <n-button
+                quaternary
+                size="medium"
+                :type="currentView === 'servers' ? 'primary' : 'default'"
+                :class="{ 'is-active-btn': currentView === 'servers' }"
+                @click="currentView = 'servers'"
+              >
+                <template #icon>
+                  <Server class="icon-nav" />
+                </template>
+              </n-button>
+            </template>
+            服务器矩阵与 SVN 凭据速查
+          </n-tooltip>
+        </div>
+
+        <!-- 神经轨底部功能：外观、设置、工作区心跳指示灯 -->
+        <div class="rail-bottom-tools">
+          <n-tooltip placement="right" trigger="hover">
+            <template #trigger>
+              <n-button quaternary size="small" @click="openThemeModal" class="tool-btn">
+                <template #icon><Palette class="icon-nav" /></template>
+              </n-button>
+            </template>
+            个性化外观与自定义壁纸
+          </n-tooltip>
+
+          <n-tooltip placement="right" trigger="hover">
+            <template #trigger>
+              <n-button quaternary size="small" @click="openSettingsModal" class="tool-btn">
+                <template #icon><Settings class="icon-nav" /></template>
+              </n-button>
+            </template>
+            系统设置中心
+          </n-tooltip>
+
+          <!-- 工作区在线心跳指示灯 -->
+          <div
+            class="heartbeat-dot"
+            :title="`工作区在线: ${workspacePath}`"
+          />
+        </div>
+      </aside>
+
+      <!-- ===================================================================== -->
+      <!-- 右侧：全息矩阵主舞台 (通透架构，透出底层自定义壁纸)                      -->
+      <!-- ===================================================================== -->
+      <div class="main-stage-wrapper">
+        <!-- 1. 顶层 Omni-Bar 流光状态条 (采用 Naive UI 组件化) -->
+        <header class="omni-bar-header">
+          <!-- 模块标识与工作区路径 -->
+          <div class="header-left">
+            <n-tag type="primary" size="small" :bordered="false" class="font-mono font-bold">
+              {{ currentViewTitle.badge }}
+            </n-tag>
+
+            <span class="view-desc">
+              {{ currentViewTitle.desc }}
+            </span>
+
+            <span class="bar-divider">|</span>
+
+            <!-- 当前工作区目录 (点击可更换) -->
             <n-button
+              size="small"
               quaternary
-              size="medium"
-              :type="currentView === 'notes' ? 'primary' : 'default'"
-              :class="currentView === 'notes' ? 'bg-teal-500/20 text-teal-300 ring-1 ring-teal-500/40' : 'text-slate-400'"
-              @click="currentView = 'notes'"
+              @click="changeWorkspace"
+              class="workspace-path-btn"
+              title="点击更换工作区根目录"
             >
               <template #icon>
-                <BookMarked class="w-4 h-4" />
+                <FolderGit2 class="icon-small text-teal-400" />
               </template>
+              <span>{{ workspacePath || '选择工作区' }}</span>
             </n-button>
-          </template>
-          随手记 & 常用命令军火库
-        </n-tooltip>
+          </div>
 
-        <!-- 3. 服务器矩阵与凭据速查 -->
-        <n-tooltip placement="right" trigger="hover">
-          <template #trigger>
-            <n-button
-              quaternary
-              size="medium"
-              :type="currentView === 'servers' ? 'primary' : 'default'"
-              :class="currentView === 'servers' ? 'bg-teal-500/20 text-teal-300 ring-1 ring-teal-500/40' : 'text-slate-400'"
-              @click="currentView = 'servers'"
+          <!-- 右侧：待发 SQL 胶囊、极速搜索、更新中心与沉浸模式 -->
+          <div class="header-right">
+            <!-- 待发 SQL 预警标签 -->
+            <n-tag
+              v-if="totalPendingProdSqls > 0"
+              type="warning"
+              size="small"
+              class="font-mono font-bold"
             >
               <template #icon>
-                <Server class="w-4 h-4" />
+                <Database class="icon-tiny text-amber-400" />
+              </template>
+              {{ totalPendingProdSqls }} 份产线 SQL 待发布
+            </n-tag>
+
+            <!-- 全局搜索入口 (Ctrl+K) -->
+            <n-button
+              size="small"
+              secondary
+              @click="openSearchModal"
+              title="全局搜索任务、SQL与命令 (快捷键 Ctrl+K)"
+            >
+              <template #icon>
+                <Search class="icon-small text-teal-400" />
+              </template>
+              <span>全局搜索...</span>
+              <kbd class="shortcut-badge">Ctrl K</kbd>
+            </n-button>
+
+            <!-- DBX 同款无感更新中心 -->
+            <n-button
+              size="small"
+              type="primary"
+              secondary
+              @click="openUpdateCenter"
+              title="打开更新中心 (DBX 模式在线自动更新)"
+            >
+              <template #icon>
+                <RefreshCw class="icon-tiny text-teal-400" />
+              </template>
+              <span>更新中心</span>
+            </n-button>
+
+            <!-- 一键沉浸壁纸模式 -->
+            <n-button
+              size="small"
+              :type="isZenMode ? 'primary' : 'default'"
+              quaternary
+              @click="toggleZenMode"
+              title="沉浸壁纸模式 (隐藏卡片观赏背景，按 Esc 退出)"
+            >
+              <template #icon>
+                <Eye class="icon-small" />
               </template>
             </n-button>
-          </template>
-          服务器矩阵与 SVN 凭据速查
-        </n-tooltip>
+          </div>
+        </header>
+
+        <!-- 2. 主舞台区 (沉浸壁纸模式时淡出，平时通透悬浮) -->
+        <main
+          class="stage-content"
+          :class="{ 'is-zen': isZenMode }"
+        >
+          <TaskBoard
+            v-show="currentView === 'tasks'"
+            :tasks="tasks"
+            :years="years"
+            :is-light="false"
+            :card-opacity="currentTheme.overlayOpacity ?? 20"
+            :card-glass="true"
+            @open-new-task="openNewTaskModal"
+            @select-task="handleSelectTask"
+            @updated="loadTasks"
+            @toast="showToast"
+          />
+          <QuickNotesView
+            v-if="currentView === 'notes'"
+            :is-light="false"
+            @toast="showToast"
+          />
+          <ServerCredentialsView
+            v-if="currentView === 'servers'"
+            @toast="showToast"
+          />
+        </main>
+
+        <!-- 3. 底部全局极客状态条 (Status Bar) -->
+        <footer class="global-status-bar">
+          <div class="footer-left">
+            <span class="status-indicator-text">
+              <span class="status-pulse-dot" />
+              矩阵系统就绪
+            </span>
+            <span class="bar-divider">|</span>
+            <span class="tasks-loaded-text">当前共加载 {{ tasks.length }} 个任务资产</span>
+          </div>
+
+          <div class="footer-shortcuts">
+            <span>↑↓ 切换条目</span>
+            <span>↵ 打开详情</span>
+            <span>Ctrl+O 在IDE打开</span>
+            <span>Ctrl+E 资源管理器</span>
+            <span class="brand-version">DevOrbit v1.3.0</span>
+          </div>
+        </footer>
       </div>
 
-      <!-- 神经轨底部功能：外观、设置、工作区心跳指示灯 -->
-      <div class="flex flex-col items-center space-y-2.5">
-        <n-tooltip placement="right" trigger="hover">
-          <template #trigger>
-            <n-button quaternary size="small" @click="openThemeModal" class="text-slate-400 hover:text-teal-400">
-              <template #icon><Palette class="w-4 h-4" /></template>
-            </n-button>
-          </template>
-          个性化外观与自定义壁纸
-        </n-tooltip>
-
-        <n-tooltip placement="right" trigger="hover">
-          <template #trigger>
-            <n-button quaternary size="small" @click="openSettingsModal" class="text-slate-400 hover:text-teal-400">
-              <template #icon><Settings class="w-4 h-4" /></template>
-            </n-button>
-          </template>
-          系统设置中心
-        </n-tooltip>
-
-        <!-- 工作区在线心跳指示灯 -->
-        <div
-          class="w-2 h-2 rounded-full bg-teal-400 shadow-sm shadow-teal-400/80 animate-pulse mt-1"
-          :title="`工作区在线: ${workspacePath}`"
-        ></div>
+      <!-- 沉浸壁纸观赏提示浮条 -->
+      <div
+        v-if="isZenMode"
+        @click="toggleZenMode"
+        class="zen-floating-pill"
+        title="点击任意处或按 Esc 恢复工作台"
+      >
+        <EyeOff class="icon-small text-teal-400" />
+        <span>壁纸沉浸模式 · 点击屏幕或按 Esc 恢复</span>
       </div>
-    </aside>
-
-    <!-- ===================================================================== -->
-    <!-- 右侧：全息矩阵主舞台 (通透架构，透出底层自定义壁纸)                      -->
-    <!-- ===================================================================== -->
-    <div class="flex-1 flex flex-col overflow-hidden relative z-10 bg-transparent">
-
-      <!-- 1. 顶层 Omni-Bar 流光状态条 (采用 Naive UI 组件化) -->
-      <header
-        class="h-12 border-b border-white/10 px-5 flex items-center justify-between flex-shrink-0 z-20 backdrop-blur-xl"
-        style="background: rgba(13, 17, 26, 0.72);"
-      >
-        <!-- 模块标识与工作区路径 -->
-        <div class="flex items-center gap-3">
-          <n-tag type="primary" size="small" :bordered="false" class="font-mono font-bold">
-            {{ currentViewTitle.badge }}
-          </n-tag>
-
-          <span class="text-xs font-semibold text-slate-200">
-            {{ currentViewTitle.desc }}
-          </span>
-
-          <span class="text-slate-500 opacity-40">|</span>
-
-          <!-- 当前工作区目录 (点击可更换) -->
-          <n-button
-            size="small"
-            quaternary
-            @click="changeWorkspace"
-            class="font-mono text-xs text-slate-400"
-            title="点击更换工作区根目录"
-          >
-            <template #icon>
-              <FolderGit2 class="w-3.5 h-3.5 text-teal-400" />
-            </template>
-            <span>{{ workspacePath || '选择工作区' }}</span>
-          </n-button>
-        </div>
-
-        <!-- 右侧：待发 SQL 胶囊、极速搜索、更新中心与沉浸模式 -->
-        <div class="flex items-center gap-2.5 text-xs">
-          <!-- 待发 SQL 预警标签 -->
-          <n-tag
-            v-if="totalPendingProdSqls > 0"
-            type="warning"
-            size="small"
-            class="font-mono font-bold"
-          >
-            <template #icon>
-              <Database class="w-3 h-3 text-amber-400" />
-            </template>
-            {{ totalPendingProdSqls }} 份产线 SQL 待发布
-          </n-tag>
-
-          <!-- 全局搜索入口 (Ctrl+K) -->
-          <n-button
-            size="small"
-            secondary
-            @click="openSearchModal"
-            title="全局搜索任务、SQL与命令 (快捷键 Ctrl+K)"
-          >
-            <template #icon>
-              <Search class="w-3.5 h-3.5 text-teal-400" />
-            </template>
-            <span>全局搜索...</span>
-            <kbd class="ml-1.5 px-1 py-0.2 text-[10px] rounded bg-black/40 border border-white/10 opacity-70">Ctrl K</kbd>
-          </n-button>
-
-          <!-- DBX 同款无感更新中心 -->
-          <n-button
-            size="small"
-            type="primary"
-            secondary
-            @click="openUpdateCenter"
-            title="打开更新中心 (DBX 模式在线自动更新)"
-          >
-            <template #icon>
-              <RefreshCw class="w-3 h-3 text-teal-400" />
-            </template>
-            <span>更新中心</span>
-          </n-button>
-
-          <!-- 一键沉浸壁纸模式 -->
-          <n-button
-            size="small"
-            :type="isZenMode ? 'primary' : 'default'"
-            quaternary
-            @click="toggleZenMode"
-            title="沉浸壁纸模式 (隐藏卡片观赏背景，按 Esc 退出)"
-          >
-            <template #icon>
-              <Eye class="w-3.5 h-3.5" />
-            </template>
-          </n-button>
-        </div>
-      </header>
-
-      <!-- 2. 主舞台区 (沉浸壁纸模式时淡出，平时通透悬浮) -->
-      <main
-        class="flex-1 overflow-hidden relative transition-all duration-300"
-        :class="isZenMode ? 'opacity-0 pointer-events-none scale-98' : 'opacity-100 scale-100'"
-      >
-        <TaskBoard
-          v-show="currentView === 'tasks'"
-          :tasks="tasks"
-          :years="years"
-          :is-light="false"
-          :card-opacity="currentTheme.overlayOpacity ?? 20"
-          :card-glass="true"
-          @open-new-task="openNewTaskModal"
-          @select-task="handleSelectTask"
-          @updated="loadTasks"
-          @toast="showToast"
-        />
-        <QuickNotesView
-          v-if="currentView === 'notes'"
-          :is-light="false"
-          @toast="showToast"
-        />
-        <ServerCredentialsView
-          v-if="currentView === 'servers'"
-          @toast="showToast"
-        />
-      </main>
-
-      <!-- 3. 底部全局极客状态条 (Status Bar) -->
-      <footer
-        class="h-7 border-t border-white/10 px-5 flex items-center justify-between text-[11px] font-mono select-none flex-shrink-0 backdrop-blur-xl"
-        style="background: rgba(11, 14, 23, 0.78); color: #94a3b8;"
-      >
-        <div class="flex items-center gap-3">
-          <span class="flex items-center gap-1.5 text-teal-400 font-bold">
-            <span class="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse"></span>
-            矩阵系统就绪
-          </span>
-          <span class="text-slate-600">|</span>
-          <span class="truncate max-w-sm">当前共加载 {{ tasks.length }} 个任务资产</span>
-        </div>
-
-        <div class="flex items-center gap-4 text-[10px]">
-          <span>↑↓ 切换条目</span>
-          <span>↵ 打开详情</span>
-          <span>Ctrl+O 在IDE打开</span>
-          <span>Ctrl+E 资源管理器</span>
-          <span class="text-teal-400 font-bold">DevOrbit v1.3.0</span>
-        </div>
-      </footer>
-
-    </div>
-
-    <!-- 沉浸壁纸观赏提示浮条 -->
-    <div
-      v-if="isZenMode"
-      @click="toggleZenMode"
-      class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-black/80 hover:bg-black/95 backdrop-blur-xl border border-white/20 text-xs text-slate-200 cursor-pointer shadow-2xl transition hover:scale-105 select-none"
-      title="点击任意处或按 Esc 恢复工作台"
-    >
-      <EyeOff class="w-4 h-4 text-teal-400 animate-pulse" />
-      <span>壁纸沉浸模式 · 点击屏幕或按 Esc 恢复</span>
-    </div>
 
     <!-- 弹窗集 -->
     <NewTaskModal
@@ -566,3 +548,281 @@ function showToast(msg, type = 'success') {
   toastRef.value?.show(msg, type)
 }
 </script>
+
+<style scoped>
+.app-container {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: row;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  background-color: #090b10;
+  color: #f1f5f9;
+}
+
+.bg-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  transition: all 0.7s ease;
+  background-position: center;
+  background-size: cover;
+}
+
+.bg-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+/* 左侧 54px 极窄神经轨 */
+.rail-sidebar {
+  width: 54px;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 0;
+  flex-shrink: 0;
+  z-index: 30;
+  gap: 16px;
+  backdrop-filter: blur(24px);
+  background: rgba(11, 14, 23, 0.78);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.45);
+}
+
+.rail-logo-avatar {
+  background: linear-gradient(to top right, #14b8a6, #10b981, #06b6d4);
+  color: #020617;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 900;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(6, 78, 59, 0.5);
+}
+
+.rail-divider {
+  margin: 4px 0;
+  width: 24px;
+  opacity: 0.2;
+}
+
+.view-switch-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.is-active-btn {
+  background-color: rgba(20, 184, 166, 0.2) !important;
+  color: #5eead4 !important;
+  box-shadow: 0 0 0 1px rgba(20, 184, 166, 0.4);
+}
+
+.rail-bottom-tools {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.tool-btn {
+  color: #94a3b8;
+}
+.tool-btn:hover {
+  color: #2dd4bf;
+}
+
+.heartbeat-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #2dd4bf;
+  box-shadow: 0 0 6px rgba(45, 212, 191, 0.8);
+  animation: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  margin-top: 4px;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+/* 主舞台区 */
+.main-stage-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  z-index: 10;
+  background-color: transparent;
+}
+
+.omni-bar-header {
+  height: 48px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  z-index: 20;
+  backdrop-filter: blur(16px);
+  background: rgba(13, 17, 26, 0.72);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.view-desc {
+  font-size: 12px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.bar-divider {
+  color: #64748b;
+  opacity: 0.4;
+}
+
+.workspace-path-btn {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.shortcut-badge {
+  margin-left: 6px;
+  padding: 2px 4px;
+  font-size: 10px;
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  opacity: 0.7;
+}
+
+.stage-content {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  transition: all 0.3s ease;
+  opacity: 1;
+  transform: scale(1);
+}
+
+.stage-content.is-zen {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.98);
+}
+
+/* 全局极客状态条 */
+.global-status-bar {
+  height: 28px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  user-select: none;
+  flex-shrink: 0;
+  backdrop-filter: blur(16px);
+  background: rgba(11, 14, 23, 0.78);
+  color: #94a3b8;
+}
+
+.status-indicator-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #2dd4bf;
+  font-weight: 700;
+}
+
+.status-pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #2dd4bf;
+  animation: pulse-dot 2s infinite;
+}
+
+.tasks-loaded-text {
+  max-width: 380px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.footer-shortcuts {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 10px;
+}
+
+.brand-version {
+  color: #2dd4bf;
+  font-weight: 700;
+}
+
+/* 沉浸壁纸浮条 */
+.zen-floating-pill {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  border-radius: 9999px;
+  background-color: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 12px;
+  color: #e2e8f0;
+  cursor: pointer;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+  transition: all 0.2s ease;
+  user-select: none;
+}
+.zen-floating-pill:hover {
+  background-color: rgba(0, 0, 0, 0.95);
+  transform: translateX(-50%) scale(1.05);
+}
+
+.icon-nav {
+  width: 16px;
+  height: 16px;
+}
+.icon-small {
+  width: 14px;
+  height: 14px;
+}
+.icon-tiny {
+  width: 12px;
+  height: 12px;
+}
+</style>

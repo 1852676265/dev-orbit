@@ -125,63 +125,53 @@
               :key="item.id"
               :id="`note-item-${idx}`"
               @click="focusedIndex = idx"
-              class="p-2.5 rounded-xl border transition-all duration-150 cursor-pointer flex items-center justify-between gap-3 group relative select-none"
-              :class="focusedIndex === idx
-                ? 'bg-teal-950/40 border-teal-500/70 shadow-lg shadow-teal-950/40 ring-1 ring-teal-500/30 text-white'
-                : 'bg-white/[0.02] hover:bg-white/[0.05] border-white/5 text-slate-300'"
+              class="note-item-card"
+              :class="{ 'is-focused': focusedIndex === idx }"
             >
               <!-- 聚焦高亮左边缘晶体微光条 -->
-              <div
-                v-if="focusedIndex === idx"
-                class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4/5 bg-teal-400 rounded-r shadow-md shadow-teal-400"
-              ></div>
+              <div v-if="focusedIndex === idx" class="active-indicator" />
 
               <!-- 左侧：分类微标 + 标题 + 缩略命令 -->
-              <div class="flex items-center gap-2.5 overflow-hidden flex-1 min-w-0 pl-1">
-                <div class="min-w-0 flex-1">
-                  <div class="flex items-center gap-1.5 mb-0.5">
-                    <span
-                      class="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold border"
-                      :style="{
-                        color: getTagColor(item.tag),
-                        borderColor: getTagColor(item.tag) + '40',
-                        backgroundColor: getTagColor(item.tag) + '15'
-                      }"
-                    >
-                      {{ item.tag || '通用' }}
-                    </span>
-                    <span class="text-[10px] text-slate-500 font-mono truncate">
-                      {{ item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '' }}
-                    </span>
-                  </div>
-
-                  <!-- 作用说明 / 标题 -->
-                  <h3
-                    class="text-xs font-semibold leading-snug truncate transition"
-                    :class="focusedIndex === idx ? 'text-teal-200 font-bold' : 'text-slate-200 group-hover:text-teal-300'"
+              <div class="note-item-content">
+                <div class="note-item-meta">
+                  <span
+                    class="note-tag-badge"
+                    :style="{
+                      color: getTagColor(item.tag),
+                      borderColor: getTagColor(item.tag) + '40',
+                      backgroundColor: getTagColor(item.tag) + '15'
+                    }"
                   >
-                    {{ item.title }}
-                  </h3>
+                    {{ item.tag || '通用' }}
+                  </span>
+                  <span class="note-date-text">
+                    {{ item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '' }}
+                  </span>
+                </div>
 
-                  <!-- 命令代码缩略 -->
-                  <div class="text-[10px] font-mono text-slate-500 truncate mt-0.5 opacity-80">
-                    $ {{ item.command }}
-                  </div>
+                <!-- 作用说明 / 标题 -->
+                <h3 class="note-title-text" :class="{ 'is-active': focusedIndex === idx }">
+                  {{ item.title }}
+                </h3>
+
+                <!-- 命令代码缩略 -->
+                <div class="note-cmd-preview">
+                  $ {{ item.command }}
                 </div>
               </div>
 
               <!-- 右侧：快捷复制钮与箭头 -->
-              <div class="flex-shrink-0 flex items-center gap-1.5">
+              <div class="note-item-actions">
                 <button
                   @click.stop="copyCommand(item.command)"
-                  class="p-1.5 rounded-lg opacity-70 group-hover:opacity-100 transition hover:bg-teal-500/20 text-slate-400 hover:text-teal-300"
+                  class="copy-quick-btn"
                   title="一键复制命令"
                 >
-                  <Copy class="w-3.5 h-3.5" />
+                  <Copy class="icon-small" />
                 </button>
                 <ChevronRight
-                  class="w-3.5 h-3.5 transition"
-                  :class="focusedIndex === idx ? 'text-teal-400 translate-x-0.5' : 'text-slate-600 opacity-40'"
+                  class="arrow-icon"
+                  :class="{ 'is-active': focusedIndex === idx }"
                 />
               </div>
             </div>
@@ -711,6 +701,146 @@ function scrollToActive() {
 </script>
 
 <style scoped>
+.note-item-card {
+  position: relative;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background-color: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  transition: all 0.15s ease-in-out;
+  user-select: none;
+  color: #cbd5e1;
+}
+
+.note-item-card:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.note-item-card.is-focused {
+  background-color: rgba(19, 78, 74, 0.35);
+  border-color: rgba(45, 212, 191, 0.65);
+  box-shadow: 0 4px 16px rgba(13, 148, 136, 0.2);
+  color: #ffffff;
+}
+
+.active-indicator {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 80%;
+  background-color: #2dd4bf;
+  border-radius: 0 4px 4px 0;
+  box-shadow: 0 0 8px rgba(45, 212, 191, 0.6);
+}
+
+.note-item-content {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+  padding-left: 4px;
+}
+
+.note-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.note-tag-badge {
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 700;
+  border-width: 1px;
+}
+
+.note-date-text {
+  font-size: 10px;
+  color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.note-title-text {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+  color: #e2e8f0;
+  transition: color 0.15s ease;
+}
+
+.note-title-text.is-active,
+.note-item-card:hover .note-title-text {
+  color: #5eead4;
+}
+
+.note-cmd-preview {
+  font-size: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+  opacity: 0.8;
+}
+
+.note-item-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.copy-quick-btn {
+  background: none;
+  border: none;
+  padding: 6px;
+  border-radius: 8px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.copy-quick-btn:hover {
+  background-color: rgba(45, 212, 191, 0.2);
+  color: #2dd4bf;
+}
+
+.arrow-icon {
+  width: 14px;
+  height: 14px;
+  color: #475569;
+  opacity: 0.4;
+  transition: all 0.15s ease;
+}
+
+.arrow-icon.is-active,
+.note-item-card:hover .arrow-icon {
+  color: #2dd4bf;
+  opacity: 1;
+  transform: translateX(2px);
+}
+
+.icon-small {
+  width: 14px;
+  height: 14px;
+}
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 5px;
   height: 5px;

@@ -1,7 +1,7 @@
 <template>
-  <div class="h-full w-full flex flex-col overflow-hidden relative font-sans select-none">
+  <div class="taskboard-container">
     <!-- 主工作区：左侧边栏 (TaskSidebar) + 右侧行动舱 -->
-    <div class="flex-1 flex flex-row overflow-hidden relative">
+    <div class="workspace-body">
       <!-- 1. 左侧任务边栏组件 -->
       <TaskSidebar
         v-model:selectedYear="selectedYear"
@@ -19,10 +19,7 @@
       />
 
       <!-- 2. 右侧全息行动舱 -->
-      <main
-        v-if="currentTask"
-        class="flex-1 min-w-0 flex flex-col overflow-hidden transition-all duration-300 bg-black/20"
-      >
+      <main v-if="currentTask" class="workspace-main">
         <!-- 任务头部组件 -->
         <TaskHeader
           :task="currentTask"
@@ -31,7 +28,7 @@
         />
 
         <!-- 标签式工作区 (采用 Naive UI 组件化 n-tabs) -->
-        <div class="px-4 border-b border-white/5 flex items-center justify-between bg-[#0f1420]/80 flex-shrink-0 select-none">
+        <div class="workspace-tabbar">
           <n-tabs
             :value="activeWorkspaceTab"
             type="line"
@@ -39,8 +36,8 @@
             @update:value="switchWorkspaceTab"
           >
             <n-tab name="notes">
-              <div class="flex items-center gap-1.5 py-1">
-                <StickyNote class="w-3.5 h-3.5 text-teal-400" />
+              <div class="tab-item-inner">
+                <StickyNote class="icon-small text-teal-400" />
                 <span>开发备忘与联调参数</span>
                 <n-badge
                   :value="notesState.taskNotes.value.length"
@@ -51,22 +48,22 @@
               </div>
             </n-tab>
             <n-tab name="sqls">
-              <div class="flex items-center gap-1.5 py-1">
-                <Database class="w-3.5 h-3.5 text-amber-400" />
+              <div class="tab-item-inner">
+                <Database class="icon-small text-amber-400" />
                 <span>上线 SQL 资产</span>
                 <n-tag
                   size="tiny"
                   :type="currentTask.prodPendingCount > 0 ? 'warning' : 'default'"
                   :bordered="false"
-                  class="font-mono font-bold"
+                  class="tag-count"
                 >
                   {{ currentTask.prodPendingCount > 0 ? `${currentTask.prodPendingCount} 待发` : `${sqlsState.currentSqls.value.length}` }}
                 </n-tag>
               </div>
             </n-tab>
             <n-tab name="docs">
-              <div class="flex items-center gap-1.5 py-1">
-                <FolderKanban class="w-3.5 h-3.5 text-blue-400" />
+              <div class="tab-item-inner">
+                <FolderKanban class="icon-small text-blue-400" />
                 <span>交付与需求文档</span>
                 <n-badge
                   :value="docsState.currentDocs.value.length"
@@ -77,24 +74,24 @@
               </div>
             </n-tab>
             <n-tab name="overview">
-              <div class="flex items-center gap-1.5 py-1">
-                <LayoutDashboard class="w-3.5 h-3.5 text-slate-400" />
+              <div class="tab-item-inner">
+                <LayoutDashboard class="icon-small text-slate-400" />
                 <span>全景看板</span>
               </div>
             </n-tab>
           </n-tabs>
 
           <!-- 保存状态微提示 -->
-          <div class="text-[11px] font-mono text-teal-400/90 flex items-center gap-1.5">
-            <span v-if="notesState.noteSavedNotice.value" class="flex items-center gap-1 text-emerald-400 animate-in fade-in">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+          <div class="save-status-hint">
+            <span v-if="notesState.noteSavedNotice.value" class="saved-badge">
+              <span class="saved-dot"></span>
               已保存并同步
             </span>
           </div>
         </div>
 
         <!-- 标签页主体内容区 -->
-        <div class="flex-1 overflow-hidden relative bg-[#0B0E17]/60">
+        <div class="tab-content-area">
           <!-- Tab 1: 开发备忘与参数速查 -->
           <TaskNotesTab
             v-if="activeWorkspaceTab === 'notes'"
@@ -137,35 +134,30 @@
       </main>
 
       <!-- 未选中任务空状态 -->
-      <div
-        v-else
-        class="flex-1 flex flex-col items-center justify-center text-center p-8 text-slate-500 select-none"
-      >
-        <Layers class="w-12 h-12 text-slate-600 mb-3" />
-        <p class="text-sm font-medium">请从左侧选择一个开发任务</p>
-        <p class="text-xs text-slate-600 mt-1">支持通过 ↑ ↓ 键盘方向键无缝切换查看</p>
+      <div v-else class="empty-selection-state">
+        <Layers class="empty-icon" />
+        <p class="empty-title">请从左侧选择一个开发任务</p>
+        <p class="empty-sub">支持通过 ↑ ↓ 键盘方向键无缝切换查看</p>
       </div>
     </div>
 
     <!-- 底部状态与快捷键提示行 -->
-    <footer
-      class="h-8 px-5 border-t border-white/5 flex items-center justify-between text-[11px] font-mono flex-shrink-0 select-none bg-black/40 text-slate-400"
-    >
-      <div class="flex items-center gap-4">
-        <span class="flex items-center gap-1.5 text-teal-400 font-semibold">
-          <span class="w-1.5 h-1.5 rounded-full bg-teal-400"></span>
+    <footer class="status-footer">
+      <div class="footer-left">
+        <span class="system-status">
+          <span class="status-dot"></span>
           DevOrbit HUD 就绪
         </span>
-        <span class="hidden md:inline text-slate-500 opacity-40">|</span>
-        <span class="hidden md:inline truncate max-w-sm">
+        <span class="divider">|</span>
+        <span class="task-title-hint">
           {{ currentTask ? currentTask.title : '未选择任务' }}
         </span>
       </div>
 
-      <div class="flex items-center gap-3">
-        <span class="hidden sm:inline">↑↓ 切换任务</span>
-        <span class="hidden sm:inline">Ctrl+E 资源管理器</span>
-        <span class="text-teal-400/90 font-bold">⚡ v1.3.0</span>
+      <div class="footer-right">
+        <span class="shortcut-hint">↑↓ 切换任务</span>
+        <span class="shortcut-hint">Ctrl+E 资源管理器</span>
+        <span class="version-tag">⚡ v1.3.0</span>
       </div>
     </footer>
 
@@ -565,6 +557,186 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.taskboard-container {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  user-select: none;
+}
+
+.workspace-body {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  position: relative;
+}
+
+.workspace-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.workspace-tabbar {
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: rgba(15, 20, 32, 0.8);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.tab-item-inner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.tag-count {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 700;
+}
+
+.save-status-hint {
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: rgba(45, 212, 191, 0.9);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.saved-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #34d399;
+}
+
+.saved-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #34d399;
+}
+
+.tab-content-area {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  background-color: rgba(11, 14, 23, 0.6);
+}
+
+.empty-selection-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px;
+  color: #64748b;
+  user-select: none;
+}
+
+.empty-icon {
+  width: 48px;
+  height: 48px;
+  color: #475569;
+  margin-bottom: 12px;
+}
+
+.empty-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #cbd5e1;
+  margin: 0;
+}
+
+.empty-sub {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.status-footer {
+  height: 32px;
+  padding: 0 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  flex-shrink: 0;
+  user-select: none;
+  background-color: rgba(0, 0, 0, 0.4);
+  color: #94a3b8;
+}
+
+.footer-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.system-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #2dd4bf;
+  font-weight: 600;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #2dd4bf;
+}
+
+.divider {
+  color: #64748b;
+  opacity: 0.4;
+}
+
+.task-title-hint {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 360px;
+}
+
+.footer-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.shortcut-hint {
+  color: #64748b;
+}
+
+.version-tag {
+  color: rgba(45, 212, 191, 0.9);
+  font-weight: 700;
+}
+
+.icon-small {
+  width: 14px;
+  height: 14px;
+}
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 5px;
   height: 5px;

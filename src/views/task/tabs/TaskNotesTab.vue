@@ -1,12 +1,12 @@
 <template>
-  <div class="h-full flex flex-col p-4 space-y-3.5 overflow-y-auto custom-scrollbar">
+  <div class="notes-tab-container custom-scrollbar">
     <!-- 1. 智能提取参数速查栏 -->
     <div
       v-if="notesState.enableSmartParams.value && notesState.parsedParameters.value.length > 0"
-      class="p-2.5 rounded-xl border border-white/10 bg-[#121826]/90 transition-all duration-200"
+      class="smart-params-panel"
     >
-      <div class="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-white/5 select-none">
-        <div class="flex items-center gap-2">
+      <div class="params-header">
+        <div class="header-left">
           <n-button
             size="tiny"
             type="primary"
@@ -15,16 +15,16 @@
             :title="`打开参数全景清单 (${notesState.parsedParameters.value.length} 项)`"
           >
             <template #icon>
-              <Sparkles class="w-3.5 h-3.5" />
+              <Sparkles class="icon-small" />
             </template>
             <span>速拷核心参数 ({{ notesState.parsedParameters.value.length }})</span>
           </n-button>
-          <span class="text-[11px] text-slate-400 hidden sm:inline font-mono">
+          <span class="view-mode-hint">
             {{ notesState.paramViewMode.value === 'wrap' ? '当前为平铺完整模式 (无截断)' : '当前为单行紧凑模式' }}
           </span>
         </div>
 
-        <div class="flex items-center gap-1.5 text-xs">
+        <div class="header-actions">
           <n-button
             size="tiny"
             quaternary
@@ -46,27 +46,25 @@
             @click="notesState.toggleSmartParams(false)"
             title="关闭智能参数栏"
           >
-            <EyeOff class="w-3 h-3 text-slate-400" />
+            <EyeOff class="icon-tiny text-slate-400" />
           </n-button>
         </div>
       </div>
 
       <!-- 参数胶囊展示区 -->
       <div
-        class="gap-1.5 py-0.5 custom-scrollbar"
-        :class="notesState.paramViewMode.value === 'wrap'
-          ? 'flex flex-wrap items-center'
-          : 'flex items-center overflow-x-auto whitespace-nowrap scroll-smooth'"
+        class="params-pill-list custom-scrollbar"
+        :class="{ 'is-wrap': notesState.paramViewMode.value === 'wrap' }"
       >
         <div
           v-for="(param, pIdx) in notesState.parsedParameters.value"
           :key="pIdx"
-          class="px-2.5 py-1 rounded-lg border text-xs font-mono flex items-center gap-2 transition group bg-black/40 hover:bg-black/75 shadow-sm flex-shrink-0"
-          :class="getParamPillColor(param.type)"
+          class="param-capsule"
+          :class="getParamCapsuleClass(param.type)"
         >
-          <span class="font-bold text-teal-300 flex-shrink-0">{{ param.label }}:</span>
+          <span class="capsule-label">{{ param.label }}:</span>
           <span
-            class="text-slate-200 group-hover:text-white font-mono break-all max-w-[260px] truncate select-all cursor-text"
+            class="capsule-value"
             :title="`完整值: ${param.value} (单击复制)`"
             @click="notesState.copyParamText(param.value, param.label)"
           >
@@ -74,20 +72,20 @@
           </span>
           <button
             type="button"
-            @click="notesState.copyParamText(param.value, param.label)"
-            class="p-0.5 rounded hover:bg-white/10 text-slate-400 hover:text-teal-300 transition cursor-pointer flex-shrink-0"
+            class="copy-btn"
             title="复制此项完整值"
+            @click="notesState.copyParamText(param.value, param.label)"
           >
-            <Copy class="w-3 h-3" />
+            <Copy class="icon-tiny" />
           </button>
         </div>
       </div>
     </div>
 
     <!-- 2. 备忘录工具栏 -->
-    <div class="flex items-center justify-between gap-2 flex-wrap border-b border-white/5 pb-2.5 select-none">
+    <div class="notes-toolbar">
       <!-- 分类标签过滤器 -->
-      <div class="flex items-center gap-1.5 flex-wrap">
+      <div class="category-filters">
         <n-button
           size="tiny"
           :type="notesState.selectedNoteCategory.value === 'all' ? 'primary' : 'default'"
@@ -111,17 +109,17 @@
       </div>
 
       <!-- 右侧视图切换与新建 -->
-      <div class="flex items-center gap-2">
+      <div class="toolbar-right">
         <n-input
           v-if="notesState.noteViewMode.value === 'cards'"
           v-model:value="notesState.noteSearchQuery.value"
           size="small"
           placeholder="搜索备忘内容..."
           clearable
-          class="w-40 sm:w-48"
+          class="search-input"
         >
           <template #prefix>
-            <Search class="w-3.5 h-3.5 text-slate-500" />
+            <Search class="icon-small text-slate-500" />
           </template>
         </n-input>
 
@@ -151,7 +149,7 @@
           @click="notesState.startAddNote"
         >
           <template #icon>
-            <Plus class="w-3.5 h-3.5" />
+            <Plus class="icon-small" />
           </template>
           <span>新建备忘</span>
         </n-button>
@@ -159,13 +157,10 @@
     </div>
 
     <!-- 3. 卡片视图 -->
-    <div v-if="notesState.noteViewMode.value === 'cards'" class="space-y-2.5 flex-1">
+    <div v-if="notesState.noteViewMode.value === 'cards'" class="cards-view-container">
       <!-- 新增卡片就地输入框 -->
-      <div
-        v-if="notesState.isAddingNote.value"
-        class="p-3.5 rounded-xl border border-teal-500/40 bg-[#151C2C] space-y-2.5 shadow-xl animate-in fade-in"
-      >
-        <div class="flex items-center gap-2">
+      <div v-if="notesState.isAddingNote.value" class="note-editor-card">
+        <div class="editor-header-row">
           <n-input
             v-model:value="notesState.newNoteForm.value.title"
             size="small"
@@ -176,7 +171,7 @@
             v-model:value="notesState.newNoteForm.value.category"
             size="small"
             :options="categoryOptions"
-            class="w-32"
+            class="category-select"
           />
         </div>
         <n-input
@@ -186,11 +181,11 @@
           placeholder="在此粘贴参数、YAML、SQL片段或接口文档..."
           :rows="4"
         />
-        <div class="flex items-center justify-between">
+        <div class="editor-footer-row">
           <n-checkbox v-model:checked="notesState.newNoteForm.value.pinned">
             置顶显示
           </n-checkbox>
-          <div class="flex items-center gap-2">
+          <div class="action-btn-group">
             <n-button size="small" quaternary @click="notesState.isAddingNote.value = false">
               取消
             </n-button>
@@ -204,22 +199,22 @@
       <!-- 空状态 -->
       <div
         v-if="notesState.filteredTaskNotes.value.length === 0 && !notesState.isAddingNote.value"
-        class="py-12 text-center rounded-xl border border-white/5 bg-black/20 text-slate-500 space-y-2"
+        class="notes-empty-state"
       >
-        <StickyNote class="w-10 h-10 mx-auto text-slate-600" />
-        <p class="text-xs">当前任务暂无开发备忘卡片</p>
-        <p class="text-[11px] text-slate-600">可点击右上角「新建备忘」随时记录联调参数与配置</p>
+        <StickyNote class="empty-icon" />
+        <p class="empty-text">当前任务暂无开发备忘卡片</p>
+        <p class="empty-subtext">可点击右上角「新建备忘」随时记录联调参数与配置</p>
       </div>
 
       <!-- 备忘卡片列表 -->
       <div
         v-for="note in notesState.filteredTaskNotes.value"
         :key="note.id"
-        class="p-3.5 rounded-xl border transition-all duration-150 group relative bg-black/40 hover:bg-black/60 border-white/5 hover:border-teal-500/40"
+        class="note-card"
       >
         <!-- 编辑状态 -->
-        <div v-if="notesState.editingNoteId.value === note.id" class="space-y-2.5">
-          <div class="flex items-center gap-2">
+        <div v-if="notesState.editingNoteId.value === note.id" class="card-edit-mode">
+          <div class="editor-header-row">
             <n-input
               v-model:value="notesState.editingNoteForm.value.title"
               size="small"
@@ -229,7 +224,7 @@
               v-model:value="notesState.editingNoteForm.value.category"
               size="small"
               :options="categoryOptions"
-              class="w-32"
+              class="category-select"
             />
           </div>
           <n-input
@@ -238,11 +233,11 @@
             size="small"
             :rows="5"
           />
-          <div class="flex items-center justify-between">
+          <div class="editor-footer-row">
             <n-checkbox v-model:checked="notesState.editingNoteForm.value.pinned">
               置顶显示
             </n-checkbox>
-            <div class="flex items-center gap-2">
+            <div class="action-btn-group">
               <n-button size="small" quaternary @click="notesState.editingNoteId.value = null">
                 取消
               </n-button>
@@ -254,25 +249,33 @@
         </div>
 
         <!-- 正常阅读卡片 -->
-        <div v-else class="space-y-2">
-          <div class="flex items-center justify-between gap-2">
-            <div class="flex items-center gap-2 min-w-0">
-              <span
+        <div v-else class="card-view-mode">
+          <div class="card-header">
+            <div class="header-info">
+              <n-tag
                 v-if="note.pinned"
-                class="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex-shrink-0"
+                size="tiny"
+                type="warning"
+                :bordered="false"
+                class="tag-pinned"
               >
                 置顶
-              </span>
-              <span class="px-1.5 py-0.2 rounded text-[10px] font-mono bg-teal-500/15 text-teal-300 border border-teal-500/30 flex-shrink-0">
+              </n-tag>
+              <n-tag
+                size="tiny"
+                type="info"
+                :bordered="false"
+                class="tag-category"
+              >
                 {{ note.category || '配置参数' }}
-              </span>
-              <h4 class="text-xs font-bold text-slate-100 truncate">
+              </n-tag>
+              <h4 class="card-title">
                 {{ note.title }}
               </h4>
             </div>
 
             <!-- 卡片操作按钮 (采用 Naive UI 组件化 n-button 与 n-popconfirm) -->
-            <div class="flex items-center gap-0.5 opacity-70 group-hover:opacity-100 transition">
+            <div class="card-actions">
               <n-button
                 size="tiny"
                 quaternary
@@ -280,7 +283,7 @@
                 :title="note.pinned ? '取消置顶' : '置顶此条'"
               >
                 <template #icon>
-                  <Pin class="w-3.5 h-3.5" :class="note.pinned ? 'text-amber-400 fill-amber-400' : 'text-slate-400'" />
+                  <Pin class="icon-small" :class="{ 'is-pinned': note.pinned }" />
                 </template>
               </n-button>
               <n-button
@@ -289,7 +292,7 @@
                 @click="notesState.startEditNote(note)"
                 title="编辑此备忘"
               >
-                <template #icon><Pencil class="w-3.5 h-3.5 text-slate-400" /></template>
+                <template #icon><Pencil class="icon-small" /></template>
               </n-button>
               <n-button
                 size="tiny"
@@ -297,7 +300,7 @@
                 @click="notesState.copyParamText(note.content, note.title)"
                 title="复制卡片内容"
               >
-                <template #icon><Copy class="w-3.5 h-3.5 text-slate-400" /></template>
+                <template #icon><Copy class="icon-small" /></template>
               </n-button>
               <n-popconfirm
                 @positive-click="notesState.deleteNote(note.id)"
@@ -311,7 +314,7 @@
                     type="error"
                     title="删除备忘卡片"
                   >
-                    <template #icon><Trash2 class="w-3.5 h-3.5" /></template>
+                    <template #icon><Trash2 class="icon-small" /></template>
                   </n-button>
                 </template>
                 确认删除备忘 [{{ note.title }}] 吗？
@@ -320,9 +323,9 @@
           </div>
 
           <!-- 内容预览区 (等宽代码字体，支持选中) -->
-          <pre class="p-2.5 rounded-lg bg-black/50 border border-white/5 font-mono text-xs text-slate-200 overflow-x-auto whitespace-pre-wrap break-all select-text selection:bg-teal-500/30">{{ note.content }}</pre>
+          <pre class="note-preview-content">{{ note.content }}</pre>
 
-          <div class="text-[10px] text-slate-500 font-mono text-right">
+          <div class="note-time-footer">
             更新于: {{ note.updatedAt }}
           </div>
         </div>
@@ -330,12 +333,12 @@
     </div>
 
     <!-- 4. Markdown 源码视图 -->
-    <div v-else class="flex-1 flex flex-col space-y-2">
-      <div class="flex items-center justify-between text-xs text-slate-400">
-        <span>与本地任务目录 <b class="text-slate-200 font-mono">docs/笔记.md</b> 实时双向同步</span>
+    <div v-else class="raw-view-container">
+      <div class="raw-header">
+        <span>与本地任务目录 <b class="sync-file-path">docs/笔记.md</b> 实时双向同步</span>
         <n-button size="small" type="primary" secondary @click="notesState.saveRawNote">
           <template #icon>
-            <Save class="w-3.5 h-3.5" />
+            <Save class="icon-small" />
           </template>
           <span>保存源码</span>
         </n-button>
@@ -343,7 +346,7 @@
       <n-input
         v-model:value="notesState.rawNoteContent.value"
         type="textarea"
-        class="flex-1 font-mono text-xs"
+        class="raw-textarea"
         placeholder="# 在此输入 Markdown 格式的开发备忘..."
       />
     </div>
@@ -353,24 +356,24 @@
       v-model:show="isMoreParamsOpen"
       preset="card"
       title="联调核心参数全景清单"
-      class="max-w-2xl bg-[#111726] border border-slate-700"
+      class="params-modal"
     >
-      <div class="space-y-3">
-        <div class="flex items-center justify-between">
-          <span class="text-xs text-slate-400 font-mono">从备忘中智能提取了 {{ notesState.parsedParameters.value.length }} 项配置</span>
+      <div class="params-modal-body">
+        <div class="modal-summary-row">
+          <span class="summary-text">从备忘中智能提取了 {{ notesState.parsedParameters.value.length }} 项配置</span>
           <n-button size="tiny" type="primary" secondary @click="notesState.copyAllParamsAsYaml">
             一键复制 YAML 格式
           </n-button>
         </div>
-        <div class="max-h-[60vh] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+        <div class="params-modal-list custom-scrollbar">
           <div
             v-for="(p, idx) in notesState.parsedParameters.value"
             :key="idx"
-            class="p-2.5 rounded-lg border border-white/10 bg-black/40 flex items-center justify-between gap-3 text-xs font-mono"
+            class="modal-param-card"
           >
-            <div class="min-w-0 flex-1">
-              <span class="text-teal-400 font-bold block">{{ p.label }}</span>
-              <span class="text-slate-200 select-all break-all block mt-0.5">{{ p.value }}</span>
+            <div class="param-card-left">
+              <span class="param-card-label">{{ p.label }}</span>
+              <span class="param-card-value">{{ p.value }}</span>
             </div>
             <n-button size="tiny" secondary @click="notesState.copyParamText(p.value, p.label)">
               复制
@@ -391,7 +394,8 @@ import {
   NSelect,
   NCheckbox,
   NModal,
-  NPopconfirm
+  NPopconfirm,
+  NTag
 } from 'naive-ui'
 import {
   Sparkles,
@@ -437,14 +441,452 @@ async function switchViewMode(mode) {
   props.notesState.noteViewMode.value = mode
 }
 
-function getParamPillColor(type) {
+function getParamCapsuleClass(type) {
   switch (type) {
-    case 'key': return 'border-teal-500/40 text-teal-300 bg-teal-500/10 hover:border-teal-400'
-    case 'secret': return 'border-amber-500/40 text-amber-300 bg-amber-500/10 hover:border-amber-400'
-    case 'token': return 'border-sky-500/40 text-sky-300 bg-sky-500/10 hover:border-sky-400'
-    case 'network': return 'border-cyan-500/40 text-cyan-300 bg-cyan-500/10 hover:border-cyan-400'
-    case 'id': return 'border-purple-500/40 text-purple-300 bg-purple-500/10 hover:border-purple-400'
-    default: return 'border-white/10 text-slate-300 bg-black/40 hover:border-white/20'
+    case 'key': return 'capsule--key'
+    case 'secret': return 'capsule--secret'
+    case 'token': return 'capsule--token'
+    case 'network': return 'capsule--network'
+    case 'id': return 'capsule--id'
+    default: return 'capsule--default'
   }
 }
 </script>
+
+<style scoped>
+.notes-tab-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 14px;
+  overflow-y: auto;
+}
+
+/* 顶部智能参数面板 */
+.smart-params-panel {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: rgba(18, 24, 38, 0.9);
+  transition: all 0.2s ease;
+}
+
+.params-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  user-select: none;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.view-mode-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.params-pill-list {
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.params-pill-list.is-wrap {
+  flex-wrap: wrap;
+  overflow-x: visible;
+}
+
+.param-capsule {
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+  background-color: rgba(0, 0, 0, 0.4);
+  flex-shrink: 0;
+}
+
+.capsule--key {
+  border-color: rgba(45, 212, 191, 0.4);
+  background-color: rgba(45, 212, 191, 0.1);
+}
+.capsule--secret {
+  border-color: rgba(245, 158, 11, 0.4);
+  background-color: rgba(245, 158, 11, 0.1);
+}
+.capsule--token {
+  border-color: rgba(56, 189, 248, 0.4);
+  background-color: rgba(56, 189, 248, 0.1);
+}
+.capsule--network {
+  border-color: rgba(6, 182, 212, 0.4);
+  background-color: rgba(6, 182, 212, 0.1);
+}
+.capsule--id {
+  border-color: rgba(168, 85, 247, 0.4);
+  background-color: rgba(168, 85, 247, 0.1);
+}
+.capsule--default {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.capsule-label {
+  font-weight: 700;
+  color: #5eead4;
+  white-space: nowrap;
+}
+
+.capsule-value {
+  color: #e2e8f0;
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: text;
+  user-select: all;
+}
+
+.copy-btn {
+  background: none;
+  border: none;
+  padding: 2px;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+}
+.copy-btn:hover {
+  color: #2dd4bf;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* 备忘录工具栏 */
+.notes-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 10px;
+  user-select: none;
+}
+
+.category-filters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search-input {
+  width: 160px;
+}
+@media (min-width: 640px) {
+  .search-input {
+    width: 200px;
+  }
+}
+
+/* 卡片视图区 */
+.cards-view-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+/* 新增就地输入卡片 */
+.note-editor-card {
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(45, 212, 191, 0.4);
+  background-color: #151c2c;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.editor-header-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.category-select {
+  width: 128px;
+}
+
+.editor-footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.action-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 备忘卡片 */
+.note-card {
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background-color: rgba(0, 0, 0, 0.4);
+  transition: all 0.15s ease-in-out;
+}
+
+.note-card:hover {
+  background-color: rgba(0, 0, 0, 0.6);
+  border-color: rgba(45, 212, 191, 0.35);
+}
+
+.card-view-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.header-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.tag-pinned {
+  font-weight: 700;
+}
+
+.tag-category {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+}
+
+.note-card:hover .card-actions {
+  opacity: 1;
+}
+
+.is-pinned {
+  color: #f59e0b;
+  fill: #f59e0b;
+}
+
+.note-preview-content {
+  margin: 0;
+  padding: 10px;
+  border-radius: 8px;
+  background-color: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  color: #e2e8f0;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  user-select: text;
+}
+
+.note-time-footer {
+  font-size: 10px;
+  color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  text-align: right;
+}
+
+.card-edit-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 空状态 */
+.notes-empty-state {
+  padding: 48px 16px;
+  text-align: center;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background-color: rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.empty-icon {
+  width: 40px;
+  height: 40px;
+  color: #475569;
+}
+
+.empty-text {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.empty-subtext {
+  font-size: 11px;
+  color: #475569;
+  margin: 0;
+}
+
+/* 源码视图 */
+.raw-view-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.raw-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.sync-file-path {
+  color: #e2e8f0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.raw-textarea {
+  flex: 1;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+}
+
+/* 弹窗样式 */
+.params-modal {
+  max-width: 640px;
+  background-color: #111726;
+  border: 1px solid #334155;
+}
+
+.params-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modal-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.summary-text {
+  font-size: 12px;
+  color: #94a3b8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.params-modal-list {
+  max-height: 60vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 4px;
+}
+
+.modal-param-card {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.param-card-left {
+  min-width: 0;
+  flex: 1;
+}
+
+.param-card-label {
+  color: #2dd4bf;
+  font-weight: 700;
+  display: block;
+}
+
+.param-card-value {
+  color: #e2e8f0;
+  user-select: all;
+  word-break: break-all;
+  display: block;
+  margin-top: 2px;
+}
+
+.icon-small {
+  width: 14px;
+  height: 14px;
+}
+
+.icon-tiny {
+  width: 12px;
+  height: 12px;
+}
+</style>

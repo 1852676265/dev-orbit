@@ -1,155 +1,137 @@
 <template>
-  <div v-if="isOpen" class="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-    <div class="app-modal-dialog bg-slate-800 border border-slate-700 w-full max-w-lg rounded-xl shadow-2xl p-6 text-slate-100 animate-in fade-in zoom-in-95 duration-150">
-      <div class="flex items-center justify-between pb-4 border-b border-slate-700/80">
-        <h3 class="text-lg font-semibold flex items-center gap-2">
-          <FolderPlus class="w-5 h-5 text-emerald-400" />
-          新建开发任务工作区
-        </h3>
-        <button @click="close" class="text-slate-400 hover:text-slate-200 transition">
-          <X class="w-5 h-5" />
-        </button>
-      </div>
+  <n-modal
+    v-model:show="isOpen"
+    preset="card"
+    title="新建开发任务工作区"
+    class="new-task-modal"
+  >
+    <template #header-extra>
+      <FolderPlus class="icon-medium text-teal-400" />
+    </template>
 
-      <form @submit.prevent="handleSubmit" class="mt-4 space-y-4">
-        <div class="grid grid-cols-3 gap-3">
-          <!-- 归属年份 -->
-          <div class="col-span-1">
-            <label class="block text-xs font-medium text-slate-300 mb-1">
-              归属年份 <span class="text-rose-400">*</span>
-            </label>
-            <input
-              v-model="form.year"
-              type="text"
-              required
-              placeholder="如: 2026"
-              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono"
-            />
-          </div>
-
-          <!-- 所属项目 (支持下拉选择已有项目或输入新项目) -->
-          <div class="col-span-2">
-            <div class="flex items-center justify-between mb-1">
-              <label class="block text-xs font-medium text-slate-300">
-                所属项目 <span class="text-rose-400">*</span>
-              </label>
-              <button
-                v-if="!isCustomProject"
-                type="button"
-                @click="switchToCustomProject"
-                class="text-[11px] text-emerald-400 hover:text-emerald-300 font-normal transition"
-              >
-                + 输入新项目
-              </button>
-              <button
-                v-else
-                type="button"
-                @click="isCustomProject = false"
-                class="text-[11px] text-emerald-400 hover:text-emerald-300 font-normal transition"
-              >
-                ← 返回已有项目
-              </button>
-            </div>
-
-            <!-- 下拉选择已有项目 -->
-            <div v-if="!isCustomProject" class="relative">
-              <select
-                v-model="form.project"
-                @change="handleProjectSelectChange"
-                class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-3 pr-8 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 cursor-pointer appearance-none font-medium"
-              >
-                <option v-for="p in availableProjects" :key="p" :value="p">
-                  📁 {{ p }}
-                </option>
-                <option value="__custom__">
-                  ➕ 输入新项目名称...
-                </option>
-              </select>
-              <ChevronDown class="w-4 h-4 text-slate-400 absolute right-2.5 top-2.5 pointer-events-none" />
-            </div>
-
-            <!-- 手动输入新项目名称 -->
-            <div v-else>
-              <input
-                ref="customProjectInputRef"
-                v-model="customProjectName"
-                type="text"
-                required
-                placeholder="输入新项目名称，如: 电商中台、OA系统"
-                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            <!-- 快捷候选标签药丸 (点击一键直选) -->
-            <div v-if="availableProjects.length > 0" class="flex items-center gap-1.5 flex-wrap mt-2">
-              <span class="text-[10px] text-slate-500">快捷选择:</span>
-              <button
-                v-for="p in availableProjects"
-                :key="p"
-                type="button"
-                @click="selectProjectTag(p)"
-                class="px-2 py-0.5 rounded text-[11px] font-mono transition border"
-                :class="form.project === p && !isCustomProject
-                  ? 'bg-emerald-950 text-emerald-300 border-emerald-700 font-semibold shadow-sm'
-                  : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200 hover:bg-slate-700'"
-              >
-                {{ p }}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-xs font-medium text-slate-300 mb-1">
-            任务 / 需求名称 <span class="text-rose-400">*</span>
+    <form @submit.prevent="handleSubmit" class="modal-form">
+      <div class="form-grid-top">
+        <!-- 归属年份 -->
+        <div class="field-year">
+          <label class="field-label">
+            归属年份 <span class="required-star">*</span>
           </label>
-          <input
-            v-model="form.title"
-            type="text"
-            required
-            placeholder="如: 考勤流程接口对接、5G短信推送"
-            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+          <n-input
+            v-model:value="form.year"
+            size="small"
+            placeholder="如: 2026"
+            class="font-mono"
           />
         </div>
 
-        <div class="p-3 bg-slate-900/60 rounded-lg border border-slate-700/50 text-xs text-slate-400 space-y-1">
-          <p class="font-medium text-slate-300 flex items-center gap-1.5">
-            <CheckCircle2 class="w-3.5 h-3.5 text-emerald-400" />
-            将在本地自动生成对应工作区：
-          </p>
-          <div class="font-mono text-slate-400 pl-5 text-[11px] leading-relaxed">
-            📁 {{ form.year || '2026' }}/{{ form.title || '任务名称' }}/ <span class="text-emerald-400 font-sans font-medium">({{ currentProjectDisplay }})</span><br>
-            &nbsp;&nbsp;├── 📁 docs/ (需求.md、笔记.md、Word/Excel 需求文档)<br>
-            &nbsp;&nbsp;├── 📁 sql/ (存放 SQL 脚本，支持单行管理与发布追踪)<br>
-            &nbsp;&nbsp;└── 📁 attachments/ (存放原型图、抓包、原始附件)
+        <!-- 所属项目 -->
+        <div class="field-project">
+          <div class="project-label-row">
+            <label class="field-label">
+              所属项目 <span class="required-star">*</span>
+            </label>
+            <n-button
+              v-if="!isCustomProject"
+              size="tiny"
+              quaternary
+              type="primary"
+              @click="switchToCustomProject"
+            >
+              + 输入新项目
+            </n-button>
+            <n-button
+              v-else
+              size="tiny"
+              quaternary
+              type="primary"
+              @click="isCustomProject = false"
+            >
+              ← 返回已有项目
+            </n-button>
+          </div>
+
+          <!-- 下拉选择已有项目 -->
+          <n-select
+            v-if="!isCustomProject"
+            v-model:value="form.project"
+            size="small"
+            :options="projectSelectOptions"
+            @update:value="handleProjectSelectChange"
+          />
+
+          <!-- 手动输入新项目名称 -->
+          <n-input
+            v-else
+            ref="customProjectInputRef"
+            v-model:value="customProjectName"
+            size="small"
+            placeholder="输入新项目名称，如: 电商中台、OA系统"
+          />
+
+          <!-- 快捷候选标签药丸 -->
+          <div v-if="availableProjects.length > 0" class="project-quick-tags">
+            <span class="quick-hint">快捷选择:</span>
+            <n-tag
+              v-for="p in availableProjects"
+              :key="p"
+              size="tiny"
+              :type="form.project === p && !isCustomProject ? 'primary' : 'default'"
+              :bordered="false"
+              class="quick-pill cursor-pointer"
+              @click="selectProjectTag(p)"
+            >
+              {{ p }}
+            </n-tag>
           </div>
         </div>
+      </div>
 
-        <div class="flex justify-end gap-3 pt-3">
-          <button
-            type="button"
-            @click="close"
-            class="px-4 py-2 text-sm text-slate-300 hover:bg-slate-700/60 rounded-lg transition"
-          >
-            取消
-          </button>
-          <button
-            type="submit"
-            :disabled="loading"
-            class="px-5 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg shadow-lg shadow-emerald-950/40 transition disabled:opacity-50 flex items-center gap-1.5"
-          >
-            <Loader2 v-if="loading" class="w-4 h-4 animate-spin" />
-            <span>{{ loading ? '创建中...' : '立即创建工作区' }}</span>
-          </button>
+      <div class="field-block">
+        <label class="field-label">
+          任务 / 需求名称 <span class="required-star">*</span>
+        </label>
+        <n-input
+          v-model:value="form.title"
+          size="small"
+          placeholder="如: 考勤流程接口对接、5G短信推送"
+        />
+      </div>
+
+      <!-- 自动生成的工作区预览说明 -->
+      <div class="workspace-preview-box">
+        <p class="preview-title">
+          <CheckCircle2 class="icon-small text-teal-400" />
+          将在本地自动生成对应工作区：
+        </p>
+        <div class="preview-tree">
+          📁 {{ form.year || '2026' }}/{{ form.title || '任务名称' }}/ <span class="project-highlight">({{ currentProjectDisplay }})</span><br>
+          &nbsp;&nbsp;├── 📁 docs/ (需求.md、笔记.md、Word/Excel 需求文档)<br>
+          &nbsp;&nbsp;├── 📁 sql/ (存放 SQL 脚本，支持单行管理与发布追踪)<br>
+          &nbsp;&nbsp;└── 📁 attachments/ (存放原型图、抓包、原始附件)
         </div>
-      </form>
-    </div>
-  </div>
+      </div>
+
+      <div class="modal-footer">
+        <n-button size="small" quaternary @click="close">
+          取消
+        </n-button>
+        <n-button
+          size="small"
+          type="primary"
+          :loading="loading"
+          attr-type="submit"
+        >
+          立即创建工作区
+        </n-button>
+      </div>
+    </form>
+  </n-modal>
 </template>
 
 <script setup>
 import { ref, reactive, computed, nextTick } from 'vue'
-import { FolderPlus, X, CheckCircle2, Loader2, ChevronDown } from 'lucide-vue-next'
+import { NModal, NInput, NSelect, NButton, NTag } from 'naive-ui'
+import { FolderPlus, CheckCircle2 } from 'lucide-vue-next'
 
 const emit = defineEmits(['created'])
 
@@ -171,8 +153,17 @@ const currentProjectDisplay = computed(() => {
   return isCustomProject.value ? (customProjectName.value || '新项目') : (form.project || 'MZ')
 })
 
-function handleProjectSelectChange() {
-  if (form.project === '__custom__') {
+const projectSelectOptions = computed(() => {
+  const opts = availableProjects.value.map(p => ({
+    label: `📁 ${p}`,
+    value: p
+  }))
+  opts.push({ label: '➕ 输入新项目名称...', value: '__custom__' })
+  return opts
+})
+
+function handleProjectSelectChange(val) {
+  if (val === '__custom__') {
     switchToCustomProject()
   }
 }
@@ -248,3 +239,116 @@ async function handleSubmit() {
 
 defineExpose({ open })
 </script>
+
+<style scoped>
+.new-task-modal {
+  max-width: 520px;
+  background-color: #111726;
+  border: 1px solid #334155;
+}
+
+.modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.form-grid-top {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 12px;
+}
+
+.field-year,
+.field-project,
+.field-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.project-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.field-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #cbd5e1;
+}
+
+.required-star {
+  color: #f87171;
+}
+
+.project-quick-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.quick-hint {
+  font-size: 10px;
+  color: #64748b;
+}
+
+.quick-pill {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.workspace-preview-box {
+  padding: 12px;
+  background-color: rgba(0, 0, 0, 0.4);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.preview-title {
+  font-weight: 500;
+  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+
+.preview-tree {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #94a3b8;
+  padding-left: 20px;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.project-highlight {
+  color: #2dd4bf;
+  font-family: sans-serif;
+  font-weight: 600;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 8px;
+}
+
+.icon-medium {
+  width: 18px;
+  height: 18px;
+}
+
+.icon-small {
+  width: 14px;
+  height: 14px;
+}
+</style>

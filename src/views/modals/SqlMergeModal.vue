@@ -1,234 +1,185 @@
 <template>
-  <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-in fade-in duration-200">
-    <div class="app-modal-dialog bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl text-slate-100 overflow-hidden">
-      <!-- 弹窗顶栏 -->
-      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
-        <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
-            <Layers class="w-5 h-5" />
-          </div>
-          <div>
-            <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
-              SQL 脚本一键合并导出
-              <span class="text-xs font-normal px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-mono">
-                已选 {{ selectedCount }} / {{ sqlItems.length }} 份
-              </span>
-            </h3>
-            <p class="text-xs text-slate-400 mt-0.5">
-              任务: <span class="text-slate-200 font-medium">{{ task?.title }}</span>
-              · 自动按指定次序拼接、注入元数据头并可选包裹事务
-            </p>
+  <n-modal
+    :show="isOpen"
+    preset="card"
+    title="SQL 脚本一键合并导出"
+    class="sql-merge-modal"
+    @update:show="(val) => { if (!val) close() }"
+  >
+    <template #header-extra>
+      <n-tag size="small" type="primary" :bordered="false" class="font-mono">
+        已选 {{ selectedCount }} / {{ sqlItems.length }} 份
+      </n-tag>
+    </template>
+
+    <div class="modal-subtitle-bar">
+      <span>任务: <b class="task-title-highlight">{{ task?.title }}</b></span>
+      <span class="subtitle-hint">· 自动按指定次序拼接、注入元数据头并可选包裹事务</span>
+    </div>
+
+    <!-- 主体内容：双栏左右拆分 (左侧：排序与勾选，右侧：合并结果代码预览) -->
+    <div class="modal-split-layout">
+      <!-- 左侧：脚本排序与选项面板 -->
+      <div class="left-order-panel">
+        <div class="panel-header-row">
+          <span class="panel-title">
+            <ListOrdered class="icon-small text-teal-400" />
+            脚本执行次序 (上下调整)
+          </span>
+          <div class="quick-select-links">
+            <button class="link-btn" @click="selectAll(true)">全选</button>
+            <span class="link-divider">|</span>
+            <button class="link-btn" @click="selectAll(false)">全不选</button>
           </div>
         </div>
-        <button
-          @click="close"
-          class="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition"
-          title="关闭"
-        >
-          <X class="w-5 h-5" />
-        </button>
-      </div>
 
-      <!-- 主体内容：双栏左右拆分 (左侧：排序与勾选，右侧：合并结果代码预览) -->
-      <div class="flex-1 overflow-hidden grid grid-cols-12 min-h-[460px]">
-        <!-- 左侧：脚本排序与选项面板 (5 列) -->
-        <div class="col-span-5 border-r border-slate-800/80 p-4 flex flex-col bg-slate-900/60 overflow-hidden">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-              <ListOrdered class="w-4 h-4 text-indigo-400" />
-              脚本执行次序 (上下调整)
-            </span>
-            <div class="flex items-center gap-1 text-[11px]">
-              <button
-                @click="selectAll(true)"
-                class="px-1.5 py-0.5 text-slate-400 hover:text-indigo-300 transition"
-              >
-                全选
-              </button>
-              <span class="text-slate-600">|</span>
-              <button
-                @click="selectAll(false)"
-                class="px-1.5 py-0.5 text-slate-400 hover:text-indigo-300 transition"
-              >
-                全不选
-              </button>
-            </div>
-          </div>
-
-          <!-- 脚本列表 (支持上下调整执行次序) -->
-          <div class="flex-1 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
-            <div
-              v-for="(item, idx) in sqlItems"
-              :key="item.fileName"
-              class="p-2.5 rounded-xl border transition flex items-center justify-between gap-2 text-xs"
-              :class="item.selected ? 'bg-slate-800/80 border-indigo-500/30' : 'bg-slate-900/40 border-slate-800 opacity-60'"
-            >
-              <!-- 勾选与次序号 -->
-              <div class="flex items-center gap-2 min-w-0 flex-1">
-                <input
-                  type="checkbox"
-                  v-model="item.selected"
-                  @change="triggerRegenerate"
-                  class="rounded bg-slate-800 border-slate-600 text-indigo-500 focus:ring-0 cursor-pointer"
-                />
-                <span class="w-5 text-center font-mono text-[11px] font-bold text-indigo-400/80 bg-slate-950/80 rounded px-1 py-0.5">
-                  {{ idx + 1 }}
-                </span>
-                <div class="min-w-0 flex-1">
-                  <div class="font-mono text-slate-200 truncate font-medium" :title="item.fileName">
-                    {{ item.fileName }}
-                  </div>
-                  <div class="flex items-center gap-2 text-[10px] text-slate-400 mt-0.5">
-                    <span>{{ formatFileSize(item.size) }}</span>
-                    <span v-if="item.testReleased" class="text-emerald-400">● 测试已发</span>
-                    <span v-else class="text-amber-400">○ 待发测试</span>
-                  </div>
+        <!-- 脚本列表 (支持上下调整执行次序) -->
+        <div class="sql-order-list custom-scrollbar">
+          <div
+            v-for="(item, idx) in sqlItems"
+            :key="item.fileName"
+            class="order-item-card"
+            :class="{ 'is-active': item.selected }"
+          >
+            <!-- 勾选与次序号 -->
+            <div class="item-left">
+              <n-checkbox
+                v-model:checked="item.selected"
+                @update:checked="triggerRegenerate"
+              />
+              <span class="order-number-badge">
+                {{ idx + 1 }}
+              </span>
+              <div class="item-meta">
+                <div class="item-filename" :title="item.fileName">
+                  {{ item.fileName }}
+                </div>
+                <div class="item-sub">
+                  <span>{{ formatFileSize(item.size) }}</span>
+                  <span v-if="item.testReleased" class="tag-released">● 测试已发</span>
+                  <span v-else class="tag-pending">○ 待发测试</span>
                 </div>
               </div>
-
-              <!-- 上下排序按钮 -->
-              <div class="flex items-center gap-0.5 flex-shrink-0">
-                <button
-                  @click="moveItem(idx, -1)"
-                  :disabled="idx === 0"
-                  class="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-slate-100 disabled:opacity-20 disabled:hover:bg-transparent"
-                  title="上移此脚本"
-                >
-                  <ArrowUp class="w-3.5 h-3.5" />
-                </button>
-                <button
-                  @click="moveItem(idx, 1)"
-                  :disabled="idx === sqlItems.length - 1"
-                  class="p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-slate-100 disabled:opacity-20 disabled:hover:bg-transparent"
-                  title="下移此脚本"
-                >
-                  <ArrowDown class="w-3.5 h-3.5" />
-                </button>
-              </div>
             </div>
-          </div>
 
-          <!-- 合并参数开关面板 -->
-          <div class="mt-3 pt-3 border-t border-slate-800 space-y-2 text-xs">
-            <span class="text-[11px] font-bold text-slate-400 block mb-1">包装与事务选项:</span>
-            
-            <label class="flex items-center gap-2 cursor-pointer select-none text-slate-300 hover:text-slate-100">
-              <input
-                type="checkbox"
-                v-model="options.wrapTransaction"
-                @change="triggerRegenerate"
-                class="rounded bg-slate-800 border-slate-600 text-indigo-500 focus:ring-0"
-              />
-              <span>事务包裹 (<code class="text-indigo-300 font-mono text-[11px]">START TRANSACTION; ... COMMIT;</code>)</span>
-            </label>
-
-            <label class="flex items-center gap-2 cursor-pointer select-none text-slate-300 hover:text-slate-100">
-              <input
-                type="checkbox"
-                v-model="options.includeHeader"
-                @change="triggerRegenerate"
-                class="rounded bg-slate-800 border-slate-600 text-indigo-500 focus:ring-0"
-              />
-              <span>注入任务上线元数据头 (含日期、清单、开发者)</span>
-            </label>
-
-            <label class="flex items-center gap-2 cursor-pointer select-none text-slate-300 hover:text-slate-100">
-              <input
-                type="checkbox"
-                v-model="options.includeDividers"
-                @change="triggerRegenerate"
-                class="rounded bg-slate-800 border-slate-600 text-indigo-500 focus:ring-0"
-              />
-              <span>单脚本之间插入清晰分割线与文件名</span>
-            </label>
+            <!-- 上下排序按钮 -->
+            <div class="item-order-actions">
+              <n-button
+                size="tiny"
+                quaternary
+                :disabled="idx === 0"
+                @click="moveItem(idx, -1)"
+                title="上移此脚本"
+              >
+                <template #icon><ArrowUp class="icon-tiny" /></template>
+              </n-button>
+              <n-button
+                size="tiny"
+                quaternary
+                :disabled="idx === sqlItems.length - 1"
+                @click="moveItem(idx, 1)"
+                title="下移此脚本"
+              >
+                <template #icon><ArrowDown class="icon-tiny" /></template>
+              </n-button>
+            </div>
           </div>
         </div>
 
-        <!-- 右侧：实时合并结果代码预览 (7 列) -->
-        <div class="col-span-7 flex flex-col p-4 bg-slate-950/70 overflow-hidden">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                <Code2 class="w-4 h-4 text-indigo-400" />
-                合并生成预览
-              </span>
-              <span class="text-[11px] font-mono text-slate-500">
-                (共 {{ previewLines }} 行 · {{ formatFileSize(previewBytes) }})
-              </span>
-            </div>
-            <button
-              @click="regenerateSql"
-              class="text-[11px] text-slate-400 hover:text-indigo-300 flex items-center gap-1 transition"
-              title="重新拼接合并"
-            >
-              <RefreshCw class="w-3 h-3" :class="{ 'animate-spin': isGenerating }" />
-              重新生成
-            </button>
-          </div>
-
-          <!-- 代码高亮预览框 -->
-          <div class="flex-1 relative rounded-xl border border-slate-800/80 bg-slate-900/90 overflow-hidden">
-            <div v-if="isGenerating" class="absolute inset-0 z-10 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs">
-              <div class="flex items-center gap-2 text-xs text-indigo-300">
-                <RefreshCw class="w-4 h-4 animate-spin text-indigo-400" />
-                正在智能拼接脚本内容...
-              </div>
-            </div>
-
-            <textarea
-              v-model="mergedSql"
-              readonly
-              class="w-full h-full p-4 bg-transparent text-slate-200 font-mono text-xs leading-relaxed resize-none focus:outline-none selection:bg-indigo-600/40 custom-scrollbar"
-              placeholder="请勾选左侧需要合并的 SQL 脚本..."
-            ></textarea>
-          </div>
+        <!-- 底部配置开关 -->
+        <div class="options-box">
+          <n-checkbox v-model:checked="options.wrapTransaction" @update:checked="triggerRegenerate">
+            包裹事务 (START TRANSACTION / COMMIT)
+          </n-checkbox>
+          <n-checkbox v-model:checked="options.includeHeader" @update:checked="triggerRegenerate">
+            包含元数据头 (需求、系统、生成时间与清单)
+          </n-checkbox>
+          <n-checkbox v-model:checked="options.includeDividers" @update:checked="triggerRegenerate">
+            包含单文件分隔注释
+          </n-checkbox>
         </div>
       </div>
 
-      <!-- 弹窗底部操作栏 -->
-      <div class="px-6 py-3.5 border-t border-slate-800 flex items-center justify-between bg-slate-950/70">
-        <div class="text-xs text-slate-400 flex items-center gap-1.5">
-          <Info class="w-3.5 h-3.5 text-indigo-400" />
-          <span>合并导出后可直接复制发给 DBA，或保存到当前任务作为发版总单</span>
+      <!-- 右侧：拼接代码实时预览区 -->
+      <div class="right-preview-panel">
+        <div class="preview-header-bar">
+          <span class="preview-title">
+            <Code2 class="icon-small text-teal-400" />
+            合并脚本全文预览
+            <span v-if="previewLines > 0" class="lines-count font-mono">
+              ({{ previewLines }} 行 · {{ formatFileSize(previewBytes) }})
+            </span>
+          </span>
+
+          <n-button
+            size="tiny"
+            quaternary
+            type="primary"
+            :loading="isGenerating"
+            @click="regenerateSql"
+          >
+            <template #icon><RefreshCw class="icon-tiny" /></template>
+            <span>重新生成</span>
+          </n-button>
         </div>
 
-        <div class="flex items-center gap-2.5">
-          <button
-            @click="close"
-            class="px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 rounded-xl transition"
-          >
-            取消
-          </button>
-
-          <!-- 一键复制全文 -->
-          <button
-            @click="copyMergedSql"
-            :disabled="!mergedSql.trim() || isGenerating"
-            class="px-4 py-2 text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-100 font-medium rounded-xl flex items-center gap-1.5 shadow-sm transition disabled:opacity-40"
-          >
-            <Copy class="w-3.5 h-3.5 text-indigo-400" />
-            <span>一键复制全文 (发版提测)</span>
-          </button>
-
-          <!-- 另存为任务目录脚本 00_merged_all.sql -->
-          <button
-            @click="saveMergedToFile"
-            :disabled="!mergedSql.trim() || isSaving || isGenerating"
-            class="px-4 py-2 text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl flex items-center gap-1.5 shadow-md shadow-indigo-600/30 transition disabled:opacity-40"
-          >
-            <Save class="w-3.5 h-3.5" :class="{ 'animate-spin': isSaving }" />
-            <span>另存为 00_merged_all.sql</span>
-          </button>
+        <div class="code-preview-box custom-scrollbar">
+          <div v-if="isGenerating" class="code-loading-box">
+            <RefreshCw class="icon-medium animate-spin text-teal-400" />
+            <span>正在分析并按序拼接 SQL 文件...</span>
+          </div>
+          <pre v-else class="code-pre select-text">{{ mergedSql }}</pre>
         </div>
       </div>
     </div>
-  </div>
+
+    <!-- 弹窗底部操作按钮 -->
+    <template #action>
+      <div class="modal-action-bar">
+        <div class="action-hint">
+          <Info class="icon-tiny text-teal-400" />
+          <span>合并结果将按当前排列次序拼接，建议先点击「重新生成」检查</span>
+        </div>
+
+        <div class="action-btns">
+          <n-button size="small" quaternary @click="close">
+            取消
+          </n-button>
+
+          <!-- 一键复制全文 -->
+          <n-button
+            size="small"
+            secondary
+            type="primary"
+            :disabled="!mergedSql.trim() || isGenerating"
+            @click="copyMergedSql"
+          >
+            <template #icon><Copy class="icon-small" /></template>
+            <span>一键复制全文 (发版提测)</span>
+          </n-button>
+
+          <!-- 另存为任务目录脚本 00_merged_all.sql -->
+          <n-button
+            size="small"
+            type="primary"
+            :loading="isSaving"
+            :disabled="!mergedSql.trim() || isSaving || isGenerating"
+            @click="saveMergedToFile"
+          >
+            <template #icon><Save class="icon-small" /></template>
+            <span>另存为 00_merged_all.sql</span>
+          </n-button>
+        </div>
+      </div>
+    </template>
+  </n-modal>
 </template>
 
 <script setup>
 import { ref, computed, reactive, watch, nextTick } from 'vue'
+import { NModal, NButton, NCheckbox, NTag } from 'naive-ui'
 import {
-  Layers, X, ListOrdered, ArrowUp, ArrowDown, Code2,
+  Layers, ListOrdered, ArrowUp, ArrowDown, Code2,
   RefreshCw, Copy, Save, Info
 } from 'lucide-vue-next'
 
@@ -240,20 +191,17 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'updated', 'toast'])
 
-// 脚本排序及选择状态项
 const sqlItems = ref([])
 const isGenerating = ref(false)
 const isSaving = ref(false)
 const mergedSql = ref('')
 
-// 合并选项配置
 const options = reactive({
   wrapTransaction: true,
   includeHeader: true,
   includeDividers: true
 })
 
-// 监听弹窗打开时初始化数据
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {
     initItems()
@@ -261,7 +209,6 @@ watch(() => props.isOpen, (newVal) => {
 })
 
 function initItems() {
-  // 排除已存在的合并文件本身，避免死循环自我合并
   const rawList = (props.sqlList || []).filter(item => item.fileName !== '00_merged_all.sql')
   
   sqlItems.value = rawList.map(item => ({
@@ -295,7 +242,6 @@ function triggerRegenerate() {
   regenerateSql()
 }
 
-// 核心：读取各 SQL 内容并拼接
 async function regenerateSql() {
   isGenerating.value = true
   const selected = sqlItems.value.filter(s => s.selected)
@@ -308,12 +254,10 @@ async function regenerateSql() {
 
   try {
     const pieces = []
-    const fileNames = selected.map(s => s.fileName)
     const nowStr = new Date().toLocaleString()
     const taskTitle = props.task?.title || '未命名任务'
     const project = props.task?.project || '常规项目'
 
-    // 1. 生成元数据头注释
     if (options.includeHeader) {
       pieces.push(`-- ====================================================================`)
       pieces.push(`--  DevOrbit (星轨) · SQL 脚本统一合并上线总单`)
@@ -329,13 +273,11 @@ async function regenerateSql() {
       pieces.push(`-- ====================================================================\n`)
     }
 
-    // 2. 事务开头
     if (options.wrapTransaction) {
       pieces.push(`-- >>> [事务开始] 防止部分 SQL 失败导致脏读，请确保支持 DDL 事务 (MySQL 推荐谨慎分段)`)
       pieces.push(`START TRANSACTION;\n`)
     }
 
-    // 3. 读取并拼接每个脚本
     for (let i = 0; i < selected.length; i++) {
       const item = selected[i]
       let fileContent = ''
@@ -357,7 +299,6 @@ async function regenerateSql() {
       pieces.push('\n')
     }
 
-    // 4. 事务提交
     if (options.wrapTransaction) {
       pieces.push(`-- >>> [事务提交] 脚本全部按序执行完成`)
       pieces.push(`COMMIT;\n`)
@@ -371,7 +312,6 @@ async function regenerateSql() {
   }
 }
 
-// 复制到剪贴板
 async function copyMergedSql() {
   if (!mergedSql.value) return
   try {
@@ -386,7 +326,6 @@ async function copyMergedSql() {
   }
 }
 
-// 另存为 00_merged_all.sql
 async function saveMergedToFile() {
   if (!mergedSql.value || !props.task?.fullPath) return
   isSaving.value = true
@@ -419,6 +358,266 @@ function formatFileSize(bytes) {
 </script>
 
 <style scoped>
+.sql-merge-modal {
+  width: 90vw;
+  max-width: 980px;
+  background-color: #0f172a;
+  border: 1px solid #334155;
+}
+
+.modal-subtitle-bar {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.task-title-highlight {
+  color: #e2e8f0;
+}
+
+.subtitle-hint {
+  color: #64748b;
+}
+
+.modal-split-layout {
+  display: grid;
+  grid-template-columns: 5fr 7fr;
+  gap: 14px;
+  min-height: 440px;
+  max-height: 56vh;
+}
+
+.left-order-panel {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  padding-right: 12px;
+  overflow: hidden;
+}
+
+.panel-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.panel-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.quick-select-links {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0;
+}
+.link-btn:hover {
+  color: #2dd4bf;
+}
+
+.link-divider {
+  color: #475569;
+}
+
+.sql-order-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 4px;
+}
+
+.order-item-card {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background-color: rgba(30, 41, 59, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  transition: all 0.15s ease;
+  opacity: 0.6;
+}
+.order-item-card.is-active {
+  background-color: rgba(30, 41, 59, 0.8);
+  border-color: rgba(45, 212, 191, 0.3);
+  opacity: 1;
+}
+
+.item-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.order-number-badge {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: #2dd4bf;
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.item-meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.item-filename {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.tag-released {
+  color: #34d399;
+}
+.tag-pending {
+  color: #fbbf24;
+}
+
+.item-order-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.options-box {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* 右侧预览区 */
+.right-preview-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.preview-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.preview-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lines-count {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: normal;
+}
+
+.code-preview-box {
+  flex: 1;
+  overflow: auto;
+  border-radius: 8px;
+  background-color: #020617;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px;
+}
+
+.code-loading-box {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.code-pre {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #cbd5e1;
+  white-space: pre;
+}
+
+.modal-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.action-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.action-btns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-medium {
+  width: 18px;
+  height: 18px;
+}
+.icon-small {
+  width: 14px;
+  height: 14px;
+}
+.icon-tiny {
+  width: 12px;
+  height: 12px;
+}
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -427,10 +626,10 @@ function formatFileSize(bytes) {
   background: rgba(15, 23, 42, 0.4);
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(99, 102, 241, 0.3);
+  background: rgba(45, 212, 191, 0.3);
   border-radius: 3px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(99, 102, 241, 0.6);
+  background: rgba(45, 212, 191, 0.6);
 }
 </style>

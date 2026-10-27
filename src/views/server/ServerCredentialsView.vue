@@ -161,55 +161,45 @@
               :key="srv.id"
               :id="`server-item-${idx}`"
               @click="focusedIndex = idx"
-              class="p-2.5 rounded-xl border transition-all duration-150 cursor-pointer flex items-center justify-between gap-3 group relative select-none"
-              :class="focusedIndex === idx
-                ? 'bg-teal-950/40 border-teal-500/70 shadow-lg shadow-teal-950/40 ring-1 ring-teal-500/30 text-white'
-                : 'bg-white/[0.02] hover:bg-white/[0.05] border-white/5 text-slate-300'"
+              class="server-item-card"
+              :class="{ 'is-focused': focusedIndex === idx }"
             >
               <!-- 聚焦高亮左边缘晶体微光条 -->
-              <div
-                v-if="focusedIndex === idx"
-                class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4/5 bg-teal-400 rounded-r shadow-md shadow-teal-400"
-              ></div>
+              <div v-if="focusedIndex === idx" class="active-indicator" />
 
               <!-- 左侧：环境标签 + 主机名称 + IP -->
-              <div class="flex items-center gap-2.5 overflow-hidden flex-1 min-w-0 pl-1">
-                <div class="min-w-0 flex-1">
-                  <div class="flex items-center gap-1.5 mb-0.5">
-                    <span
-                      class="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold border"
-                      :class="getEnvStyle(srv.env)"
-                    >
-                      {{ srv.env || '常规环境' }}
-                    </span>
-                    <span class="text-[10px] text-slate-500 font-mono truncate">
-                      SSH: {{ srv.port || '22' }}
-                    </span>
-                  </div>
-
-                  <!-- 主机名称 -->
-                  <h3
-                    class="text-xs font-semibold leading-snug truncate transition"
-                    :class="focusedIndex === idx ? 'text-teal-200 font-bold' : 'text-slate-200 group-hover:text-teal-300'"
+              <div class="server-item-content">
+                <div class="server-item-meta">
+                  <span
+                    class="server-env-badge"
+                    :class="getEnvStyle(srv.env)"
                   >
-                    {{ srv.name }}
-                  </h3>
+                    {{ srv.env || '常规环境' }}
+                  </span>
+                  <span class="server-port-text">
+                    SSH: {{ srv.port || '22' }}
+                  </span>
+                </div>
 
-                  <!-- 主机 IP / 标号 -->
-                  <div class="text-[11px] font-mono text-teal-300/80 truncate mt-0.5 select-all">
-                    {{ srv.ip }}
-                  </div>
+                <!-- 主机名称 -->
+                <h3 class="server-title-text" :class="{ 'is-active': focusedIndex === idx }">
+                  {{ srv.name }}
+                </h3>
+
+                <!-- 主机 IP / 标号 -->
+                <div class="server-ip-preview">
+                  {{ srv.ip }}
                 </div>
               </div>
 
               <!-- 右侧：账号与一键复制 -->
-              <div class="flex-shrink-0 flex items-center gap-1.5">
-                <span class="text-[10px] font-mono text-slate-400 bg-white/5 px-1.5 py-0.5 rounded border border-white/10 hidden sm:inline">
+              <div class="server-item-actions">
+                <span class="server-user-tag">
                   {{ srv.username || 'root' }}
                 </span>
                 <ChevronRight
-                  class="w-3.5 h-3.5 transition"
-                  :class="focusedIndex === idx ? 'text-teal-400 translate-x-0.5' : 'text-slate-600 opacity-40'"
+                  class="arrow-icon"
+                  :class="{ 'is-active': focusedIndex === idx }"
                 />
               </div>
             </div>
@@ -650,6 +640,143 @@ function scrollToActive() {
 </script>
 
 <style scoped>
+.server-item-card {
+  position: relative;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background-color: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  transition: all 0.15s ease-in-out;
+  user-select: none;
+  color: #cbd5e1;
+}
+
+.server-item-card:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.server-item-card.is-focused {
+  background-color: rgba(19, 78, 74, 0.35);
+  border-color: rgba(45, 212, 191, 0.65);
+  box-shadow: 0 4px 16px rgba(13, 148, 136, 0.2);
+  color: #ffffff;
+}
+
+.active-indicator {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 80%;
+  background-color: #2dd4bf;
+  border-radius: 0 4px 4px 0;
+  box-shadow: 0 0 8px rgba(45, 212, 191, 0.6);
+}
+
+.server-item-content {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+  padding-left: 4px;
+}
+
+.server-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.server-env-badge {
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 700;
+  border-width: 1px;
+}
+
+.server-port-text {
+  font-size: 10px;
+  color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.server-title-text {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+  color: #e2e8f0;
+  transition: color 0.15s ease;
+}
+
+.server-title-text.is-active,
+.server-item-card:hover .server-title-text {
+  color: #5eead4;
+}
+
+.server-ip-preview {
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: rgba(94, 234, 212, 0.8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+  user-select: all;
+}
+
+.server-item-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.server-user-tag {
+  font-size: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #94a3b8;
+  background-color: rgba(255, 255, 255, 0.05);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: none;
+}
+@media (min-width: 640px) {
+  .server-user-tag {
+    display: inline;
+  }
+}
+
+.arrow-icon {
+  width: 14px;
+  height: 14px;
+  color: #475569;
+  opacity: 0.4;
+  transition: all 0.15s ease;
+}
+
+.arrow-icon.is-active,
+.server-item-card:hover .arrow-icon {
+  color: #2dd4bf;
+  opacity: 1;
+  transform: translateX(2px);
+}
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 5px;
   height: 5px;
