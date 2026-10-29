@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>方案一 · Linear 极简三栏（浅色）</title>
+<link rel="stylesheet" href="shared/common.css">
+<style>
+:root {
+  --bg: #f8f9fa; --fg: #181a1f; --muted: #767c87; --line: #e6e8ec; --card: #ffffff; --soft: #f1f3f5;
+  --accent: #0d9488; --accent-fg: #fff; --ok: #059669; --ok-bg: #ecfdf5; --warn: #d97706; --warn-bg: #fffbeb; --radius: 7px;
+}
+.shell { display: grid; grid-template-columns: 54px 1fr; height: 100vh; }
+.rail { background: var(--card); border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 6px; }
+.logo { width: 32px; height: 32px; border-radius: 8px; background: var(--fg); color: #fff; font-weight: 800; display: grid; place-items: center; margin-bottom: 8px; }
+.rbtn { width: 38px; height: 36px; border-radius: 7px; color: var(--muted); font-size: 11px; position: relative; }
+.rbtn:hover { background: var(--soft); color: var(--fg); }
+.rbtn.active { background: var(--soft); color: var(--accent); font-weight: 700; }
+.stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.omni { height: 42px; padding: 0 16px; border-bottom: 1px solid var(--line); background: var(--card); display: flex; align-items: center; justify-content: space-between; }
+.main { flex: 1; display: grid; grid-template-columns: 300px 1fr; min-height: 0; }
+.main.single { grid-template-columns: 1fr; }
+.side { border-right: 1px solid var(--line); background: var(--card); display: flex; flex-direction: column; min-height: 0; }
+.work { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.foot { height: 28px; padding: 0 16px; border-top: 1px solid var(--line); background: var(--card); display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="shell zen-hide" id="app"></div>
+<div class="zen-pill" data-act="toggle-zen">👁 壁纸沉浸观赏模式 · 点击此处或按 Esc 恢复工作台</div>
+<script src="shared/common.js"></script>
+<script>
+const VNAMES = { tasks: ['TASK HUB', '开发任务工作台中枢'], notes: ['ARSENAL', '随手记 & 常用命令军火库'], servers: ['MATRIX', '服务器矩阵与 SVN 凭据速查'] };
+window.renderApp = function () {
+  const pend = totalPending();
+  const [badge, desc] = VNAMES[UI.view];
+  $('#app').innerHTML = `
+    <aside class="rail">
+      <div class="logo" title="DevOrbit v1.3.0">DO</div>
+      <button class="rbtn ${UI.view === 'tasks' ? 'active' : ''}" data-view="tasks">任务</button>
+      <button class="rbtn ${UI.view === 'notes' ? 'active' : ''}" data-view="notes">随手</button>
+      <button class="rbtn ${UI.view === 'servers' ? 'active' : ''}" data-view="servers">凭据</button>
+      <div class="spacer"></div>
+      <button class="rbtn" data-act="modal-theme" title="个性化外观与壁纸">🎨</button>
+      <button class="rbtn" data-act="modal-settings" title="系统设置中心">⚙️</button>
+      <span class="dot in-progress" title="工作区在线: ${DATA.workspace}"></span>
+    </aside>
+    <div class="stage">
+      <header class="omni">
+        <div class="row">
+          <span class="tag accent mono">${badge}</span>
+          <span class="muted">${desc}</span>
+          <span class="muted">|</span>
+          <button class="btn xs ghost mono" data-act="modal-settings">📁 ${DATA.workspace}</button>
+        </div>
+        <div class="row">
+          ${pend ? `<span class="tag warn">⚠️ ${pend} 份产线 SQL 待发布</span>` : ''}
+          <button class="btn xs" data-act="modal-new-task">+ 新建任务</button>
+          <button class="btn xs" data-act="modal-search">🔍 全局搜索… <kbd>Ctrl K</kbd></button>
+          <button class="btn xs" data-act="modal-update">🔄 更新中心</button>
+          <button class="btn xs ghost" data-act="toggle-zen" title="沉浸壁纸模式">👁</button>
+        </div>
+      </header>
+      <main class="main ${UI.view !== 'tasks' ? 'single' : ''}">
+        ${UI.view === 'tasks' ? `<aside class="side">${renderTaskSidebar()}</aside><section class="work">${renderTaskWorkspace()}</section>` : ''}
+        ${UI.view === 'notes' ? `<section class="work">${renderNotesView()}</section>` : ''}
+        ${UI.view === 'servers' ? `<section class="work">${renderServersView()}</section>` : ''}
+      </main>
+      <footer class="foot">
+        <div class="row"><span class="dot in-progress"></span><span>矩阵系统就绪 · 当前共加载 ${DATA.tasks.length} 个任务资产</span></div>
+        <div class="row"><span>↑↓ 切换条目</span><span>↵ 打开详情</span><span>Ctrl+O 在IDE打开</span><span>Ctrl+E 资源管理器</span><b>DevOrbit v1.3.0</b></div>
+      </footer>
+    </div>`;
+};
+renderApp();
+</script>
+</body>
+</html>

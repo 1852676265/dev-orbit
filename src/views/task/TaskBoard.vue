@@ -1,111 +1,153 @@
 <template>
   <div class="taskboard-container">
-    <!-- 主工作区：左侧边栏 (TaskSidebar) + 右侧行动舱 -->
+    <!-- 主工作区：左侧玻璃列表岛 (TaskSidebar) + 右侧玻璃预览岛 (Spotlight 竖向子导航 + 内容舱) -->
     <div class="workspace-body">
       <!-- 1. 左侧任务边栏组件 -->
-      <TaskSidebar v-model:selectedYear="selectedYear" v-model:selectedProject="selectedProject"
-        v-model:onlyPendingSql="onlyPendingSql" :years="props.years" :project-list="projectList"
-        :filtered-tasks="filteredTasks" :total-tasks-count="props.tasks.length" :focused-task-index="focusedTaskIndex"
-        :current-task="currentTask" @select-task="setFocusedTask" @open-in-explorer="openInExplorer"
-        @task-contextmenu="openTaskContextMenu" @project-contextmenu="openProjectContextMenu" />
+      <TaskSidebar
+        v-model:selectedYear="selectedYear"
+        v-model:selectedProject="selectedProject"
+        v-model:onlyPendingSql="onlyPendingSql"
+        :years="props.years"
+        :project-list="projectList"
+        :filtered-tasks="filteredTasks"
+        :total-tasks-count="props.tasks.length"
+        :total-pending-sqls="totalPendingProdSqls"
+        :focused-task-index="focusedTaskIndex"
+        :current-task="currentTask"
+        @select-task="setFocusedTask"
+        @open-in-explorer="openInExplorer"
+        @task-contextmenu="openTaskContextMenu"
+        @project-contextmenu="openProjectContextMenu"
+        @open-new-task="$emit('open-new-task')"
+        @open-cross-merge="openCrossTaskMerge"
+      />
 
-      <!-- 2. 右侧全息行动舱 -->
-      <main v-if="currentTask" class="workspace-main">
+      <!-- 2. 右侧全息玻璃行动舱 (方案 6：顶部任务头 + 左竖向子导航 + 右内容预览) -->
+      <main v-if="currentTask" class="workspace-main glass-island">
         <!-- 任务头部组件 -->
-        <TaskHeader :task="currentTask" @open-explorer="openInExplorer" @copy-path="copyTaskPath" />
+        <TaskHeader
+          :task="currentTask"
+          @open-explorer="openInExplorer"
+          @copy-path="copyTaskPath"
+        />
 
-        <!-- 标签式工作区 (采用 Naive UI 组件化 n-tabs) -->
-        <div class="workspace-tabbar">
-          <n-tabs :value="activeWorkspaceTab" type="line" size="small" @update:value="switchWorkspaceTab">
-            <n-tab name="notes">
-              <div class="tab-item-inner">
+        <!-- 下部左右分栏：左侧 172px 竖向子导航 + 右侧内容预览区 -->
+        <div class="detail-split-body">
+          <nav class="vertical-subnav">
+            <button
+              type="button"
+              class="v-nav-btn"
+              :class="{ 'is-active': activeWorkspaceTab === 'notes' }"
+              @click="switchWorkspaceTab('notes')"
+            >
+              <span class="v-nav-left">
                 <StickyNote class="icon-small text-teal-400" />
-                <span>开发备忘与联调参数</span>
-                <n-badge :value="notesState.taskNotes.value.length" :max="99" type="info" size="small" />
-              </div>
-            </n-tab>
-            <n-tab name="sqls">
-              <div class="tab-item-inner">
+                <span>开发备忘</span>
+              </span>
+              <span class="v-nav-count">{{ notesState.taskNotes.value.length }}</span>
+            </button>
+
+            <button
+              type="button"
+              class="v-nav-btn"
+              :class="{ 'is-active': activeWorkspaceTab === 'sqls' }"
+              @click="switchWorkspaceTab('sqls')"
+            >
+              <span class="v-nav-left">
                 <Database class="icon-small text-amber-400" />
-                <span>上线 SQL 资产</span>
-                <n-tag size="tiny" :type="currentTask.prodPendingCount > 0 ? 'warning' : 'default'" :bordered="false"
-                  class="tag-count">
-                  {{ currentTask.prodPendingCount > 0 ? `${currentTask.prodPendingCount} 待发` :
-                    `${sqlsState.currentSqls.value.length}` }}
-                </n-tag>
-              </div>
-            </n-tab>
-            <n-tab name="docs">
-              <div class="tab-item-inner">
+                <span>上线 SQL</span>
+              </span>
+              <span
+                class="v-nav-count"
+                :class="{ 'is-pending': currentTask.prodPendingCount > 0 }"
+              >
+                {{ currentTask.prodPendingCount > 0 ? `${currentTask.prodPendingCount} 待发` : sqlsState.currentSqls.value.length }}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              class="v-nav-btn"
+              :class="{ 'is-active': activeWorkspaceTab === 'docs' }"
+              @click="switchWorkspaceTab('docs')"
+            >
+              <span class="v-nav-left">
                 <FolderKanban class="icon-small text-blue-400" />
-                <span>交付与需求文档</span>
-                <n-badge :value="docsState.currentDocs.value.length" :max="99" type="default" size="small" />
-              </div>
-            </n-tab>
-          </n-tabs>
+                <span>交付文档</span>
+              </span>
+              <span class="v-nav-count">{{ docsState.currentDocs.value.length }}</span>
+            </button>
 
-          <!-- 保存状态微提示 -->
-          <div class="save-status-hint">
-            <span v-if="notesState.noteSavedNotice.value" class="saved-badge">
-              <span class="saved-dot"></span>
-              已保存并同步
-            </span>
+            <div class="v-nav-spacer" />
+
+            <div class="save-status-hint">
+              <span class="saved-badge">
+                <span class="saved-dot"></span>
+                {{ notesState.noteSavedNotice.value ? '已保存并同步' : '已同步 task.json' }}
+              </span>
+            </div>
+          </nav>
+
+          <!-- 右侧子面板内容区 -->
+          <div class="tab-content-area">
+            <TaskDocsTab
+              v-if="activeWorkspaceTab === 'docs'"
+              :docs-state="docsState"
+              @open-file="openFilePreview"
+              @show-in-folder="showInFolder"
+              @doc-contextmenu="openDocContextMenu"
+            />
+
+            <TaskSqlTab
+              v-else-if="activeWorkspaceTab === 'sqls'"
+              :sqls-state="sqlsState"
+              :highlighted-sql-name="highlightedSqlName"
+              @open-file="openFilePreview"
+              @show-in-folder="showInFolder"
+              @copy-path="copyTaskPath"
+              @sql-contextmenu="openSqlContextMenu"
+              @open-cross-merge="openCrossTaskMerge"
+            />
+
+            <TaskNotesTab
+              v-else-if="activeWorkspaceTab === 'notes'"
+              :notes-state="notesState"
+            />
           </div>
-        </div>
-
-        <!-- 标签页主体内容区 -->
-        <div class="tab-content-area">
-
-          <!-- Tab 3: 需求与交付文档资产 -->
-          <TaskDocsTab v-if="activeWorkspaceTab === 'docs'" :docs-state="docsState" @open-file="openFilePreview"
-            @show-in-folder="showInFolder" @doc-contextmenu="openDocContextMenu" />
-
-          <!-- Tab 2: 上线 SQL 脚本资产 -->
-          <TaskSqlTab v-else-if="activeWorkspaceTab === 'sqls'" :sqls-state="sqlsState" @open-file="openFilePreview"
-            @show-in-folder="showInFolder" @copy-path="copyTaskPath" @sql-contextmenu="openSqlContextMenu" />
-
-          <!-- Tab 1: 开发备忘与参数速查 -->
-          <TaskNotesTab v-else-if="activeWorkspaceTab === 'notes'" :notes-state="notesState" />
         </div>
       </main>
 
       <!-- 未选中任务空状态 -->
-      <div v-else class="empty-selection-state">
+      <div v-else class="empty-selection-state glass-island">
         <Layers class="empty-icon" />
         <p class="empty-title">请从左侧选择一个开发任务</p>
         <p class="empty-sub">支持通过 ↑ ↓ 键盘方向键无缝切换查看</p>
       </div>
     </div>
 
-    <!-- 底部状态与快捷键提示行 -->
-    <footer class="status-footer">
-      <div class="footer-left">
-        <span class="system-status">
-          <span class="status-dot"></span>
-          DevOrbit HUD 就绪
-        </span>
-        <span class="divider">|</span>
-        <span class="task-title-hint">
-          {{ currentTask ? currentTask.title : '未选择任务' }}
-        </span>
-      </div>
+    <!-- 通用文件软件内弹窗编辑器 -->
+    <FilePreviewModal
+      v-model:visible="filePreviewModal.visible"
+      :file-path="filePreviewModal.filePath"
+      :file-name="filePreviewModal.fileName"
+      :initial-edit="filePreviewModal.initialEdit"
+      :target-line="filePreviewModal.targetLine || 0"
+      @toast="(msg, type) => emit('toast', msg, type)"
+      @file-saved="handleFileSaved"
+    />
 
-      <div class="footer-right">
-        <span class="shortcut-hint">↑↓ 切换任务</span>
-        <span class="shortcut-hint">Ctrl+E 资源管理器</span>
-        <span class="version-tag">⚡ v1.3.0</span>
-      </div>
-    </footer>
-
-    <!-- 通用文件软件内弹窗编辑器 (免任何外部 IDEA/编辑器) -->
-    <FilePreviewModal v-model:visible="filePreviewModal.visible" :file-path="filePreviewModal.filePath"
-      :file-name="filePreviewModal.fileName" :initial-edit="filePreviewModal.initialEdit"
-      @toast="(msg, type) => emit('toast', msg, type)" @file-saved="handleFileSaved" />
-
-    <!-- SQL 一键合并弹窗 -->
-    <SqlMergeModal v-if="sqlsState.sqlMergeModalOpen.value" :is-open="sqlsState.sqlMergeModalOpen.value"
-      :task="currentTask" :sql-list="sqlsState.currentSqls.value" @close="sqlsState.sqlMergeModalOpen.value = false"
-      @updated="emit('updated')" @toast="(msg, type) => emit('toast', msg, type)" />
+    <!-- SQL 一键合并弹窗（支持单任务 & 跨多任务合并） -->
+    <SqlMergeModal
+      v-if="sqlsState.sqlMergeModalOpen.value"
+      :is-open="sqlsState.sqlMergeModalOpen.value"
+      :task="currentTask"
+      :sql-list="sqlsState.currentSqls.value"
+      :all-tasks="props.tasks"
+      :initial-scope="mergeModalInitialScope"
+      @close="() => { sqlsState.sqlMergeModalOpen.value = false; mergeModalInitialScope = 'current' }"
+      @updated="emit('updated')"
+      @toast="(msg, type) => emit('toast', msg, type)"
+    />
 
     <!-- 右键上下文菜单 -->
     <TaskContextMenu :menu="contextMenu" @action="handleContextMenuAction" />
@@ -175,6 +217,10 @@ const props = defineProps({
 
 const emit = defineEmits(['open-new-task', 'select-task', 'updated', 'toast'])
 
+const totalPendingProdSqls = computed(() => {
+  return props.tasks.reduce((sum, t) => sum + (t.prodPendingCount || 0), 0)
+})
+
 function emitToast(msg, type = 'info') {
   emit('toast', msg, type)
 }
@@ -203,8 +249,63 @@ const notesState = useTaskNotes(currentTask, emitToast, emitUpdated)
 const sqlsState = useTaskSqls(currentTask, emitToast, emitUpdated)
 const docsState = useTaskDocs(currentTask, emitToast, emitUpdated)
 
-// 3. Tab 切换状态
+// 3. Tab 切换状态与跨任务 SQL 合并控制
 const activeWorkspaceTab = ref(localStorage.getItem('devorbit_active_tab') || 'notes')
+const mergeModalInitialScope = ref('current')
+const highlightedSqlName = ref('')
+
+function openCrossTaskMerge() {
+  mergeModalInitialScope.value = 'cross'
+  sqlsState.sqlMergeModalOpen.value = true
+}
+
+async function locateTaskAndFile(targetTask, filePath, fileName, lineNum = 0) {
+  if (!targetTask) return
+
+  // 1. 若当前被筛选器过滤掉了（例如过滤了年份/项目/仅看待发），解除过滤确保目标任务在当前视窗中可见
+  if (selectedYear.value !== 'all' && targetTask.year && selectedYear.value !== targetTask.year) {
+    selectedYear.value = 'all'
+  }
+  if (selectedProject.value !== 'all' && targetTask.project && selectedProject.value !== targetTask.project.trim()) {
+    selectedProject.value = 'all'
+  }
+  onlyPendingSql.value = false
+
+  // 2. 聚焦目标任务
+  await setFocusedTask(targetTask)
+
+  // 3. 根据文件类型自动跳转切换至对应的子 Tab
+  const lowerName = (fileName || '').toLowerCase()
+  if (lowerName.endsWith('.sql')) {
+    await switchWorkspaceTab('sqls')
+    highlightedSqlName.value = fileName
+    setTimeout(() => {
+      if (highlightedSqlName.value === fileName) {
+        highlightedSqlName.value = ''
+      }
+    }, 8000)
+  } else if (lowerName.endsWith('.md') || lowerName.endsWith('.doc') || lowerName.endsWith('.docx') || lowerName.endsWith('.pdf')) {
+    await switchWorkspaceTab('docs')
+  } else {
+    await switchWorkspaceTab('notes')
+  }
+
+  // 4. 核心：在软件内置全屏预览器中打开该文件并精准滚动至指定行！
+  if (filePath && fileName) {
+    await nextTick()
+    openFilePreview(filePath, fileName, false, lineNum)
+  }
+}
+
+function openFilePreviewDirectly(filePath, fileName, lineNum = 0) {
+  openFilePreview(filePath, fileName, false, lineNum)
+}
+
+defineExpose({
+  openCrossTaskMerge,
+  locateTaskAndFile,
+  openFilePreviewDirectly
+})
 
 const workspaceTabs = computed(() => {
   const pendingSql = currentTask.value?.prodPendingCount || 0
@@ -268,15 +369,17 @@ const filePreviewModal = ref({
   visible: false,
   filePath: '',
   fileName: '',
-  initialEdit: false
+  initialEdit: false,
+  targetLine: 0
 })
 
-function openFilePreview(filePath, fileName, initialEdit = false) {
+function openFilePreview(filePath, fileName, initialEdit = false, targetLine = 0) {
   filePreviewModal.value = {
     visible: true,
     filePath,
     fileName,
-    initialEdit
+    initialEdit,
+    targetLine
   }
 }
 
@@ -561,6 +664,7 @@ onUnmounted(() => {
   flex: 1;
   display: flex;
   flex-direction: row;
+  gap: 12px;
   overflow: hidden;
   position: relative;
 }
@@ -571,18 +675,76 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background-color: rgba(0, 0, 0, 0.2);
 }
 
-.workspace-tabbar {
-  padding: 0 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+.detail-split-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 176px 1fr;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.vertical-subnav {
+  padding: 12px 10px;
+  border-right: 1px solid var(--app-border);
+  background: var(--app-secondary-background);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.v-nav-btn {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background-color: rgba(15, 20, 32, 0.8);
-  flex-shrink: 0;
-  user-select: none;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--app-secondary-foreground);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.v-nav-btn:hover {
+  background: var(--app-list-hover-background);
+  color: var(--app-primary-foreground);
+}
+
+.v-nav-btn.is-active {
+  background: var(--app-accent-teal-bg);
+  border-color: var(--app-accent-teal-border);
+  color: var(--app-accent-teal);
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(20, 184, 166, 0.12);
+}
+
+.v-nav-left {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.v-nav-count {
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  background: var(--app-tool-background);
+  color: var(--app-secondary-foreground);
+}
+
+.v-nav-count.is-pending {
+  background: var(--app-accent-amber-bg);
+  color: var(--app-accent-amber);
+  font-weight: 700;
+}
+
+.v-nav-spacer {
+  flex: 1;
 }
 
 .tab-item-inner {
@@ -600,7 +762,7 @@ onUnmounted(() => {
 .save-status-hint {
   font-size: 11px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  color: rgba(45, 212, 191, 0.9);
+  color: var(--app-accent-teal);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -610,21 +772,21 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 4px;
-  color: #34d399;
+  color: #10b981;
 }
 
 .saved-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background-color: #34d399;
+  background-color: #10b981;
 }
 
 .tab-content-area {
   flex: 1;
   overflow: hidden;
   position: relative;
-  background-color: rgba(11, 14, 23, 0.6);
+  background-color: transparent;
 }
 
 .empty-selection-state {
@@ -635,34 +797,34 @@ onUnmounted(() => {
   justify-content: center;
   text-align: center;
   padding: 32px;
-  color: #64748b;
+  color: var(--app-muted-foreground);
   user-select: none;
 }
 
 .empty-icon {
   width: 48px;
   height: 48px;
-  color: #475569;
+  color: var(--app-muted-foreground);
   margin-bottom: 12px;
 }
 
 .empty-title {
   font-size: 14px;
   font-weight: 500;
-  color: #cbd5e1;
+  color: var(--app-primary-foreground);
   margin: 0;
 }
 
 .empty-sub {
   font-size: 12px;
-  color: #64748b;
+  color: var(--app-muted-foreground);
   margin-top: 4px;
 }
 
 .status-footer {
   height: 32px;
   padding: 0 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--app-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -670,8 +832,8 @@ onUnmounted(() => {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   flex-shrink: 0;
   user-select: none;
-  background-color: rgba(0, 0, 0, 0.4);
-  color: #94a3b8;
+  background-color: var(--app-secondary-background);
+  color: var(--app-secondary-foreground);
 }
 
 .footer-left {
@@ -684,7 +846,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #2dd4bf;
+  color: var(--app-accent-teal);
   font-weight: 600;
 }
 
@@ -692,11 +854,11 @@ onUnmounted(() => {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background-color: #2dd4bf;
+  background-color: #14b8a6;
 }
 
 .divider {
-  color: #64748b;
+  color: var(--app-muted-foreground);
   opacity: 0.4;
 }
 
@@ -714,11 +876,11 @@ onUnmounted(() => {
 }
 
 .shortcut-hint {
-  color: #64748b;
+  color: var(--app-muted-foreground);
 }
 
 .version-tag {
-  color: rgba(45, 212, 191, 0.9);
+  color: var(--app-accent-teal);
   font-weight: 700;
 }
 

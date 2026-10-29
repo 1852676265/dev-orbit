@@ -1,9 +1,9 @@
 <template>
-  <n-config-provider :theme="darkTheme">
+  <n-config-provider :theme="isDarkMode ? darkTheme : null">
     <div
       class="app-container"
-      data-theme-mode="dark"
-      data-theme-accent="emerald"
+      :data-theme-mode="isDarkMode ? 'dark' : 'light'"
+      :data-theme-accent="isDarkMode ? 'emerald' : 'white'"
     >
       <!-- 动态背景画布层 (支持自定义壁纸与系统预设渐变) -->
       <div class="bg-canvas" :style="backgroundStyle" />
@@ -12,127 +12,17 @@
       <div class="bg-overlay" :style="overlayStyle" />
 
       <!-- ===================================================================== -->
-      <!-- 全局架构一：左侧 54px 极窄神经轨 (采用 Naive UI 组件化规范)             -->
-      <!-- ===================================================================== -->
-      <aside class="rail-sidebar">
-        <!-- 神经轨 Logo (DO / DevOrbit) -->
-        <n-avatar
-          round
-          :size="36"
-          class="rail-logo-avatar"
-          title="DevOrbit 开发者星轨 v1.3"
-        >
-          DO
-        </n-avatar>
-
-        <n-divider class="rail-divider" />
-
-        <!-- 核心视图切换主按钮组 (任务 / 随手记 / 服务器) -->
-        <div class="view-switch-group">
-          <!-- 1. 开发任务工作台 -->
-          <n-tooltip placement="right" trigger="hover">
-            <template #trigger>
-              <n-badge :dot="totalPendingProdSqls > 0" type="warning" :offset="[-2, 2]">
-                <n-button
-                  quaternary
-                  size="medium"
-                  :type="currentView === 'tasks' ? 'primary' : 'default'"
-                  :class="{ 'is-active-btn': currentView === 'tasks' }"
-                  @click="currentView = 'tasks'"
-                >
-                  <template #icon>
-                    <Layers class="icon-nav" />
-                  </template>
-                </n-button>
-              </n-badge>
-            </template>
-            开发任务中枢 ({{ tasks.length }}) · {{ totalPendingProdSqls }} 待发 SQL
-          </n-tooltip>
-
-          <!-- 2. 随手记 & 常用命令军火库 -->
-          <n-tooltip placement="right" trigger="hover">
-            <template #trigger>
-              <n-button
-                quaternary
-                size="medium"
-                :type="currentView === 'notes' ? 'primary' : 'default'"
-                :class="{ 'is-active-btn': currentView === 'notes' }"
-                @click="currentView = 'notes'"
-              >
-                <template #icon>
-                  <BookMarked class="icon-nav" />
-                </template>
-              </n-button>
-            </template>
-            随手记 & 常用命令军火库
-          </n-tooltip>
-
-          <!-- 3. 服务器矩阵与凭据速查 -->
-          <n-tooltip placement="right" trigger="hover">
-            <template #trigger>
-              <n-button
-                quaternary
-                size="medium"
-                :type="currentView === 'servers' ? 'primary' : 'default'"
-                :class="{ 'is-active-btn': currentView === 'servers' }"
-                @click="currentView = 'servers'"
-              >
-                <template #icon>
-                  <Server class="icon-nav" />
-                </template>
-              </n-button>
-            </template>
-            服务器矩阵与 SVN 凭据速查
-          </n-tooltip>
-        </div>
-
-        <!-- 神经轨底部功能：外观、设置、工作区心跳指示灯 -->
-        <div class="rail-bottom-tools">
-          <n-tooltip placement="right" trigger="hover">
-            <template #trigger>
-              <n-button quaternary size="small" @click="openThemeModal" class="tool-btn">
-                <template #icon><Palette class="icon-nav" /></template>
-              </n-button>
-            </template>
-            个性化外观与自定义壁纸
-          </n-tooltip>
-
-          <n-tooltip placement="right" trigger="hover">
-            <template #trigger>
-              <n-button quaternary size="small" @click="openSettingsModal" class="tool-btn">
-                <template #icon><Settings class="icon-nav" /></template>
-              </n-button>
-            </template>
-            系统设置中心
-          </n-tooltip>
-
-          <!-- 工作区在线心跳指示灯 -->
-          <div
-            class="heartbeat-dot"
-            :title="`工作区在线: ${workspacePath}`"
-          />
-        </div>
-      </aside>
-
-      <!-- ===================================================================== -->
-      <!-- 右侧：全息矩阵主舞台 (通透架构，透出底层自定义壁纸)                      -->
+      <!-- 全局架构：方案 6 Spotlight 玻璃流光顶栏 + 居中胶囊导航 + 双浮岛主舞台    -->
       <!-- ===================================================================== -->
       <div class="main-stage-wrapper">
-        <!-- 1. 顶层 Omni-Bar 流光状态条 (采用 Naive UI 组件化) -->
-        <header class="omni-bar-header">
-          <!-- 模块标识与工作区路径 -->
+        <!-- 1. 顶层悬浮玻璃导航栏 (左：品牌与工作区 | 中：居中胶囊切换 | 右：搜索与全局工具) -->
+        <header class="omni-bar-header glass-island">
           <div class="header-left">
-            <n-tag type="primary" size="small" :bordered="false" class="font-mono font-bold">
-              {{ currentViewTitle.badge }}
-            </n-tag>
+            <div class="brand-box" title="DevOrbit 开发者星轨 v1.3">
+              <div class="brand-logo-orb">DO</div>
+              <span class="brand-title">DevOrbit</span>
+            </div>
 
-            <span class="view-desc">
-              {{ currentViewTitle.desc }}
-            </span>
-
-            <span class="bar-divider">|</span>
-
-            <!-- 当前工作区目录 (点击可更换) -->
             <n-button
               size="small"
               quaternary
@@ -147,61 +37,120 @@
             </n-button>
           </div>
 
-          <!-- 右侧：待发 SQL 胶囊、极速搜索、更新中心与沉浸模式 -->
+          <!-- 居中毛玻璃分段胶囊导航 (取代原左上角切页，支持键盘 1 / 2 / 3 快速切换) -->
+          <nav class="center-nav-pill">
+            <button
+              type="button"
+              class="nav-pill-item"
+              :class="{ 'is-active': currentView === 'tasks' }"
+              @click="currentView = 'tasks'"
+            >
+              <Layers class="icon-small" />
+              <span>开发任务</span>
+              <span class="pill-count">{{ tasks.length }}</span>
+              <kbd class="pill-kbd">1</kbd>
+            </button>
+
+            <button
+              type="button"
+              class="nav-pill-item"
+              :class="{ 'is-active': currentView === 'notes' }"
+              @click="currentView = 'notes'"
+            >
+              <BookMarked class="icon-small" />
+              <span>命令 & 随手记</span>
+              <kbd class="pill-kbd">2</kbd>
+            </button>
+
+            <button
+              type="button"
+              class="nav-pill-item"
+              :class="{ 'is-active': currentView === 'servers' }"
+              @click="currentView = 'servers'"
+            >
+              <Server class="icon-small" />
+              <span>服务器与凭据</span>
+              <kbd class="pill-kbd">3</kbd>
+            </button>
+          </nav>
+
+          <!-- 右侧：紧凑玻璃搜索框、待发 SQL 跨任务合并入口、新建任务与系统工具 -->
           <div class="header-right">
-            <!-- 待发 SQL 预警标签 -->
-            <n-tag
-              v-if="totalPendingProdSqls > 0"
-              type="warning"
-              size="small"
-              class="font-mono font-bold"
-            >
-              <template #icon>
-                <Database class="icon-tiny text-amber-400" />
-              </template>
-              {{ totalPendingProdSqls }} 份产线 SQL 待发布
-            </n-tag>
-
-            <!-- 全局搜索入口 (Ctrl+K) -->
-            <n-button
-              size="small"
-              secondary
+            <button
+              type="button"
+              class="omni-search-pill"
               @click="openSearchModal"
-              title="全局搜索任务、SQL与命令 (快捷键 Ctrl+K)"
+              title="全局穿透搜索任务、SQL、命令与服务器 (Ctrl+K)"
             >
-              <template #icon>
-                <Search class="icon-small text-teal-400" />
-              </template>
-              <span>全局搜索...</span>
+              <Search class="icon-small text-teal-400" />
+              <span>搜索任务、SQL、命令...</span>
               <kbd class="shortcut-badge">Ctrl K</kbd>
-            </n-button>
+            </button>
 
-            <!-- DBX 同款无感更新中心 -->
-            <n-button
-              size="small"
-              type="primary"
-              secondary
-              @click="openUpdateCenter"
-              title="打开更新中心 (DBX 模式在线自动更新)"
-            >
-              <template #icon>
-                <RefreshCw class="icon-tiny text-teal-400" />
-              </template>
-              <span>更新中心</span>
-            </n-button>
+            <!-- 全局常驻操作工具组（一键明暗切换、系统设置、检查更新、沉浸模式） -->
+            <div class="header-tools-group">
+              <!-- 1. JeikCode 同款：一键明亮/暗黑主题切换 -->
+              <n-tooltip placement="bottom" trigger="hover">
+                <template #trigger>
+                  <button
+                    type="button"
+                    class="tool-icon-btn"
+                    @click="toggleThemeMode"
+                    :title="isDarkMode ? '当前暗黑模式，点击切换至明亮模式' : '当前明亮模式，点击切换至暗黑模式'"
+                  >
+                    <Sun v-if="isDarkMode" class="w-4 h-4 text-amber-300 hover:rotate-45 transition-transform duration-300" />
+                    <Moon v-else class="w-4 h-4 text-indigo-500 hover:-rotate-12 transition-transform duration-300" />
+                  </button>
+                </template>
+                <span>{{ isDarkMode ? '切换至明亮模式' : '切换至暗黑模式' }}</span>
+              </n-tooltip>
 
-            <!-- 一键沉浸壁纸模式 -->
-            <n-button
-              size="small"
-              :type="isZenMode ? 'primary' : 'default'"
-              quaternary
-              @click="toggleZenMode"
-              title="沉浸壁纸模式 (隐藏卡片观赏背景，按 Esc 退出)"
-            >
-              <template #icon>
-                <Eye class="icon-small" />
-              </template>
-            </n-button>
+              <!-- 2. 系统设置中心入口 (恢复且常驻不可挤压) -->
+              <n-tooltip placement="bottom" trigger="hover">
+                <template #trigger>
+                  <button
+                    type="button"
+                    class="tool-icon-btn"
+                    @click="openSettingsModal"
+                    title="系统设置中心"
+                  >
+                    <Settings class="w-4 h-4" />
+                  </button>
+                </template>
+                <span>系统设置</span>
+              </n-tooltip>
+
+              <!-- 3. 更新中心 -->
+              <n-tooltip placement="bottom" trigger="hover">
+                <template #trigger>
+                  <button
+                    type="button"
+                    class="tool-icon-btn"
+                    @click="openUpdateCenter"
+                    title="更新中心 (GitHub 热更新)"
+                  >
+                    <RefreshCw class="w-4 h-4" />
+                  </button>
+                </template>
+                <span>检查更新</span>
+              </n-tooltip>
+
+              <!-- 4. 沉浸壁纸观赏模式 -->
+              <n-tooltip placement="bottom" trigger="hover">
+                <template #trigger>
+                  <button
+                    type="button"
+                    class="tool-icon-btn"
+                    :class="{ 'is-active': isZenMode }"
+                    @click="toggleZenMode"
+                    title="沉浸壁纸观赏模式 (Esc 恢复)"
+                  >
+                    <Eye class="w-4 h-4" />
+                  </button>
+                </template>
+                <span>沉浸模式</span>
+              </n-tooltip>
+            </div>
           </div>
         </header>
 
@@ -211,10 +160,11 @@
           :class="{ 'is-zen': isZenMode }"
         >
           <TaskBoard
+            ref="taskBoardRef"
             v-show="currentView === 'tasks'"
             :tasks="tasks"
             :years="years"
-            :is-light="false"
+            :is-light="!isDarkMode"
             :card-opacity="currentTheme.overlayOpacity ?? 20"
             :card-glass="true"
             @open-new-task="openNewTaskModal"
@@ -222,35 +172,16 @@
             @toast="showToast"
           />
           <QuickNotesView
-            v-if="currentView === 'notes'"
-            :is-light="false"
+            ref="quickNotesViewRef"
+            v-show="currentView === 'notes'"
+            :is-light="!isDarkMode"
             @toast="showToast"
           />
           <ServerCredentialsView
-            v-if="currentView === 'servers'"
+            v-show="currentView === 'servers'"
             @toast="showToast"
           />
         </main>
-
-        <!-- 3. 底部全局极客状态条 (Status Bar) -->
-        <footer class="global-status-bar">
-          <div class="footer-left">
-            <span class="status-indicator-text">
-              <span class="status-pulse-dot" />
-              矩阵系统就绪
-            </span>
-            <span class="bar-divider">|</span>
-            <span class="tasks-loaded-text">当前共加载 {{ tasks.length }} 个任务资产</span>
-          </div>
-
-          <div class="footer-shortcuts">
-            <span>↑↓ 切换条目</span>
-            <span>↵ 打开详情</span>
-            <span>Ctrl+O 在IDE打开</span>
-            <span>Ctrl+E 资源管理器</span>
-            <span class="brand-version">DevOrbit v1.3.0</span>
-          </div>
-        </footer>
       </div>
 
       <!-- 沉浸壁纸观赏提示浮条 -->
@@ -276,6 +207,7 @@
     />
     <GlobalSearchModal
       ref="globalSearchModalRef"
+      @navigate="handleGlobalSearchNavigate"
       @toast="showToast"
     />
     <ThemeModal
@@ -301,7 +233,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import {
   NConfigProvider,
   darkTheme,
@@ -314,7 +246,7 @@ import {
 } from 'naive-ui'
 import {
   Layers, BookMarked, Server, Search, FolderGit2, Settings, Palette,
-  Eye, EyeOff, RefreshCw, Database
+  Eye, EyeOff, RefreshCw, Database, Sun, Moon
 } from 'lucide-vue-next'
 
 // 视图层 UI 组件引入
@@ -335,6 +267,8 @@ const tasks = ref([])
 const years = ref(['2026', '2025'])
 const isZenMode = ref(false)
 
+const taskBoardRef = ref(null)
+const quickNotesViewRef = ref(null)
 const newTaskModalRef = ref(null)
 const taskDetailModalRef = ref(null)
 const globalSearchModalRef = ref(null)
@@ -360,7 +294,23 @@ const totalPendingProdSqls = computed(() => {
   return tasks.value.reduce((sum, t) => sum + (t.prodPendingCount || 0), 0)
 })
 
-// 主题配置
+// 主题配置与极简日夜间模式
+const isDarkMode = ref(localStorage.getItem('devorbit_theme_mode') !== 'light')
+
+watch(
+  isDarkMode,
+  (dark) => {
+    const mode = dark ? 'dark' : 'light'
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme-mode', mode)
+      document.documentElement.setAttribute('data-theme-accent', dark ? 'emerald' : 'white')
+      document.documentElement.classList.toggle('light', !dark)
+      document.documentElement.classList.toggle('dark', dark)
+    }
+  },
+  { immediate: true }
+)
+
 const currentTheme = ref({
   colorTheme: 'emerald',
   customPrimaryColor: '#14b8a6',
@@ -371,8 +321,22 @@ const currentTheme = ref({
   overlayOpacity: 20,
   blurLevel: 'none',
   cardGlass: true,
-  cardOpacity: 18
+  cardOpacity: 18,
+  mode: isDarkMode.value ? 'dark' : 'light'
 })
+
+function toggleThemeMode() {
+  isDarkMode.value = !isDarkMode.value
+  const mode = isDarkMode.value ? 'dark' : 'light'
+  localStorage.setItem('devorbit_theme_mode', mode)
+  currentTheme.value.mode = mode
+  try {
+    window.electronAPI?.saveAppConfig({
+      themeSettings: { ...currentTheme.value, mode }
+    })
+  } catch (e) {}
+  showToast(isDarkMode.value ? '已切换至暗黑模式' : '已切换至明亮模式', 'info')
+}
 
 // 预设背景定义
 const presetGradients = {
@@ -385,6 +349,12 @@ const presetGradients = {
 
 // 动态背景样式
 const backgroundStyle = computed(() => {
+  if (!isDarkMode.value) {
+    return {
+      background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%)'
+    }
+  }
+
   if (currentTheme.value.type === 'custom' && currentTheme.value.customBg) {
     return {
       backgroundImage: `url("${currentTheme.value.customBg}")`,
@@ -405,6 +375,9 @@ const backgroundStyle = computed(() => {
 
 // 遮罩层样式 (动态应用用户的暗度遮罩百分比)
 const overlayStyle = computed(() => {
+  if (!isDarkMode.value) {
+    return { opacity: 0 }
+  }
   let op = currentTheme.value.overlayOpacity ?? 20
   return {
     opacity: op / 100,
@@ -427,6 +400,9 @@ onMounted(async () => {
     const config = await window.electronAPI.getAppConfig()
     if (config && config.themeSettings) {
       Object.assign(currentTheme.value, config.themeSettings)
+      if (config.themeSettings.mode) {
+        isDarkMode.value = config.themeSettings.mode !== 'light'
+      }
     }
   } catch (e) {}
 
@@ -447,7 +423,19 @@ function handleGlobalKeydown(e) {
   if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
     e.preventDefault()
     openSearchModal()
+    return
   }
+  const tag = (e.target?.tagName || '').toLowerCase()
+  if (tag !== 'input' && tag !== 'textarea' && tag !== 'select' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    if (e.key === '1') currentView.value = 'tasks'
+    else if (e.key === '2') currentView.value = 'notes'
+    else if (e.key === '3') currentView.value = 'servers'
+  }
+}
+
+function openCrossTaskSqlMerge() {
+  currentView.value = 'tasks'
+  taskBoardRef.value?.openCrossTaskMerge?.()
 }
 
 function toggleZenMode() {
@@ -459,6 +447,10 @@ function toggleZenMode() {
 
 function onThemeUpdate(newTheme) {
   Object.assign(currentTheme.value, newTheme)
+  if (newTheme && newTheme.mode) {
+    isDarkMode.value = newTheme.mode !== 'light'
+    localStorage.setItem('devorbit_theme_mode', newTheme.mode)
+  }
 }
 
 function openThemeModal() {
@@ -517,6 +509,58 @@ function openSearchModal() {
   globalSearchModalRef.value?.open()
 }
 
+async function handleGlobalSearchNavigate(item) {
+  if (!item) return
+  const relPath = (item.relativePath || '').replace(/\\/g, '/')
+  const filePath = (item.filePath || '').replace(/\\/g, '/')
+  const lowerName = (item.fileName || '').toLowerCase()
+
+  // 1. 若属于随手记/常用命令 (即 _quick_notes 目录，如 memos.json 或 commands.json)
+  if (relPath.includes('_quick_notes') || filePath.includes('_quick_notes') || lowerName.includes('memo') || lowerName.includes('command')) {
+    currentView.value = 'notes'
+    await nextTick()
+    quickNotesViewRef.value?.locateMemoOrCommand?.(item)
+    return
+  }
+
+  // 2. 若属于开发任务目录中的文件
+  if (tasks.value && tasks.value.length > 0) {
+    const sortedTasks = [...tasks.value].sort((a, b) => (b.fullPath || '').length - (a.fullPath || '').length)
+    let matchedTask = sortedTasks.find(t => {
+      if (!t.fullPath) return false
+      const normTaskPath = t.fullPath.replace(/\\/g, '/').toLowerCase().replace(/\/+$/, '')
+      const normFilePath = filePath.toLowerCase()
+      return normFilePath === normTaskPath || normFilePath.startsWith(normTaskPath + '/')
+    })
+
+    if (!matchedTask) {
+      const pathSegments = relPath.toLowerCase().split('/')
+      matchedTask = sortedTasks.find(t => {
+        if (!t.dirName) return false
+        const dn = t.dirName.toLowerCase()
+        return pathSegments.includes(dn) || normFilePath.includes('/' + dn + '/')
+      })
+    }
+
+    if (matchedTask) {
+      currentView.value = 'tasks'
+      await nextTick()
+      taskBoardRef.value?.locateTaskAndFile?.(matchedTask, item.filePath, item.fileName, item.lineNum)
+      if (lowerName.endsWith('.sql')) {
+        showToast(`已在软件内跳转至任务 [${matchedTask.title || matchedTask.dirName}] 的上线 SQL 资产并打开`)
+      } else {
+        showToast(`已在软件内定位至任务 [${matchedTask.title || matchedTask.dirName}] 并打开文件`)
+      }
+      return
+    }
+  }
+
+  // 3. 通用其他文件：若不在已知任务中，直接在软件内打开全屏文件编辑器
+  currentView.value = 'tasks'
+  await nextTick()
+  taskBoardRef.value?.openFilePreviewDirectly?.(item.filePath, item.fileName, item.lineNum)
+}
+
 function openSettingsModal() {
   settingsModalRef.value?.open()
 }
@@ -532,6 +576,10 @@ function onSettingsSaved(newConfig) {
   }
   if (newConfig && newConfig.themeSettings) {
     Object.assign(currentTheme.value, newConfig.themeSettings)
+    if (newConfig.themeSettings.mode) {
+      isDarkMode.value = newConfig.themeSettings.mode !== 'light'
+      localStorage.setItem('devorbit_theme_mode', newConfig.themeSettings.mode)
+    }
   }
 }
 
@@ -651,11 +699,13 @@ function showToast(msg, type = 'success') {
   50% { opacity: 0.4; transform: scale(0.85); }
 }
 
-/* 主舞台区 */
+/* 主舞台区（方案6 玻璃悬浮岛外框） */
 .main-stage-wrapper {
   flex: 1;
   display: flex;
   flex-direction: column;
+  padding: 12px 16px 14px;
+  gap: 12px;
   overflow: hidden;
   position: relative;
   z-index: 10;
@@ -663,16 +713,127 @@ function showToast(msg, type = 'success') {
 }
 
 .omni-bar-header {
-  height: 48px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 0 20px;
+  height: 54px;
+  padding: 0 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 14px;
   flex-shrink: 0;
   z-index: 20;
-  backdrop-filter: blur(16px);
-  background: rgba(13, 17, 26, 0.72);
+}
+
+.brand-box {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.brand-logo-orb {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #14b8a6, #6366f1);
+  color: #ffffff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 900;
+  font-size: 12px;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 4px 14px rgba(20, 184, 166, 0.35);
+}
+
+.brand-title {
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: -0.02em;
+  color: #f8fafc;
+}
+
+.center-nav-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(2, 6, 23, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.nav-pill-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #94a3b8;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.nav-pill-item:hover {
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.nav-pill-item.is-active {
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0.24), rgba(99, 102, 241, 0.22));
+  color: #5eead4;
+  border-color: rgba(45, 212, 191, 0.45);
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(20, 184, 166, 0.18);
+}
+
+.pill-count {
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  background: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+}
+
+.pill-kbd {
+  padding: 0 5px;
+  font-size: 10px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.omni-search-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(2, 6, 23, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.omni-search-pill:hover {
+  border-color: rgba(45, 212, 191, 0.5);
+  color: #f1f5f9;
+  background: rgba(2, 6, 23, 0.65);
+}
+
+.pending-sql-btn {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 700;
 }
 
 .header-left {
@@ -703,6 +864,42 @@ function showToast(msg, type = 'success') {
   align-items: center;
   gap: 10px;
   font-size: 12px;
+  flex-shrink: 0;
+}
+
+.header-tools-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.tool-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  flex-shrink: 0;
+  outline: none;
+}
+
+.tool-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(45, 212, 191, 0.4);
+  color: #f1f5f9;
+}
+
+.tool-icon-btn.is-active {
+  background: rgba(20, 184, 166, 0.2);
+  border-color: rgba(45, 212, 191, 0.45);
+  color: #5eead4;
 }
 
 .shortcut-badge {
@@ -728,58 +925,6 @@ function showToast(msg, type = 'success') {
   opacity: 0;
   pointer-events: none;
   transform: scale(0.98);
-}
-
-/* 全局极客状态条 */
-.global-status-bar {
-  height: 28px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 0 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 11px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  user-select: none;
-  flex-shrink: 0;
-  backdrop-filter: blur(16px);
-  background: rgba(11, 14, 23, 0.78);
-  color: #94a3b8;
-}
-
-.status-indicator-text {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #2dd4bf;
-  font-weight: 700;
-}
-
-.status-pulse-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: #2dd4bf;
-  animation: pulse-dot 2s infinite;
-}
-
-.tasks-loaded-text {
-  max-width: 380px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.footer-shortcuts {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  font-size: 10px;
-}
-
-.brand-version {
-  color: #2dd4bf;
-  font-weight: 700;
 }
 
 /* 沉浸壁纸浮条 */

@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>方案八 · Bento 玻璃桌面（壁纸 + 组件 + Dock）</title>
+<link rel="stylesheet" href="shared/common.css">
+<style>
+:root {
+  --bg: #eef1f7; --fg: #111827; --muted: #5b6474; --line: rgba(17,24,39,.1); --card: rgba(255,255,255,.78); --soft: rgba(17,24,39,.045);
+  --accent: #0369a1; --accent-fg: #fff; --ok: #047857; --ok-bg: rgba(4,120,87,.1); --warn: #b45309; --warn-bg: rgba(180,83,9,.12); --radius: 10px;
+}
+body {
+  background:
+    radial-gradient(1100px 700px at 10% 6%, #c7d2fe 0%, transparent 60%),
+    radial-gradient(900px 620px at 90% 18%, #bae6fd 0%, transparent 55%),
+    radial-gradient(1000px 700px at 58% 100%, #fbcfe8 0%, transparent 60%), #eef1f7;
+}
+.tag.accent { background: rgba(3,105,161,.1); }
+.modal { background: #fff; }
+.shell { height: 100vh; display: flex; flex-direction: column; }
+.menubar { height: 34px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,.5); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255,255,255,.6); }
+.desk { flex: 1; min-height: 0; padding: 14px 18px 94px; overflow: auto; }
+.glass { background: rgba(255,255,255,.62); backdrop-filter: blur(22px) saturate(1.4); border: 1px solid rgba(255,255,255,.75); border-radius: 16px; box-shadow: 0 8px 30px rgba(31,41,55,.08); display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.glass .t-head { background: transparent; border: 0; }
+.w-head { padding: 11px 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 700; }
+.w-body { flex: 1; padding: 0 14px 14px; overflow: auto; min-height: 0; }
+.bento-task { display: grid; grid-template-columns: 300px 1fr; grid-template-rows: auto auto 1fr; gap: 14px; height: 100%; }
+.bento-notes { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: auto 1fr; gap: 14px; height: 100%; }
+.bento-srv { display: grid; grid-template-columns: 1.1fr 1.1fr 1fr; grid-template-rows: auto 1fr; gap: 14px; height: 100%; }
+.kpi { padding: 12px 16px; border-radius: 16px; background: rgba(255,255,255,.55); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,.75); text-align: left; }
+.kpi:hover { border-color: rgba(3,105,161,.35); }
+.kpi.active { background: #fff; border-color: var(--accent); }
+.kpi .num { font-size: 26px; font-weight: 800; letter-spacing: -.02em; line-height: 1.3; }
+.root-pwd { font-size: 22px; font-weight: 800; letter-spacing: .06em; margin: 2px 0 12px; }
+.cmd-card pre { white-space: pre-wrap; word-break: break-all; }
+.dock { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 4px; padding: 7px 10px; background: rgba(255,255,255,.6); backdrop-filter: blur(24px) saturate(1.5); border: 1px solid rgba(255,255,255,.8); border-radius: 20px; box-shadow: 0 12px 40px rgba(31,41,55,.18); z-index: 40; }
+.dk { position: relative; width: 46px; height: 46px; border-radius: 13px; display: grid; place-items: center; font-size: 20px; transition: transform .12s; }
+.dk:hover { background: rgba(255,255,255,.85); transform: translateY(-3px); }
+.dk.active::after { content: ''; position: absolute; bottom: -4px; width: 5px; height: 5px; border-radius: 50%; background: var(--fg); }
+.dk span { position: absolute; bottom: 54px; padding: 2px 8px; border-radius: 6px; background: rgba(17,24,39,.86); color: #fff; font-size: 11px; white-space: nowrap; opacity: 0; pointer-events: none; }
+.dk:hover span { opacity: 1; }
+.dk-sep { width: 1px; height: 30px; background: rgba(17,24,39,.12); margin: 0 4px; }
+</style>
+</head>
+<body>
+<div class="shell zen-hide" id="app"></div>
+<div class="zen-pill" data-act="toggle-zen">👁 壁纸沉浸观赏模式 · 点击此处或按 Esc 恢复工作台</div>
+<script src="shared/common.js"></script>
+<script>
+const DOCK_VIEWS = [['tasks', '📋', '开发任务'], ['notes', '💻', '随手记 & 命令'], ['servers', '🖥️', '服务器与凭据']];
+const DOCK_ACTS = [['modal-new-task', '➕', '新建任务'], ['modal-search', '🔍', '全局搜索 Ctrl+K'], ['modal-update', '🔄', '更新中心'], ['modal-theme', '🎨', '外观与壁纸'], ['modal-settings', '⚙️', '系统设置'], ['toggle-zen', '🌄', '沉浸壁纸']];
+const SRV_CATS = ['服务器账号', 'Web网站', 'iNode'];
+const memoBox = (m) => `<div class="memo-box ${m.color}"><div style="line-height:1.6">${esc(m.text)}</div><div class="between muted" style="font-size:11px;margin-top:6px"><span>${m.time}</span><button class="btn xs ghost" data-copy="${esc(m.text)}">复制</button></div></div>`;
+
+/* ---------- 页面 1：任务清单组件 + 标题组件 + 三个可点击 KPI 磁贴（代替 Tab）+ 内容组件 ---------- */
+function bentoTasks(t = currentTask()) {
+  const pend = taskPending(t);
+  const kpis = [
+    ['notes', '📝 开发备忘', t.notes.length, `${t.params.length} 个速拷参数`],
+    ['sqls', '🗄️ 上线 SQL', t.sqls.length, pend ? `${pend} 份待发产线` : '全部已发产线'],
+    ['docs', '📂 交付文档', t.docs.length, `${t.docs.filter((d) => d.type !== 'md').length} 份 Office 文档`]
+  ];
+  return `
+    <div class="bento-task">
+      <section class="glass" style="grid-row:1/4">
+        <div class="w-head"><span>📋 任务清单</span><button class="btn xs primary" data-act="modal-new-task">+ 新建</button></div>
+        ${renderTaskSidebar()}
+      </section>
+      <section class="glass">
+        <div class="t-head">
+          <div>
+            <div class="row"><span class="tag">${t.year} 年</span><span class="tag accent">${esc(t.project)}</span><span class="tag ${t.status === 'in-progress' ? 'ok' : 'warn'}">${STATUS_MAP[t.status]}</span><span class="muted" style="font-size:11px">更新于 ${t.updated}</span></div>
+            <h1>${esc(t.title)}</h1>
+            <div class="t-path mono">📁 ${esc(t.path)}</div>
+          </div>
+          <div class="row">
+            <button class="btn" data-toast="已在 IDE 打开任务目录">在 IDE 打开</button>
+            <button class="btn primary" data-toast="已打开资源管理器">打开资源管理器</button>
+            <button class="btn ghost" data-copy="${esc(t.path)}">复制路径</button>
+          </div>
+        </div>
+      </section>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+        ${kpis.map(([id, label, n, sub]) => `<button class="kpi ${UI.wsTab === id ? 'active' : ''}" data-ws-tab="${id}"><div class="muted">${label}</div><div class="num">${n}</div><div class="muted" style="font-size:11px">${sub}</div></button>`).join('')}
+      </div>
+      <section class="glass"><div class="w-body" style="padding-top:14px">${renderTaskTabBody(t)}</div></section>
+    </div>`;
+}
+
+/* ---------- 页面 2：置顶组件 + 快速记一笔组件 + 便签墙（竖长）+ 命令库组件 ---------- */
+function bentoNotes() {
+  const cats = [...new Set(DATA.commands.map((c) => c.cat))];
+  const cmds = DATA.commands.filter((c) => UI.cmdCat === 'all' ? true : UI.cmdCat === 'pinned' ? c.pinned : c.cat === UI.cmdCat);
+  const pinned = DATA.commands.filter((c) => c.pinned);
+  return `
+    <div class="bento-notes">
+      <section class="glass" style="grid-column:1/3">
+        <div class="w-head"><span>📌 置顶常用 · 一键复制</span><span class="tag">${pinned.length}</span></div>
+        <div class="w-body" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
+          ${pinned.map((c) => `<div class="cmd-card"><div class="between"><b>${esc(c.title)}</b><button class="btn xs primary" data-copy="${esc(c.cmd)}">复制</button></div><pre class="mono" data-copy="${esc(c.cmd)}">${esc(c.cmd)}</pre></div>`).join('')}
+        </div>
+      </section>
+      <section class="glass">
+        <div class="w-head"><span>⚡ 快速记一笔</span></div>
+        <div class="w-body" style="display:flex;flex-direction:column;gap:8px">
+          <textarea class="input" id="_memo_inp" rows="3" placeholder="发版提醒、临时待办… 回车保存，Shift+回车换行"></textarea>
+          <button class="btn primary" style="justify-content:center" data-act="add-memo">保存到便签墙</button>
+        </div>
+      </section>
+      <section class="glass" style="grid-column:4;grid-row:1/3">
+        <div class="w-head"><span>📝 便签墙</span><span class="tag">${DATA.memos.length}</span></div>
+        <div class="w-body" style="display:flex;flex-direction:column;gap:9px">${DATA.memos.map(memoBox).join('')}</div>
+      </section>
+      <section class="glass" style="grid-column:1/4">
+        <div class="w-head">
+          <div class="row">
+            <span style="margin-right:6px">💻 命令军火库</span>
+            ${['all', 'pinned', ...cats].map((c) => `<button class="btn xs ${UI.cmdCat === c ? 'active' : ''}" data-cmd-cat="${c}">${c === 'all' ? '全部' : c === 'pinned' ? '📌 置顶' : esc(c)}</button>`).join('')}
+            <button class="btn xs ghost" data-toast="新建命令分类">+ 分类</button>
+          </div>
+          <div class="row">
+            <input class="input" placeholder="检索命令 (/)…" style="width:160px">
+            <div class="seg"><button class="${UI.cmdView === 'grid' ? 'active' : ''}" data-cmd-view="grid">卡片</button><button class="${UI.cmdView === 'list' ? 'active' : ''}" data-cmd-view="list">清单</button></div>
+            <button class="btn xs" data-act="modal-txt-import">📄 TXT 导入</button>
+            <button class="btn xs primary" data-act="modal-new-cmd">+ 新增</button>
+          </div>
+        </div>
+        <div class="w-body">
+          ${UI.cmdView === 'grid'
+            ? `<div class="cmd-grid">${cmds.map((c) => `<div class="cmd-card"><div class="between"><div class="row"><span class="tag accent">${esc(c.cat)}</span><b>${esc(c.title)}</b></div><div class="row"><button class="btn xs" data-copy="${esc(c.cmd)}">📋 复制</button><button class="btn xs ghost" data-act="modal-new-cmd">✏️</button></div></div><pre class="mono" data-copy="${esc(c.cmd)}">${esc(c.cmd)}</pre></div>`).join('')}</div>`
+            : cmds.map((c) => `<div class="sql-row"><div class="row" style="min-width:0"><span class="tag accent">${esc(c.cat)}</span><b>${esc(c.title)}</b><code class="mono muted">${esc(c.cmd)}</code></div><div class="row"><button class="btn xs" data-copy="${esc(c.cmd)}">复制</button><button class="btn xs ghost" data-act="modal-new-cmd">✏️</button></div></div>`).join('')}
+        </div>
+      </section>
+    </div>`;
+}
+
+/* ---------- 页面 3：Root 口令组件 + SVN 同步组件 + 分类统计组件 + 凭据 / Word 摘录主组件 ---------- */
+function srvTile(s) {
+  return `
+    <div class="cmd-card" style="display:flex;flex-direction:column;gap:7px">
+      <div class="between"><b>${esc(s.name)}</b><span class="tag">${s.env}</span></div>
+      <div class="between"><span class="muted">地址</span><code class="mono">${esc(s.target)}${s.port ? ':' + s.port : ''}</code></div>
+      <div class="between"><span class="muted">账号</span><code class="mono">${esc(s.user)}</code></div>
+      <div class="between"><span class="muted">口令</span>${s.inherit ? '<span class="tag accent">👑 继承 Root</span>' : `<code class="mono">${esc(s.pwd)}</code>`}</div>
+      <div class="row" style="justify-content:flex-end">
+        <button class="btn xs" data-copy="${esc(s.target)}">拷地址</button>
+        <button class="btn xs" data-copy="${esc(s.inherit ? DATA.rootPwd : s.pwd)}">拷密码</button>
+        ${s.cat === '服务器账号' ? `<button class="btn xs primary" data-copy="ssh ${esc(s.user)}@${esc(s.target)} -p ${s.port || 22}">复制 SSH</button>` : `<button class="btn xs primary" data-toast="已在浏览器打开 ${esc(s.target)}">打开 ↗</button>`}
+      </div>
+    </div>`;
+}
+
+function bentoServers() {
+  const list = DATA.servers.filter((s) => UI.srvCat === 'all' || s.cat === UI.srvCat);
+  const excerpt = UI.srvMode === 'excerpt';
+  return `
+    <div class="bento-srv">
+      <section class="glass">
+        <div class="w-head"><span>👑 通用 Root 口令</span><button class="btn xs ghost" data-act="modal-new-srv">修改</button></div>
+        <div class="w-body">
+          <div class="mono root-pwd">${UI.showRootPwd ? DATA.rootPwd : '••••••••••'}</div>
+          <div class="row"><button class="btn" data-act="toggle-root-pwd">${UI.showRootPwd ? '🙈 隐藏' : '👁 显示'}</button><button class="btn primary" data-copy="${esc(DATA.rootPwd)}">秒拷口令</button><span class="muted" style="font-size:11px">${DATA.servers.filter((s) => s.inherit).length} 项凭据继承</span></div>
+        </div>
+      </section>
+      <section class="glass">
+        <div class="w-head"><span>📘 SVN 文档同步</span><span class="tag ok">今天 09:12 已同步</span></div>
+        <div class="w-body">
+          <div class="mono" style="font-size:11.5px;margin:4px 0 14px">${DATA.svnDoc}</div>
+          <div class="row"><button class="btn" data-toast="已拉取最新 SVN Word 文档并自动同步标蓝密码">🔄 SVN 同步新密码</button><button class="btn ${excerpt ? 'active' : ''}" data-act="toggle-srv-mode">${excerpt ? '← 返回凭据卡片' : '📖 Word 原档摘录'}</button></div>
+        </div>
+      </section>
+      <section class="glass">
+        <div class="w-head"><span>🧮 资产分类</span><button class="btn xs ghost" data-toast="新建自定义凭据分类">+ 分类</button></div>
+        <div class="w-body" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">
+          ${['all', ...SRV_CATS].map((c) => `<button class="kpi ${UI.srvCat === c ? 'active' : ''}" style="padding:7px 12px" data-srv-cat="${c}"><div class="muted" style="font-size:11px">${c === 'all' ? '全部精选' : c}</div><b style="font-size:17px">${c === 'all' ? DATA.servers.length : DATA.servers.filter((s) => s.cat === c).length}</b></button>`).join('')}
+        </div>
+      </section>
+      <section class="glass" style="grid-column:1/4">
+        <div class="w-head">
+          <span>${excerpt ? '📘 Word 原档交互摘录台 — 点左侧单元格 / 蓝字拾取入账' : `🖥️ 凭据卡片 (${list.length})`}</span>
+          <div class="row"><input class="input" placeholder="搜索名称 / IP / URL…" style="width:200px"><button class="btn xs primary" data-act="modal-new-srv">+ 手动新建</button></div>
+        </div>
+        <div class="w-body">${excerpt ? renderWordBench() : `<div class="cmd-grid">${list.map(srvTile).join('')}</div>`}</div>
+      </section>
+    </div>`;
+}
+
+window.renderApp = function () {
+  const pend = totalPending();
+  const page = { tasks: bentoTasks, notes: bentoNotes, servers: bentoServers }[UI.view]();
+  const title = DOCK_VIEWS.find(([id]) => id === UI.view)[2];
+  $('#app').innerHTML = `
+    <header class="menubar">
+      <div class="row" style="gap:14px"><b>◐ DevOrbit</b><button class="btn xs ghost mono" data-act="modal-settings">📁 ${DATA.workspace}</button><span class="muted">${title}</span></div>
+      <div class="row" style="gap:10px">
+        ${pend ? `<span class="tag warn">🗄️ ${pend} 份产线 SQL 待发</span>` : ''}
+        <button class="btn xs ghost" data-act="modal-search">🔍 搜索 <kbd>Ctrl K</kbd></button>
+        <span class="muted">10月28日 周三 14:20</span>
+      </div>
+    </header>
+    <main class="desk">${page}</main>
+    <nav class="dock">
+      ${DOCK_VIEWS.map(([id, ico, label]) => `<button class="dk ${UI.view === id ? 'active' : ''}" data-view="${id}">${ico}<span>${label}</span></button>`).join('')}
+      <i class="dk-sep"></i>
+      ${DOCK_ACTS.map(([act, ico, label]) => `<button class="dk" data-act="${act}">${ico}<span>${label}</span></button>`).join('')}
+    </nav>`;
+};
+renderApp();
+</script>
+</body>
+</html>

@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>方案三 · Craft 暖白文档长卷（一页纵向展开）</title>
+<link rel="stylesheet" href="shared/common.css">
+<style>
+:root {
+  --bg: #fbfaf7; --fg: #262522; --muted: #8a867e; --line: #e8e4dc; --card: #fffefb; --soft: #f3f0e8;
+  --accent: #b4532a; --accent-fg: #fff; --ok: #3f7d2f; --ok-bg: #ecf5e8; --warn: #b45309; --warn-bg: #fef4dd; --radius: 8px;
+}
+.shell { display: flex; flex-direction: column; height: 100vh; }
+.top { height: 48px; padding: 0 22px; border-bottom: 1px solid var(--line); background: var(--card); display: flex; align-items: center; justify-content: space-between; }
+.brand { font-weight: 800; font-size: 14px; letter-spacing: .04em; display: flex; align-items: center; gap: 10px; }
+.main { flex: 1; display: grid; grid-template-columns: 270px 1fr; min-height: 0; }
+.main.single { grid-template-columns: 1fr; }
+.side { border-right: 1px solid var(--line); background: var(--soft); display: flex; flex-direction: column; min-height: 0; }
+.doc-scroll { flex: 1; overflow: auto; padding: 26px 32px 60px; }
+.sheet { max-width: 860px; margin: 0 auto; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 26px 32px; }
+.sec-title { font-size: 13px; font-weight: 700; color: var(--accent); margin: 22px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+.foot { height: 28px; padding: 0 22px; border-top: 1px solid var(--line); background: var(--card); display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="shell zen-hide" id="app"></div>
+<div class="zen-pill" data-act="toggle-zen">👁 壁纸沉浸观赏模式 · 点击此处或按 Esc 恢复工作台</div>
+<script src="shared/common.js"></script>
+<script>
+/* 方案三专属：任务详情不切 Tab，像 Notion/Craft 文档一样在一张纸上纵向展开 备忘+SQL+文档 */
+function renderCraftTaskDoc(t = currentTask()) {
+  const saved = UI.wsTab;
+  UI.wsTab = 'notes'; const notesSec = renderTaskTabBody(t);
+  UI.wsTab = 'sqls';  const sqlsSec  = renderTaskTabBody(t);
+  UI.wsTab = 'docs';  const docsSec  = renderTaskTabBody(t);
+  UI.wsTab = saved;
+  return `
+    <div class="doc-scroll">
+      <article class="sheet">
+        <div class="between">
+          <div class="row"><span class="tag">${t.year} 年</span><span class="tag accent">${esc(t.project)}</span><span class="tag ok">${STATUS_MAP[t.status]}</span><span class="muted">更新于 ${t.updated}</span></div>
+          <div class="row">
+            <button class="btn xs" data-toast="已在 IDE 打开">在 IDE 打开</button>
+            <button class="btn xs primary" data-toast="已打开资源管理器">打开资源管理器</button>
+            <button class="btn xs ghost" data-copy="${esc(t.path)}">复制路径</button>
+          </div>
+        </div>
+        <h1 style="font-size:22px;margin:8px 0 4px">${esc(t.title)}</h1>
+        <div class="mono muted" style="font-size:11px">📁 ${esc(t.path)}</div>
+
+        <div class="sec-title"><span>一、 开发备忘与智能提取参数 (${t.notes.length})</span></div>
+        ${notesSec}
+
+        <div class="sec-title"><span>二、 上线 SQL 脚本资产 (${t.sqls.length})</span></div>
+        ${sqlsSec}
+
+        <div class="sec-title"><span>三、 需求与交付文档 (${t.docs.length})</span></div>
+        ${docsSec}
+      </article>
+    </div>`;
+}
+
+/* 方案三专属页面 2：随手记与命令长卷（顶部胶囊过滤 + 上部命令手册 + 下部便签时间轴） */
+function renderCraftNotesDoc() {
+  const cats = ['all', 'pinned', ...new Set(DATA.commands.map((c) => c.cat))];
+  const cmds = DATA.commands.filter((c) => UI.cmdCat === 'all' ? true : UI.cmdCat === 'pinned' ? c.pinned : c.cat === UI.cmdCat);
+  return `
+    <div class="doc-scroll">
+      <article class="sheet">
+        <div class="between" style="margin-bottom:14px">
+          <div><h1 style="font-size:20px">随手记 &amp; 常用命令手册</h1><span class="muted">顶部胶囊过滤命令，下方直接翻阅便签手账</span></div>
+          <div class="row">
+            <input class="input" placeholder="检索命令与便签…" style="width:180px">
+            <button class="btn xs" data-act="modal-txt-import">📄 TXT 导入</button>
+            <button class="btn xs primary" data-act="modal-new-cmd">+ 新增命令</button>
+          </div>
+        </div>
+        <div class="row" style="margin-bottom:14px;flex-wrap:wrap">
+          ${cats.map((c) => `<button class="btn xs ${UI.cmdCat === c ? 'active' : ''}" data-cmd-cat="${c}">${c === 'all' ? '全部命令' : c === 'pinned' ? '📌 置顶常用' : c}</button>`).join('')}
+          <button class="btn xs ghost" data-toast="新建分类">+ 新分类</button>
+        </div>
+        ${cmds.map((c) => `
+          <div class="sql-row">
+            <div><span class="tag accent">${esc(c.cat)}</span> <b style="margin-left:6px">${esc(c.title)}</b><div class="mono muted" style="margin-top:3px">${esc(c.cmd)}</div></div>
+            <button class="btn xs" data-copy="${esc(c.cmd)}">📋 复制</button>
+          </div>`).join('')}
+
+        <div class="sec-title">
+          <span>📌 极速随手记手账 (${DATA.memos.length})</span>
+          <div class="row"><input class="input" id="_memo_inp" placeholder="记下一笔新便签…" style="width:240px"><button class="btn xs primary" data-act="add-memo">保存便签</button></div>
+        </div>
+        <div class="memo-grid">
+          ${DATA.memos.map((m) => `<div class="memo-box ${m.color}"><div>${esc(m.text)}</div><div class="between muted" style="margin-top:6px;font-size:11px"><span>${m.time}</span><button class="btn xs ghost" data-copy="${esc(m.text)}">复制</button></div></div>`).join('')}
+        </div>
+      </article>
+    </div>`;
+}
+
+/* 方案三专属页面 3：按分类分章节的服务器台账文档 + 嵌入式 Word 摘录卷 */
+function renderCraftServersDoc() {
+  const groups = ['服务器账号', 'Web网站', 'iNode'];
+  return `
+    <div class="doc-scroll">
+      <article class="sheet">
+        <div class="between" style="margin-bottom:14px">
+          <div>
+            <h1 style="font-size:20px">服务器矩阵与 SVN 凭据台账</h1>
+            <div class="row" style="margin-top:4px">
+              <span class="tag accent">👑 通用Root口令: ${UI.showRootPwd ? DATA.rootPwd : '••••••••••'}</span>
+              <button class="btn xs ghost" data-act="toggle-root-pwd">👁 显隐</button>
+              <button class="btn xs" data-copy="${esc(DATA.rootPwd)}">秒拷Root</button>
+              <span class="tag">📘 ${DATA.svnDoc}</span>
+              <button class="btn xs warn" data-toast="已从 SVN 同步标蓝新密码">🔄 SVN同步新密码</button>
+            </div>
+          </div>
+          <div class="row">
+            <button class="btn ${UI.srvMode === 'excerpt' ? 'active' : ''}" data-act="toggle-srv-mode">${UI.srvMode === 'daily' ? '📖 切换 Word 原档摘录' : '← 返回台账长卷'}</button>
+            <button class="btn primary" data-act="modal-new-srv">+ 手动新建</button>
+          </div>
+        </div>
+        ${UI.srvMode === 'excerpt' ? renderWordBench() : groups.map((g) => `
+          <div class="sec-title"><span>${g} (${DATA.servers.filter((s) => s.cat === g).length})</span></div>
+          ${DATA.servers.filter((s) => s.cat === g).map((s) => `
+            <div class="sql-row">
+              <div class="row" style="gap:12px">
+                <span class="tag">${s.env}</span>
+                <b>${esc(s.name)}</b>
+                <code class="mono" data-copy="${esc(s.target)}" style="cursor:pointer">${esc(s.target)}${s.port ? ':' + s.port : ''}</code>
+                <span class="muted">账号: <b class="mono">${esc(s.user)}</b></span>
+                ${s.inherit ? '<span class="tag accent">👑 继承Root</span>' : `<span class="muted">密码: <code class="mono">${esc(s.pwd)}</code></span>`}
+              </div>
+              <div class="row">
+                <button class="btn xs" data-copy="${esc(s.target)}">拷地址</button>
+                <button class="btn xs" data-copy="${esc(s.inherit ? DATA.rootPwd : s.pwd)}">拷密码</button>
+                ${s.cat === '服务器账号' ? `<button class="btn xs primary" data-copy="ssh ${esc(s.user)}@${esc(s.target)}">复制SSH</button>` : `<button class="btn xs primary" data-toast="打开网页">打开 ↗</button>`}
+              </div>
+            </div>`).join('')}`).join('')}
+      </article>
+    </div>`;
+}
+
+window.renderApp = function () {
+  const pend = totalPending();
+  $('#app').innerHTML = `
+    <header class="top">
+      <div class="row" style="gap:14px">
+        <div class="brand"><span>DEVORBIT</span><span class="tag">${DATA.workspace}</span></div>
+        <div class="seg">
+          <button class="${UI.view === 'tasks' ? 'active' : ''}" data-view="tasks">📋 开发任务 (${DATA.tasks.length})</button>
+          <button class="${UI.view === 'notes' ? 'active' : ''}" data-view="notes">💻 随手记 &amp; 命令手册</button>
+          <button class="${UI.view === 'servers' ? 'active' : ''}" data-view="servers">🖥️ 服务器台账</button>
+        </div>
+      </div>
+      <div class="row">
+        ${pend ? `<span class="tag warn">⚠️ ${pend} 待发 SQL</span>` : ''}
+        <button class="btn xs primary" data-act="modal-new-task">+ 新建任务</button>
+        <button class="btn xs" data-act="modal-search">🔍 搜索 <kbd>Ctrl K</kbd></button>
+        <button class="btn xs" data-act="modal-update">更新中心</button>
+        <button class="btn xs" data-act="modal-theme">🎨 外观</button>
+        <button class="btn xs" data-act="modal-settings">⚙️ 设置</button>
+        <button class="btn xs ghost" data-act="toggle-zen">👁</button>
+      </div>
+    </header>
+    <main class="main ${UI.view !== 'tasks' ? 'single' : ''}">
+      ${UI.view === 'tasks' ? `<aside class="side">${renderTaskSidebar()}</aside>${renderCraftTaskDoc()}` : ''}
+      ${UI.view === 'notes' ? renderCraftNotesDoc() : ''}
+      ${UI.view === 'servers' ? renderCraftServersDoc() : ''}
+    </main>
+    <footer class="foot">
+      <span>Craft 文档流模式 · 单页纵向展示全部章节</span>
+      <div class="row"><span>↑↓ 切换任务</span><span>Ctrl+O IDE打开</span><span>Ctrl+E 资源管理器</span><b>v1.3.0</b></div>
+    </footer>`;
+};
+renderApp();
+</script>
+</body>
+</html>

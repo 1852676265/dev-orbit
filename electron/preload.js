@@ -67,6 +67,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getQuickNoteCategories: () => ipcRenderer.invoke('get-quick-note-categories'),
   saveQuickNoteCategories: (categories) => ipcRenderer.invoke('save-quick-note-categories', safeClone(categories)),
 
+  // 极速随手记 / 备忘录独立存储
+  getMemos: () => ipcRenderer.invoke('get-memos'),
+  saveMemo: (memo) => ipcRenderer.invoke('save-memo', safeClone(memo)),
+  deleteMemo: (id) => ipcRenderer.invoke('delete-memo', id),
+
   // 智能全文搜索 & 行定位
   searchKeyword: (query) => ipcRenderer.invoke('search-keyword', query),
   readFileLines: (filePath) => ipcRenderer.invoke('read-file-lines', filePath),
@@ -87,12 +92,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   detectGitHubCliAuth: () => ipcRenderer.invoke('detect-github-cli-auth'),
   openExternalUrl: (url) => ipcRenderer.invoke('open-external-url', url),
 
-  // SVN Word 服务器账号与凭据速查
+  // SVN Word 服务器账号与多维凭据资产
   getSvnDocConfig: () => ipcRenderer.invoke('get-svn-doc-config'),
   saveSvnDocPath: (docPath) => ipcRenderer.invoke('save-svn-doc-path', docPath),
   selectSvnWordFile: () => ipcRenderer.invoke('select-svn-word-file'),
   updateSvnDoc: (targetFile) => ipcRenderer.invoke('update-svn-doc', targetFile),
   parseWordCredentials: (filePath) => ipcRenderer.invoke('parse-word-credentials', filePath),
   openSvnWordFile: (filePath) => ipcRenderer.invoke('open-svn-word-file', filePath),
-  openSvnWordDir: (filePath) => ipcRenderer.invoke('open-svn-word-dir', filePath)
+  openSvnWordDir: (filePath) => ipcRenderer.invoke('open-svn-word-dir', filePath),
+  getServerCredentials: () => ipcRenderer.invoke('get-server-credentials'),
+  saveServerCredentials: (list) => ipcRenderer.invoke('save-server-credentials', safeClone(list)),
+  getCredentialsMeta: () => ipcRenderer.invoke('get-credentials-meta'),
+  saveCredentialsMeta: (meta) => ipcRenderer.invoke('save-credentials-meta', safeClone(meta))
 })

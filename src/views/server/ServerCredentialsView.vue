@@ -1,794 +1,1108 @@
 <template>
-  <div class="h-full w-full flex flex-col p-3 md:p-4 overflow-hidden select-none relative font-sans text-slate-100">
-    
-    <!-- ===================================================================== -->
-    <!-- 极客全息矩阵中枢 (统一双翼骨架 - 服务器矩阵与凭据速查中枢)               -->
-    <!-- ===================================================================== -->
-    <div
-      class="flex-1 flex flex-col rounded-2xl overflow-hidden border border-white/10 shadow-2xl transition-all duration-300"
-      style="background: rgba(14, 19, 31, 0.72); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 10px 40px rgba(0,0,0,0.5);"
-    >
+  <div class="credentials-spotlight-shell">
+    <!-- 方案 6 Spotlight 双毛玻璃悬浮岛：左凭据列表岛 (360px) + 右逐字段复制详情 / Word原档摘录台 -->
+    <div class="srv-islands-wrap">
+      <!-- =================================================================== -->
+      <!-- 左侧毛玻璃悬浮岛：通用Root口令 + 搜索/分类筛选 + 分组凭据列表 + 底部SVN栏 -->
+      <!-- =================================================================== -->
+      <aside class="srv-left-island glass-island">
+        <div class="srv-left-tools">
+          <!-- 👑 全局通用 Root 口令胶囊 -->
+          <div class="root-pwd-capsule">
+            <span class="text-teal-400 font-bold font-mono text-xs">👑 通用Root</span>
 
-      <!-- 1. 顶层速战一体指挥栏 (Command Bar) -->
-      <div
-        class="h-13 px-5 border-b border-white/5 flex items-center justify-between gap-4 flex-shrink-0 z-20 bg-[#121826]/70"
-      >
-        <!-- 搜索过滤框 -->
-        <div class="flex items-center gap-3 flex-1 max-w-md relative">
-          <Server class="w-4 h-4 text-teal-400 flex-shrink-0 animate-pulse" />
-          <input
-            ref="searchInputRef"
-            v-model="searchQuery"
-            type="text"
-            placeholder="穿透检索主机名称、IP 地址、账号或用途... (按 / 聚焦，↑↓ 切换)"
-            class="w-full bg-transparent text-xs text-slate-100 placeholder-slate-500 focus:outline-none font-mono"
-          />
-          <button
-            v-if="searchQuery"
-            @click="searchQuery = ''"
-            class="text-slate-400 hover:text-slate-200 p-1"
-          >
-            <X class="w-3.5 h-3.5" />
-          </button>
-          <kbd
-            v-else
-            class="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono rounded border border-white/10 bg-white/5 text-slate-400 opacity-60"
-          >
-            /
-          </kbd>
-        </div>
-
-        <!-- 环境分流胶囊流 -->
-        <div class="flex items-center gap-1.5 overflow-x-auto py-1 custom-scrollbar">
-          <div class="flex items-center p-0.5 rounded-xl border border-white/10 bg-black/40 text-xs">
-            <button
-              @click="selectedEnv = 'all'"
-              class="px-2.5 py-1 rounded-lg text-xs font-medium transition"
-              :class="selectedEnv === 'all'
-                ? 'bg-teal-500/20 text-teal-300 font-bold border border-teal-500/40 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'"
-            >
-              全部 ({{ serverList.length }})
-            </button>
-            <button
-              v-for="env in availableEnvs"
-              :key="env"
-              @click="selectedEnv = env"
-              class="px-2.5 py-1 rounded-lg text-xs font-medium transition flex items-center gap-1.5"
-              :class="selectedEnv === env
-                ? 'bg-teal-500/20 text-teal-300 font-bold border border-teal-500/40 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'"
-            >
-              <span>{{ env }}</span>
-              <span class="text-[10px] font-mono opacity-60">({{ getEnvCount(env) }})</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Word 原档关联与一键 SVN 更新操作 -->
-        <div class="flex items-center gap-2">
-          <!-- 关联路径胶囊 -->
-          <div
-            v-if="currentDocPath"
-            @click="selectWordFile"
-            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:border-teal-500/50 text-xs cursor-pointer max-w-[200px] transition text-slate-300"
-            :title="`已关联 Word: ${currentDocPath}\n点击更换`"
-          >
-            <FileText class="w-3.5 h-3.5 text-teal-400 flex-shrink-0" />
-            <span class="truncate font-mono text-[11px]">{{ docMeta.fileName || '已绑定 Word' }}</span>
-          </div>
-          <button
-            v-else
-            @click="selectWordFile"
-            class="px-3 py-1.5 text-xs bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-500/40 font-bold rounded-xl flex items-center gap-1.5 transition"
-          >
-            <FolderOpen class="w-3.5 h-3.5" />
-            <span>关联 SVN Word</span>
-          </button>
-
-          <!-- 一键 SVN Update -->
-          <button
-            v-if="currentDocPath"
-            @click="handleSvnUpdate"
-            :disabled="isUpdatingSvn"
-            class="px-3 py-1.5 rounded-xl bg-gradient-to-tr from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 text-xs font-bold flex items-center gap-1.5 transition shadow-sm shadow-teal-950/40 disabled:opacity-50"
-            title="执行 svn update 拉取最新服务器凭据"
-          >
-            <RefreshCw class="w-3.5 h-3.5" :class="{ 'animate-spin': isUpdatingSvn }" />
-            <span>{{ isUpdatingSvn ? '拉取中...' : 'SVN Update' }}</span>
-          </button>
-
-          <!-- 用 Word/WPS 打开原件 -->
-          <button
-            v-if="currentDocPath"
-            @click="openInNativeWord"
-            class="p-2 rounded-xl text-xs transition border border-white/10 bg-white/5 hover:bg-white/10 text-slate-300"
-            title="在本地 Word / WPS 中打开原件"
-          >
-            <ExternalLink class="w-3.5 h-3.5" />
-          </button>
-
-          <!-- 重新解析 -->
-          <button
-            v-if="currentDocPath"
-            @click="loadAndParseDoc"
-            :disabled="isLoading"
-            class="p-2 rounded-xl text-xs transition border border-white/10 bg-white/5 hover:bg-white/10 text-slate-300"
-            title="重新解析当前文件内容"
-          >
-            <RotateCw class="w-3.5 h-3.5" :class="{ 'animate-spin': isLoading }" />
-          </button>
-        </div>
-      </div>
-
-      <!-- 2. 双屏极客中枢架构 (左翼：超高密服务器条目 36% + 右翼：全息服务器行动舱 64%) -->
-      <div class="flex-1 flex overflow-hidden">
-        
-        <!-- ==================== 左翼：超高密度服务器索引流 ==================== -->
-        <div
-          class="w-5/12 max-w-md min-w-[320px] border-r border-white/5 flex flex-col overflow-hidden transition-all duration-300 bg-black/30"
-        >
-          <!-- 统计与说明 -->
-          <div
-            class="h-8 px-4 border-b border-white/5 flex items-center justify-between text-[11px] font-mono flex-shrink-0 bg-white/[0.02] text-slate-400"
-          >
-            <span class="flex items-center gap-1.5">
-              <Server class="w-3.5 h-3.5 text-teal-400" />
-              <span>服务器节点 ({{ filteredServers.length }})</span>
-            </span>
-            <span class="text-teal-400 font-medium">
-              SVN Word 智能结构化
-            </span>
-          </div>
-
-          <!-- 节点列表 (一屏容纳 15+ 项，按上下键秒级切换) -->
-          <div
-            ref="serverListContainerRef"
-            class="flex-1 overflow-y-auto p-2.5 space-y-1.5 custom-scrollbar"
-          >
-            <div
-              v-if="filteredServers.length === 0"
-              class="h-64 flex flex-col items-center justify-center text-center p-6 text-slate-500"
-            >
-              <Database class="w-10 h-10 mb-2 opacity-40" />
-              <p class="text-xs font-medium">未找到符合当前条件的服务器节点</p>
-              <button v-if="searchQuery" @click="searchQuery = ''" class="mt-2 text-xs text-teal-400 underline">清除搜索条件</button>
+            <div v-if="isEditingGlobalPassword" class="flex items-center gap-1 ml-auto">
+              <input
+                v-model="editingGlobalPasswordValue"
+                type="text"
+                class="root-pwd-input"
+                placeholder="输入全局Root密码"
+                @keydown.enter="confirmSaveGlobalPassword"
+                @keydown.esc="isEditingGlobalPassword = false"
+              />
+              <button class="mini-save-btn" @click="confirmSaveGlobalPassword">保存</button>
+              <button class="mini-cancel-btn" @click="isEditingGlobalPassword = false">取消</button>
             </div>
 
-            <!-- 节点条目卡片 (统一黑曜微晶质感，左边缘光条) -->
-            <div
-              v-for="(srv, idx) in filteredServers"
-              :key="srv.id"
-              :id="`server-item-${idx}`"
-              @click="focusedIndex = idx"
-              class="server-item-card"
-              :class="{ 'is-focused': focusedIndex === idx }"
-            >
-              <!-- 聚焦高亮左边缘晶体微光条 -->
-              <div v-if="focusedIndex === idx" class="active-indicator" />
-
-              <!-- 左侧：环境标签 + 主机名称 + IP -->
-              <div class="server-item-content">
-                <div class="server-item-meta">
-                  <span
-                    class="server-env-badge"
-                    :class="getEnvStyle(srv.env)"
-                  >
-                    {{ srv.env || '常规环境' }}
-                  </span>
-                  <span class="server-port-text">
-                    SSH: {{ srv.port || '22' }}
-                  </span>
-                </div>
-
-                <!-- 主机名称 -->
-                <h3 class="server-title-text" :class="{ 'is-active': focusedIndex === idx }">
-                  {{ srv.name }}
-                </h3>
-
-                <!-- 主机 IP / 标号 -->
-                <div class="server-ip-preview">
-                  {{ srv.ip }}
-                </div>
-              </div>
-
-              <!-- 右侧：账号与一键复制 -->
-              <div class="server-item-actions">
-                <span class="server-user-tag">
-                  {{ srv.username || 'root' }}
-                </span>
-                <ChevronRight
-                  class="arrow-icon"
-                  :class="{ 'is-active': focusedIndex === idx }"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ==================== 右翼：全息服务器中枢舱 (免弹窗生产力) ==================== -->
-        <div
-          v-if="currentServer"
-          class="flex-1 flex flex-col overflow-y-auto p-5 md:p-6 space-y-4 custom-scrollbar transition-all duration-300 bg-black/20"
-        >
-          <!-- 1. 服务器头部全景看板 -->
-          <div
-            class="p-4 rounded-xl border border-white/5 flex flex-col md:flex-row md:items-start justify-between gap-4 transition shadow-sm bg-[#121826]/80"
-          >
-            <div class="space-y-1.5 flex-1 min-w-0">
-              <div class="flex items-center gap-2 flex-wrap">
-                <span
-                  class="px-2 py-0.5 rounded text-[10px] font-mono font-bold border"
-                  :class="getEnvStyle(currentServer.env)"
-                >
-                  ● {{ currentServer.env || '常规环境' }}
-                </span>
-                <span class="text-[10px] font-mono text-slate-500">
-                  端口: {{ currentServer.port || '22' }}
-                </span>
-                <span v-if="docMeta.fileName" class="text-[10px] font-mono text-slate-500">
-                  来源: {{ docMeta.fileName }}
-                </span>
-              </div>
-
-              <!-- 主机名 -->
-              <h2 class="text-base font-bold leading-relaxed text-white">
-                {{ currentServer.name }}
-              </h2>
-
-              <!-- IP 地址 -->
-              <div class="flex items-center gap-2 text-xs font-mono text-teal-300">
-                <Server class="w-3.5 h-3.5 text-teal-400 flex-shrink-0" />
-                <span class="font-bold select-all tracking-wider">{{ currentServer.ip }}</span>
-                <button
-                  @click="copyText(currentServer.ip, 'IP 地址')"
-                  class="text-slate-400 hover:text-white transition"
-                  title="复制 IP"
-                >
-                  <Copy class="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-
-            <!-- 快捷工具按钮 -->
-            <div class="flex items-center gap-2 flex-shrink-0 flex-wrap">
-              <!-- 一键拉起终端 -->
-              <button
-                @click="openSshTerminal(currentServer)"
-                class="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-teal-400 to-emerald-400 hover:from-teal-300 hover:to-emerald-300 text-slate-950 text-xs font-bold flex items-center gap-1.5 transition shadow-lg shadow-teal-950/40"
+            <div v-else class="flex items-center gap-1.5 font-mono ml-auto">
+              <span
+                class="font-bold text-xs select-all"
+                :class="isGlobalPasswordVisible ? 'text-teal-300' : 'text-slate-400 tracking-widest'"
               >
-                <Terminal class="w-3.5 h-3.5" />
-                <span>一键拉起 SSH</span>
-              </button>
-
-              <!-- 复制连接命令 -->
-              <button
-                @click="copySshCommand(currentServer)"
-                class="px-3 py-1.5 rounded-xl text-xs font-medium border border-white/10 bg-white/5 hover:bg-white/10 text-slate-300 transition flex items-center gap-1.5"
-                title="复制完整 SSH 命令"
-              >
-                <Copy class="w-3.5 h-3.5" />
-                <span>复制连接命令</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- 2. 核心登录凭据与账号密码卡片 (支持明文/密文一键切换) -->
-          <div
-            class="p-4 rounded-xl border border-white/5 space-y-3 transition shadow-sm bg-[#121826]/80"
-          >
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-slate-200 flex items-center gap-2">
-                <KeyRound class="w-4 h-4 text-teal-400" />
-                <span>登录凭据明细</span>
+                {{ globalRootPassword ? (isGlobalPasswordVisible ? globalRootPassword : '••••••••••') : '(未设置)' }}
               </span>
               <button
-                @click="toggleGlobalPasswordMask"
-                class="text-[11px] font-mono text-teal-400 hover:text-teal-300 flex items-center gap-1"
+                v-if="globalRootPassword"
+                class="icon-ghost-btn"
+                :title="isGlobalPasswordVisible ? '隐藏密码' : '显示明文'"
+                @click="isGlobalPasswordVisible = !isGlobalPasswordVisible"
               >
-                <component :is="showAllPasswords ? EyeOff : Eye" class="w-3.5 h-3.5" />
-                <span>{{ showAllPasswords ? '密文隐藏' : '明文显示密码' }}</span>
+                <component :is="isGlobalPasswordVisible ? EyeOff : Eye" class="w-3.5 h-3.5" />
+              </button>
+              <button
+                v-if="globalRootPassword"
+                class="copy-root-btn"
+                title="一键复制全局通用 Root 密码"
+                @click="copyText(globalRootPassword, '全局通用Root密码')"
+              >
+                秒拷
+              </button>
+              <button
+                class="icon-ghost-btn"
+                title="修改通用 Root 密码"
+                @click="startEditGlobalPassword"
+              >
+                <Pencil class="w-3 h-3" />
               </button>
             </div>
+          </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
-              <!-- 用户名 -->
-              <div class="p-3 rounded-xl bg-black/40 border border-white/5 flex items-center justify-between">
-                <div>
-                  <span class="text-[10px] text-slate-500 block mb-0.5">登录用户名</span>
-                  <span class="text-slate-100 font-bold select-all text-xs">{{ currentServer.username || 'root' }}</span>
+          <!-- 搜索输入框 -->
+          <div class="srv-search-wrap">
+            <Search class="w-3.5 h-3.5 text-teal-400 flex-shrink-0" />
+            <input
+              ref="searchInputRef"
+              v-model="searchQuery"
+              type="text"
+              placeholder="搜索名称 / IP / URL (按 / 聚焦)..."
+              class="srv-search-input"
+            />
+            <button
+              v-if="searchQuery"
+              class="text-slate-400 hover:text-white"
+              @click="searchQuery = ''"
+            >
+              <X class="w-3 h-3" />
+            </button>
+          </div>
+
+          <!-- 分类胶囊条 -->
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <button
+              class="nav-tab-btn"
+              :class="{ 'is-active': selectedCategory === 'all' }"
+              @click="selectedCategory = 'all'"
+            >
+              <span>全部</span>
+              <span class="count-tag">{{ categoryCounts.all || 0 }}</span>
+            </button>
+
+            <button
+              v-for="cat in categories"
+              :key="cat"
+              class="nav-tab-btn"
+              :class="{ 'is-active': selectedCategory === cat }"
+              @click="selectedCategory = cat"
+            >
+              <span>{{ getCategoryIconLabel(cat) }}</span>
+              <span class="count-tag">{{ categoryCounts[cat] || 0 }}</span>
+              <span
+                v-if="!BUILTIN_CATEGORIES.includes(cat)"
+                class="del-cat-dot"
+                title="删除此自定义分类"
+                @click.stop="deleteCategory(cat)"
+              >×</span>
+            </button>
+
+            <div v-if="isCreatingCat" class="flex items-center gap-1">
+              <input
+                v-model="newCategoryInput"
+                type="text"
+                placeholder="分类名称"
+                class="new-cat-inline-input"
+                @keydown.enter="confirmCreateCategory"
+                @keydown.esc="isCreatingCat = false"
+              />
+              <button class="mini-save-btn" @click="confirmCreateCategory">确定</button>
+              <button class="mini-cancel-btn" @click="isCreatingCat = false">取消</button>
+            </div>
+            <button
+              v-else
+              class="create-cat-btn"
+              @click="isCreatingCat = true"
+            >
+              + 分类
+            </button>
+          </div>
+        </div>
+
+        <!-- 左侧分组凭据列表 -->
+        <div class="srv-list-scroll custom-scrollbar">
+          <div v-if="filteredAssets.length === 0" class="left-empty-state">
+            <Database class="w-8 h-8 opacity-30 text-teal-400 mb-2" />
+            <span>当前分类暂无凭据</span>
+          </div>
+
+          <template v-else>
+            <div
+              v-for="group in groupedAssets"
+              :key="group.cat"
+              class="srv-group-block"
+            >
+              <div class="srv-group-title">
+                <span>{{ getCategoryIconLabel(group.cat) }} · {{ group.items.length }}</span>
+              </div>
+
+              <div
+                v-for="item in group.items"
+                :key="item.id"
+                class="srv-list-item"
+                :class="{ 'is-active': viewMode === 'daily' && activeAsset?.id === item.id }"
+                @click="selectAssetItem(item)"
+                @contextmenu.prevent="openContextMenu($event, item)"
+              >
+                <span class="srv-item-ico">🖥️</span>
+                <div class="srv-item-meta">
+                  <div class="srv-item-name">{{ item.name || item.systemName || '未命名节点' }}</div>
+                  <div class="srv-item-target font-mono">{{ item.ip || item.url || item.target || '—' }}</div>
                 </div>
-                <button
-                  @click="copyText(currentServer.username || 'root', '用户名')"
-                  class="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition"
-                  title="复制用户名"
-                >
-                  <Copy class="w-3.5 h-3.5" />
+                <span v-if="item.env" class="srv-env-tag font-mono">{{ item.env }}</span>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- 左侧底部 SVN 同步与 Word 原档摘录操作栏 -->
+        <div class="srv-left-footer">
+          <div v-if="currentDocPath" class="flex items-center justify-between text-[11px] text-slate-400 font-mono">
+            <span class="truncate max-w-[220px]" :title="currentDocPath">📘 {{ docMeta.fileName || '已关联 SVN 文档' }}</span>
+            <button class="icon-ghost-btn" title="使用系统 Word 打开原件" @click="openInNativeWord">
+              <ExternalLink class="w-3 h-3" />
+            </button>
+          </div>
+
+          <div class="flex items-center gap-1.5">
+            <button
+              v-if="currentDocPath"
+              :disabled="isUpdatingSvn"
+              class="srv-foot-btn is-svn"
+              title="拉取最新 SVN Word 文档并自动同步标蓝密码"
+              @click="handleSvnUpdate"
+            >
+              <RefreshCw class="w-3 h-3" :class="{ 'animate-spin': isUpdatingSvn }" />
+              <span>SVN 同步</span>
+            </button>
+
+            <button
+              class="srv-foot-btn"
+              :class="{ 'is-active': viewMode === 'excerpt' }"
+              @click="viewMode === 'daily' ? openExcerptWorkbench() : (viewMode = 'daily')"
+            >
+              <BookOpen class="w-3 h-3" />
+              <span>{{ viewMode === 'daily' ? 'Word 原档摘录' : '返回日常账本' }}</span>
+            </button>
+
+            <button
+              class="srv-foot-btn is-primary"
+              @click="openAddModal"
+            >
+              <Plus class="w-3 h-3" />
+              <span>手动新建</span>
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- =================================================================== -->
+      <!-- 右侧毛玻璃悬浮岛：逐字段一键复制详情 + 极简账本表格 / Word原档摘录工作台 -->
+      <!-- =================================================================== -->
+      <section class="srv-right-island glass-island">
+        <template v-if="viewMode === 'daily'">
+          <!-- 右岛顶栏 -->
+          <div class="srv-right-header">
+            <div class="flex items-center gap-2 text-xs text-slate-300">
+              <Database class="w-4 h-4 text-teal-400" />
+              <span class="font-bold">凭据详情与精选账本</span>
+              <span class="badge-count">{{ filteredAssets.length }} 项</span>
+            </div>
+
+            <div class="right-view-seg">
+              <button
+                type="button"
+                class="r-seg-btn"
+                :class="{ 'is-on': rightPaneMode === 'spotlight' }"
+                @click="rightPaneMode = 'spotlight'"
+              >
+                详情 + 账本
+              </button>
+              <button
+                type="button"
+                class="r-seg-btn"
+                :class="{ 'is-on': rightPaneMode === 'table' }"
+                @click="rightPaneMode = 'table'"
+              >
+                全屏表格
+              </button>
+            </div>
+          </div>
+
+          <div class="flex-1 overflow-y-auto p-5 custom-scrollbar space-y-5">
+            <!-- 空状态 -->
+            <div v-if="filteredAssets.length === 0" class="empty-ledger-state">
+              <Database class="w-10 h-10 mb-2 opacity-30 text-teal-400" />
+              <p class="text-xs font-bold text-slate-200">当前分类下暂无已摘录的凭据</p>
+              <p class="text-[11px] text-slate-400 mt-1">
+                请点击下方按钮去 Word 原档点选摘录，或点击手动新建。
+              </p>
+              <div class="flex gap-2.5 mt-4">
+                <button class="excerpt-mode-btn" @click="openExcerptWorkbench">
+                  <BookOpen class="w-3.5 h-3.5" />
+                  <span>📖 去 Word 文档按需摘录</span>
+                </button>
+                <button class="add-manual-btn" @click="openAddModal">
+                  <Plus class="w-3.5 h-3.5" />
+                  <span>+ 手动新建凭据</span>
                 </button>
               </div>
+            </div>
 
-              <!-- 密码 -->
-              <div class="p-3 rounded-xl bg-black/40 border border-white/5 flex items-center justify-between">
-                <div>
-                  <span class="text-[10px] text-slate-500 block mb-0.5">登录密码</span>
-                  <span
-                    class="font-bold select-all text-xs"
-                    :class="isPasswordVisible(currentServer.id) ? 'text-teal-300' : 'text-slate-400 tracking-widest'"
-                  >
-                    {{ getDisplayPassword(currentServer) }}
-                  </span>
+            <template v-else>
+              <!-- 1. 方案 6 Spotlight 选中凭据逐字段复制详情卡 -->
+              <div
+                v-if="rightPaneMode === 'spotlight' && activeAsset"
+                class="spotlight-detail-card"
+                @contextmenu.prevent="openContextMenu($event, activeAsset)"
+              >
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="badge-count">{{ activeAsset.category || '服务器账号' }}</span>
+                    <span v-if="activeAsset.env" class="srv-env-tag font-mono">{{ activeAsset.env }}</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button
+                      v-if="(activeAsset.category || '服务器账号') === '服务器账号'"
+                      type="button"
+                      class="srv-foot-btn is-primary px-3 py-1"
+                      @click="copySshCommand(activeAsset)"
+                    >
+                      复制 SSH 命令
+                    </button>
+                    <button
+                      v-else
+                      type="button"
+                      class="srv-foot-btn is-primary px-3 py-1"
+                      @click="openTargetUrl(activeAsset)"
+                    >
+                      打开网页 ↗
+                    </button>
+                    <button type="button" class="srv-foot-btn px-2.5 py-1" @click="openEditModal(activeAsset)">
+                      ✏️ 编辑
+                    </button>
+                    <button type="button" class="srv-foot-btn px-2.5 py-1 hover:text-rose-400" @click="deleteAsset(activeAsset.id)">
+                      🗑️ 删除
+                    </button>
+                  </div>
                 </div>
-                <div class="flex items-center gap-1">
-                  <button
-                    @click="toggleSinglePassword(currentServer.id)"
-                    class="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition"
-                    :title="isPasswordVisible(currentServer.id) ? '隐藏' : '显示'"
-                  >
-                    <component :is="isPasswordVisible(currentServer.id) ? EyeOff : Eye" class="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    @click="copyText(currentServer.password, '密码')"
-                    class="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-teal-300 transition"
-                    title="复制密码"
-                  >
-                    <Copy class="w-3.5 h-3.5" />
-                  </button>
+
+                <h2 class="text-lg font-bold text-white mt-2 mb-3">
+                  {{ activeAsset.name || activeAsset.systemName || '未命名节点' }}
+                </h2>
+
+                <div class="kv-grid">
+                  <div class="kv-row">
+                    <span class="kv-label">目标地址</span>
+                    <code class="kv-val font-mono select-all">{{ activeAsset.ip || activeAsset.url || activeAsset.target || '—' }}</code>
+                    <button type="button" class="kv-copy-btn" @click="copyTarget(activeAsset)">复制</button>
+                  </div>
+                  <div class="kv-row">
+                    <span class="kv-label">端口</span>
+                    <code class="kv-val font-mono">{{ activeAsset.port || '22 / 默认' }}</code>
+                    <button
+                      v-if="activeAsset.port"
+                      type="button"
+                      class="kv-copy-btn"
+                      @click="copyText(String(activeAsset.port), '端口')"
+                    >
+                      复制
+                    </button>
+                    <span v-else />
+                  </div>
+                  <div class="kv-row">
+                    <span class="kv-label">登录账号</span>
+                    <code class="kv-val font-mono select-all">{{ activeAsset.username || activeAsset.account || 'root' }}</code>
+                    <button
+                      type="button"
+                      class="kv-copy-btn"
+                      @click="copyText(activeAsset.username || activeAsset.account || 'root', '账号')"
+                    >
+                      复制
+                    </button>
+                  </div>
+                  <div class="kv-row">
+                    <span class="kv-label">认证口令</span>
+                    <div class="flex items-center gap-2">
+                      <span v-if="activeAsset.useGlobalRoot || !activeAsset.password" class="badge-count">
+                        👑 继承全局 Root 口令
+                      </span>
+                      <code v-else class="kv-val font-mono select-all">
+                        {{ isPasswordVisible(activeAsset.id) ? activeAsset.password : '••••••••••' }}
+                      </code>
+                      <button
+                        v-if="activeAsset.password && !activeAsset.useGlobalRoot"
+                        type="button"
+                        class="icon-ghost-btn"
+                        @click="toggleSinglePassword(activeAsset.id)"
+                      >
+                        <component :is="isPasswordVisible(activeAsset.id) ? EyeOff : Eye" class="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <button type="button" class="kv-copy-btn" @click="copyPassword(activeAsset)">复制</button>
+                  </div>
                 </div>
               </div>
-            </div>
+
+              <!-- 2. 精选凭据全量表格 -->
+              <AssetGridTable
+                :assets="filteredAssets"
+                :is-password-visible="isPasswordVisible"
+                @edit="openEditModal"
+                @delete="deleteAsset"
+                @open-url="openTargetUrl"
+                @copy-text="copyText"
+                @copy-target="copyTarget"
+                @copy-ssh="copySshCommand"
+                @copy-pwd="copyPassword"
+                @toggle-pwd="toggleSinglePassword"
+                @contextmenu="openContextMenu"
+              />
+            </template>
           </div>
+        </template>
 
-          <!-- 3. 备注与用途说明抽屉 -->
-          <div
-            v-if="currentServer.remark"
-            class="p-4 rounded-xl border border-white/5 space-y-2 transition shadow-sm bg-[#121826]/80"
-          >
-            <div class="text-xs font-bold text-slate-200 flex items-center gap-2">
-              <FileText class="w-4 h-4 text-amber-400" />
-              <span>节点用途与业务说明</span>
-            </div>
-            <div class="p-3 rounded-xl bg-black/40 border border-white/5 text-xs text-slate-300 leading-relaxed font-mono">
-              {{ currentServer.remark }}
-            </div>
-          </div>
-
+        <!-- 状态二：Word 原档交互式摘录工作台 -->
+        <div v-else class="flex-1 overflow-hidden">
+          <WordExcerptWorkbench
+            :word-doc-data="wordDocData"
+            :categories="categories"
+            :asset-list="assetList"
+            @save-item="upsertAsset"
+            @add-category="addCategory"
+            @save-global-pwd="saveGlobalPassword"
+            @select-doc="selectWordFile(true)"
+          />
         </div>
-
-        <div
-          v-else
-          class="flex-1 flex flex-col items-center justify-center text-center p-8 text-slate-500"
-        >
-          <Server class="w-12 h-12 text-slate-600 mb-3" />
-          <p class="text-sm font-medium">请从左侧选择一个服务器节点</p>
-          <p class="text-xs text-slate-600 mt-1">支持通过 ↑ ↓ 键盘方向键无缝切换速览</p>
-        </div>
-
-      </div>
-
-      <!-- 3. 底部状态与快捷键提示行 -->
-      <div
-        class="h-8 px-5 border-t border-white/5 flex items-center justify-between text-[11px] font-mono flex-shrink-0 select-none bg-black/40 text-slate-400"
-      >
-        <div class="flex items-center gap-4">
-          <span class="flex items-center gap-1.5 text-teal-400 font-semibold">
-            <span class="w-1.5 h-1.5 rounded-full bg-teal-400"></span>
-            服务器矩阵就绪
-          </span>
-          <span class="hidden md:inline text-slate-500 opacity-40">|</span>
-          <span class="hidden md:inline truncate max-w-sm">
-            {{ currentServer ? `${currentServer.name} (${currentServer.ip})` : '未选择服务器' }}
-          </span>
-        </div>
-
-        <div class="flex items-center gap-3">
-          <span class="hidden sm:inline">↑↓ 切换服务器</span>
-          <span class="hidden sm:inline">Ctrl+C 复制IP</span>
-          <span class="text-teal-400/90 font-bold">SVN Word Matrix</span>
-        </div>
-      </div>
-
+      </section>
     </div>
 
+    <!-- 手动编辑/新建弹窗 -->
+    <AssetEditModal
+      v-model:show="showEditModal"
+      :edit-item="currentEditAsset"
+      :categories="categories"
+      :global-root-password="globalRootPassword"
+      @save="upsertAsset"
+      @add-category="addCategory"
+    />
+
+    <!-- 右键操作菜单 (支持右键删除凭据、复制IP/密码/SSH、编辑) -->
+    <ServerContextMenu
+      :menu="serverContextMenu"
+      @action="handleContextMenuAction"
+      @close="closeContextMenu"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import {
-  Server, X, RefreshCw, Copy, ChevronRight, Terminal, KeyRound,
-  FileText, ExternalLink, RotateCw, FolderOpen, Database, Eye, EyeOff
+  Database, Plus, Search, X, Pencil, Eye, EyeOff,
+  ExternalLink, FileText, RefreshCw, BookOpen, ArrowLeft
 } from 'lucide-vue-next'
+import {
+  useServerCredentials,
+  BUILTIN_CATEGORIES,
+  getCategoryIconLabel
+} from '@/composables/useServerCredentials'
+import AssetGridTable from './AssetGridTable.vue'
+import AssetEditModal from './AssetEditModal.vue'
+import WordExcerptWorkbench from './WordExcerptWorkbench.vue'
+import ServerContextMenu from './ServerContextMenu.vue'
 
 const emit = defineEmits(['toast'])
 
-const serverList = ref([])
-const searchQuery = ref('')
-const selectedEnv = ref('all')
-const focusedIndex = ref(0)
+const {
+  viewMode,
+  assetList,
+  categories,
+  selectedCategory,
+  searchQuery,
+  globalRootPassword,
+  isGlobalPasswordVisible,
+  isEditingGlobalPassword,
+  editingGlobalPasswordValue,
+  currentDocPath,
+  docMeta,
+  wordDocData,
+  isUpdatingSvn,
+  categoryCounts,
+  filteredAssets,
+  loadData,
+  addCategory,
+  deleteCategory,
+  saveGlobalPassword,
+  startEditGlobalPassword,
+  selectWordFile,
+  openExcerptWorkbench,
+  handleSvnUpdate,
+  openInNativeWord,
+  upsertAsset,
+  deleteAsset,
+  isPasswordVisible,
+  toggleSinglePassword,
+  copyText,
+  copyPassword,
+  copyTarget,
+  copySshCommand,
+  openTargetUrl
+} = useServerCredentials(emit)
+
 const searchInputRef = ref(null)
+const showEditModal = ref(false)
+const currentEditAsset = ref(null)
+const isCreatingCat = ref(false)
+const newCategoryInput = ref('')
+const selectedAssetId = ref(null)
+const rightPaneMode = ref('spotlight')
 
-const currentDocPath = ref('')
-const docMeta = ref({ fileName: '', mtime: '' })
-const isLoading = ref(false)
-const isUpdatingSvn = ref(false)
-
-const showAllPasswords = ref(false)
-const visiblePasswordIds = ref(new Set())
-
-const availableEnvs = computed(() => {
-  const set = new Set()
-  for (const s of serverList.value) {
-    if (s.env) set.add(s.env.trim())
-  }
-  return Array.from(set)
+const serverContextMenu = ref({
+  visible: false,
+  x: 0,
+  y: 0,
+  target: null
 })
 
-function getEnvCount(env) {
-  return serverList.value.filter(s => (s.env || '常规环境').trim() === env).length
+function openContextMenu(e, item) {
+  e.preventDefault()
+  e.stopPropagation()
+  serverContextMenu.value = {
+    visible: true,
+    x: Math.min(e.clientX, window.innerWidth - 180),
+    y: Math.min(e.clientY, window.innerHeight - 240),
+    target: item
+  }
 }
 
-const filteredServers = computed(() => {
-  return serverList.value.filter(s => {
-    if (selectedEnv.value !== 'all' && (s.env || '常规环境').trim() !== selectedEnv.value) {
-      return false
+function closeContextMenu() {
+  serverContextMenu.value.visible = false
+}
+
+function confirmDeleteAsset(item) {
+  if (!item) return
+  const label = item.name || item.systemName || item.target || '此节点'
+  if (confirm(`确认删除凭据 [${label}] 吗？`)) {
+    deleteAsset(item.id)
+    if (activeAsset.value?.id === item.id) {
+      selectedAssetId.value = null
     }
-    if (searchQuery.value.trim()) {
-      const q = searchQuery.value.trim().toLowerCase()
-      const inName = (s.name || '').toLowerCase().includes(q)
-      const inIp = (s.ip || '').toLowerCase().includes(q)
-      const inUser = (s.username || '').toLowerCase().includes(q)
-      const inRemark = (s.remark || '').toLowerCase().includes(q)
-      if (!inName && !inIp && !inUser && !inRemark) return false
-    }
-    return true
-  })
+  }
+}
+
+function handleContextMenuAction(act, target) {
+  if (!target) return
+  if (act === 'copy-target') copyTarget(target)
+  else if (act === 'copy-pwd') copyPassword(target)
+  else if (act === 'copy-ssh') copySshCommand(target)
+  else if (act === 'open-url') openTargetUrl(target)
+  else if (act === 'edit') openEditModal(target)
+  else if (act === 'delete') confirmDeleteAsset(target)
+}
+
+const groupedAssets = computed(() => {
+  const map = new Map()
+  for (const item of filteredAssets.value) {
+    const cat = item.category || '服务器账号'
+    if (!map.has(cat)) map.set(cat, [])
+    map.get(cat).push(item)
+  }
+  return Array.from(map.entries()).map(([cat, items]) => ({ cat, items }))
 })
 
-const currentServer = computed(() => {
-  if (filteredServers.value.length === 0) return null
-  const idx = Math.min(focusedIndex.value, filteredServers.value.length - 1)
-  return filteredServers.value[idx] || null
+const activeAsset = computed(() => {
+  if (filteredAssets.value.length === 0) return null
+  return filteredAssets.value.find(a => a.id === selectedAssetId.value) || filteredAssets.value[0]
 })
 
-watch(filteredServers, (newList) => {
-  if (newList.length === 0) {
-    focusedIndex.value = 0
-  } else if (focusedIndex.value >= newList.length) {
-    focusedIndex.value = newList.length - 1
-  }
-})
+function selectAssetItem(item) {
+  selectedAssetId.value = item.id
+  viewMode.value = 'daily'
+}
 
-onMounted(async () => {
-  await loadDocConfig()
-  window.addEventListener('keydown', handleKeydown)
-})
+function openAddModal() {
+  currentEditAsset.value = null
+  showEditModal.value = true
+}
 
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeydown)
-})
+function openEditModal(item) {
+  currentEditAsset.value = { ...item }
+  showEditModal.value = true
+}
 
-async function loadDocConfig() {
-  if (!window.electronAPI || !window.electronAPI.getSvnDocConfig) return
-  try {
-    const config = await window.electronAPI.getSvnDocConfig()
-    if (config && config.docPath) {
-      currentDocPath.value = config.docPath
-      await loadAndParseDoc()
-    }
-  } catch (e) {
-    console.error('加载 SVN Word 配置失败', e)
+function confirmSaveGlobalPassword() {
+  saveGlobalPassword(editingGlobalPasswordValue.value)
+}
+
+async function confirmCreateCategory() {
+  const ok = await addCategory(newCategoryInput.value)
+  if (ok) {
+    selectedCategory.value = newCategoryInput.value.trim()
+    newCategoryInput.value = ''
+    isCreatingCat.value = false
   }
 }
 
-async function loadAndParseDoc() {
-  if (!currentDocPath.value || !window.electronAPI || !window.electronAPI.parseWordCredentials) return
-  isLoading.value = true
-  try {
-    const res = await window.electronAPI.parseWordCredentials(currentDocPath.value)
-    if (res && res.servers) {
-      serverList.value = res.servers
-      docMeta.value = {
-        fileName: res.fileName || currentDocPath.value.split(/[\\/]/).pop(),
-        mtime: res.mtime || ''
-      }
-      emit('toast', `已成功解析 ${serverList.value.length} 台服务器凭据！`, 'success')
-    }
-  } catch (e) {
-    emit('toast', '解析 Word 失败: ' + e.message, 'error')
-  } finally {
-    isLoading.value = false
-  }
-}
-
-async function selectWordFile() {
-  if (!window.electronAPI || !window.electronAPI.selectSvnWordFile) return
-  try {
-    const selected = await window.electronAPI.selectSvnWordFile()
-    if (selected) {
-      currentDocPath.value = selected
-      await window.electronAPI.saveSvnDocPath(selected)
-      await loadAndParseDoc()
-    }
-  } catch (e) {
-    emit('toast', '选择文件失败: ' + e.message, 'error')
-  }
-}
-
-async function handleSvnUpdate() {
-  if (!currentDocPath.value || !window.electronAPI || !window.electronAPI.updateSvnDoc) return
-  isUpdatingSvn.value = true
-  try {
-    const res = await window.electronAPI.updateSvnDoc(currentDocPath.value)
-    if (res && res.success) {
-      await loadAndParseDoc()
-      emit('toast', 'SVN Update 成功，已同步最新版本！', 'success')
-    } else {
-      emit('toast', 'SVN Update 提示: ' + (res?.message || '未知状态'), 'info')
-    }
-  } catch (e) {
-    emit('toast', 'SVN Update 异常: ' + e.message, 'error')
-  } finally {
-    isUpdatingSvn.value = false
-  }
-}
-
-function openInNativeWord() {
-  if (currentDocPath.value && window.electronAPI && window.electronAPI.openSvnWordFile) {
-    window.electronAPI.openSvnWordFile(currentDocPath.value)
-    emit('toast', '正在调用本地 Word / WPS 打开原件...')
-  }
-}
-
-function getEnvStyle(env) {
-  const e = (env || '').trim()
-  if (e.includes('生产') || e.includes('产线')) return 'bg-rose-950/70 text-rose-300 border-rose-700/60'
-  if (e.includes('测试')) return 'bg-teal-950/70 text-teal-300 border-teal-700/60'
-  if (e.includes('开发')) return 'bg-sky-950/70 text-sky-300 border-sky-700/60'
-  if (e.includes('中间件') || e.includes('库')) return 'bg-amber-950/70 text-amber-300 border-amber-700/60'
-  return 'bg-white/10 text-slate-300 border-white/15'
-}
-
-function isPasswordVisible(id) {
-  return showAllPasswords.value || visiblePasswordIds.value.has(id)
-}
-
-function getDisplayPassword(srv) {
-  if (!srv.password) return '(无)'
-  if (isPasswordVisible(srv.id)) return srv.password
-  return '••••••••••••'
-}
-
-function toggleSinglePassword(id) {
-  if (visiblePasswordIds.value.has(id)) {
-    visiblePasswordIds.value.delete(id)
-  } else {
-    visiblePasswordIds.value.add(id)
-  }
-}
-
-function toggleGlobalPasswordMask() {
-  showAllPasswords.value = !showAllPasswords.value
-}
-
-async function copyText(text, label) {
-  if (!text) return
-  try {
-    if (window.electronAPI && window.electronAPI.copyToClipboard) {
-      await window.electronAPI.copyToClipboard(text)
-    } else {
-      await navigator.clipboard.writeText(text)
-    }
-    emit('toast', `已复制 ${label}: ${text}`, 'success')
-  } catch (e) {
-    emit('toast', '复制失败', 'error')
-  }
-}
-
-function copySshCommand(srv) {
-  const cmd = `ssh ${srv.username || 'root'}@${srv.ip} -p ${srv.port || '22'}`
-  copyText(cmd, 'SSH 命令')
-}
-
-function openSshTerminal(srv) {
-  const cmd = `ssh ${srv.username || 'root'}@${srv.ip} -p ${srv.port || '22'}`
-  if (window.electronAPI && window.electronAPI.openInTerminal) {
-    window.electronAPI.openInTerminal('')
-    copyText(cmd, 'SSH 命令')
-    emit('toast', `已在终端打开，按 Ctrl+V 粘贴执行: ${cmd}`, 'info')
-  }
-}
-
-function handleKeydown(e) {
+function handleGlobalKeydown(e) {
   const tag = e.target.tagName.toLowerCase()
   if (tag === 'textarea' || (tag === 'input' && e.key !== 'Escape')) {
     if (e.key === 'Escape') e.target.blur()
     return
   }
-
-  if (e.key === '/') {
+  if (e.key === 'Escape') {
+    closeContextMenu()
+  }
+  if (e.key === '/' && viewMode.value === 'daily') {
     e.preventDefault()
     searchInputRef.value?.focus()
-    return
-  }
-
-  if (e.key === 'ArrowDown') {
-    e.preventDefault()
-    if (focusedIndex.value < filteredServers.value.length - 1) {
-      focusedIndex.value++
-      scrollToActive()
-    }
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault()
-    if (focusedIndex.value > 0) {
-      focusedIndex.value--
-      scrollToActive()
-    }
-  } else if (e.key === 'Enter') {
-    if (currentServer.value) {
-      e.preventDefault()
-      copyText(currentServer.value.ip, 'IP 地址')
-    }
   }
 }
 
-function scrollToActive() {
-  nextTick(() => {
-    const el = document.getElementById(`server-item-${focusedIndex.value}`)
-    if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-  })
-}
+onMounted(async () => {
+  await loadData()
+  window.addEventListener('keydown', handleGlobalKeydown)
+  window.addEventListener('click', closeContextMenu)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleGlobalKeydown)
+  window.removeEventListener('click', closeContextMenu)
+})
 </script>
 
 <style scoped>
-.server-item-card {
-  position: relative;
-  padding: 10px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  background-color: rgba(255, 255, 255, 0.02);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  transition: all 0.15s ease-in-out;
-  user-select: none;
-  color: #cbd5e1;
-}
-
-.server-item-card:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.server-item-card.is-focused {
-  background-color: rgba(19, 78, 74, 0.35);
-  border-color: rgba(45, 212, 191, 0.65);
-  box-shadow: 0 4px 16px rgba(13, 148, 136, 0.2);
-  color: #ffffff;
-}
-
-.active-indicator {
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 4px;
-  height: 80%;
-  background-color: #2dd4bf;
-  border-radius: 0 4px 4px 0;
-  box-shadow: 0 0 8px rgba(45, 212, 191, 0.6);
-}
-
-.server-item-content {
+.credentials-spotlight-shell {
+  height: 100%;
+  width: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  user-select: none;
+  color: var(--app-primary-foreground);
+}
+
+.srv-islands-wrap {
   flex: 1;
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 12px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.srv-left-island,
+.srv-right-island {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
-  padding-left: 4px;
+  min-height: 0;
+  overflow: hidden;
 }
 
-.server-item-meta {
+.srv-left-tools {
+  padding: 12px;
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-secondary-background);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.srv-search-wrap {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 2px;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--app-input-background);
+  border: 1px solid var(--app-input-border);
 }
 
-.server-env-badge {
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-weight: 700;
-  border-width: 1px;
-}
-
-.server-port-text {
-  font-size: 10px;
-  color: #64748b;
+.srv-search-input {
+  flex: 1;
+  background: transparent;
+  font-size: 12px;
+  color: var(--app-input-foreground);
+  outline: none;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-.server-title-text {
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.35;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin: 0;
-  color: #e2e8f0;
-  transition: color 0.15s ease;
+.srv-search-input::placeholder {
+  color: var(--app-input-placeholder);
 }
 
-.server-title-text.is-active,
-.server-item-card:hover .server-title-text {
-  color: #5eead4;
+.srv-list-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 8px 10px;
 }
 
-.server-ip-preview {
+.left-empty-state {
+  height: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--app-muted-foreground);
+}
+
+.srv-group-block {
+  margin-bottom: 6px;
+}
+
+.srv-group-title {
+  padding: 8px 8px 4px;
   font-size: 11px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  color: rgba(94, 234, 212, 0.8);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-top: 2px;
-  user-select: all;
+  font-weight: 700;
+  color: var(--app-secondary-foreground);
 }
 
-.server-item-actions {
-  flex-shrink: 0;
+.srv-list-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-}
-
-.server-user-tag {
-  font-size: 10px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  color: #94a3b8;
-  background-color: rgba(255, 255, 255, 0.05);
-  padding: 2px 6px;
-  border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  display: none;
-}
-@media (min-width: 640px) {
-  .server-user-tag {
-    display: inline;
-  }
-}
-
-.arrow-icon {
-  width: 14px;
-  height: 14px;
-  color: #475569;
-  opacity: 0.4;
+  gap: 10px;
+  padding: 8px 10px;
+  margin-bottom: 3px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  cursor: pointer;
   transition: all 0.15s ease;
 }
 
-.arrow-icon.is-active,
-.server-item-card:hover .arrow-icon {
-  color: #2dd4bf;
-  opacity: 1;
-  transform: translateX(2px);
+.srv-list-item:hover {
+  background: var(--app-list-hover-background);
 }
 
-.custom-scrollbar::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+.srv-list-item.is-active {
+  background: var(--app-list-active-background);
+  border-color: var(--app-list-active-border);
 }
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
+
+.srv-item-ico {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--app-accent-teal-bg);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(20, 184, 166, 0.25);
-  border-radius: 9999px;
+
+.srv-item-meta {
+  min-width: 0;
+  flex: 1;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(20, 184, 166, 0.55);
+
+.srv-item-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--app-primary-foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.srv-list-item.is-active .srv-item-name {
+  color: var(--app-list-active-foreground);
+  font-weight: 700;
+}
+
+.srv-item-target {
+  font-size: 11px;
+  color: var(--app-secondary-foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.srv-env-tag {
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-size: 10px;
+  background: var(--app-tool-background);
+  color: var(--app-secondary-foreground);
+  border: 1px solid var(--app-border);
+}
+
+.srv-left-footer {
+  padding: 10px 12px;
+  border-top: 1px solid var(--app-border);
+  background: var(--app-secondary-background);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.srv-foot-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--app-primary-foreground);
+  background: var(--app-card-background);
+  border: 1px solid var(--app-card-border);
+  transition: all 0.15s ease;
+}
+
+.srv-foot-btn:hover {
+  background: var(--app-list-hover-background);
+}
+
+.srv-foot-btn.is-svn {
+  color: var(--app-accent-sky);
+  border-color: var(--app-accent-sky-border);
+  background: var(--app-accent-sky-bg);
+}
+
+.srv-foot-btn.is-active {
+  color: var(--app-accent-amber);
+  border-color: var(--app-accent-amber-border);
+  background: var(--app-accent-amber-bg);
+}
+
+.srv-foot-btn.is-primary {
+  background: linear-gradient(135deg, #14b8a6, #0d9488);
+  border-color: transparent;
+  color: var(--app-primary-btn-text);
+  font-weight: 700;
+}
+
+.srv-right-header {
+  height: 46px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--app-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--app-header-background);
+}
+
+.right-view-seg {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--app-input-secondary-background);
+  border: 1px solid var(--app-border);
+}
+
+.r-seg-btn {
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--app-secondary-foreground);
+}
+
+.r-seg-btn.is-on {
+  background: var(--app-accent-teal-bg);
+  color: var(--app-accent-teal);
+  font-weight: 700;
+}
+
+.spotlight-detail-card {
+  padding: 16px 20px;
+  border-radius: 14px;
+  background: var(--app-subcard-background);
+  border: 1px solid var(--app-card-border);
+}
+
+.kv-grid {
+  display: flex;
+  flex-direction: column;
+}
+
+.kv-row {
+  display: grid;
+  grid-template-columns: 90px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--app-border);
+  font-size: 12px;
+}
+
+.kv-row:last-child {
+  border-bottom: none;
+}
+
+.kv-label {
+  color: var(--app-secondary-foreground);
+}
+
+.kv-val {
+  color: var(--app-primary-foreground);
+  font-weight: 600;
+}
+
+.kv-copy-btn {
+  padding: 2px 9px;
+  border-radius: 6px;
+  font-size: 11px;
+  background: var(--app-card-background);
+  border: 1px solid var(--app-card-border);
+  color: var(--app-secondary-foreground);
+}
+
+.kv-copy-btn:hover {
+  border-color: var(--app-accent-teal-border);
+  color: var(--app-accent-teal);
+}
+
+.badge-count {
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  background: var(--app-accent-teal-bg);
+  color: var(--app-accent-teal);
+  border: 1px solid var(--app-accent-teal-border);
+}
+
+.root-pwd-capsule {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border-radius: 10px;
+  background: var(--app-input-background);
+  border: 1px solid var(--app-accent-teal-border);
+  color: var(--app-primary-foreground);
+  font-size: 12px;
+}
+
+.root-pwd-input {
+  width: 130px;
+  padding: 2px 6px;
+  background: var(--app-card-background);
+  border: 1px solid #14b8a6;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--app-primary-foreground);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.mini-save-btn {
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: #14b8a6;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 10px;
+}
+
+.mini-cancel-btn {
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--app-tool-background);
+  color: var(--app-secondary-foreground);
+  font-size: 10px;
+}
+
+.icon-ghost-btn {
+  padding: 3px;
+  color: var(--app-secondary-foreground);
+  transition: color 0.15s;
+}
+.icon-ghost-btn:hover {
+  color: var(--app-primary-foreground);
+}
+
+.copy-root-btn {
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: var(--app-accent-teal-bg);
+  color: var(--app-accent-teal);
+  font-weight: 700;
+  font-size: 10px;
+  border: 1px solid var(--app-accent-teal-border);
+}
+.copy-root-btn:hover {
+  filter: brightness(0.95);
+}
+
+.svn-doc-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  background: var(--app-subcard-background);
+  border: 1px solid var(--app-border);
+  font-size: 12px;
+  color: var(--app-secondary-foreground);
+}
+
+.excerpt-mode-btn {
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: var(--app-accent-amber-bg);
+  border: 1px solid var(--app-accent-amber-border);
+  color: var(--app-accent-amber);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s;
+}
+.excerpt-mode-btn:hover {
+  filter: brightness(0.95);
+}
+
+.back-daily-btn {
+  padding: 6px 14px;
+  border-radius: 10px;
+  background: #10b981;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.add-manual-btn {
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: var(--app-tool-background);
+  border: 1px solid var(--app-card-border);
+  color: var(--app-primary-foreground);
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.add-manual-btn:hover {
+  background: var(--app-list-hover-background);
+}
+
+.filter-toolbar {
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-secondary-background);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.nav-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  color: var(--app-secondary-foreground);
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.nav-tab-btn:hover {
+  color: var(--app-primary-foreground);
+  background-color: var(--app-list-hover-background);
+}
+.nav-tab-btn.is-active {
+  background-color: var(--app-accent-teal-bg);
+  color: var(--app-accent-teal);
+  border-color: var(--app-accent-teal-border);
+  font-weight: 700;
+}
+
+.count-tag {
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  background-color: var(--app-tool-background);
+  color: var(--app-secondary-foreground);
+}
+
+.del-cat-dot {
+  margin-left: 2px;
+  padding: 0 3px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--app-muted-foreground);
+}
+.del-cat-dot:hover {
+  color: #fb7185;
+  background: rgba(244, 63, 94, 0.15);
+}
+
+.create-cat-btn {
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px dashed var(--app-card-border);
+  font-size: 11px;
+  color: var(--app-secondary-foreground);
+  transition: all 0.15s;
+}
+.create-cat-btn:hover {
+  color: var(--app-accent-teal);
+  border-color: var(--app-accent-teal-border);
+}
+
+.new-cat-inline-input {
+  width: 130px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--app-input-background);
+  border: 1px solid #14b8a6;
+  font-size: 11px;
+  color: var(--app-input-foreground);
+}
+
+.search-box-input {
+  width: 100%;
+  padding: 4px 24px 4px 28px;
+  border-radius: 8px;
+  background: var(--app-input-background);
+  border: 1px solid var(--app-input-border);
+  font-size: 11px;
+  color: var(--app-input-foreground);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+.search-box-input:focus {
+  outline: none;
+  border-color: #14b8a6;
+}
+
+.empty-ledger-state {
+  height: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.bottom-status-bar {
+  height: 32px;
+  padding: 0 16px;
+  border-top: 1px solid var(--app-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  flex-shrink: 0;
+  background: var(--app-secondary-background);
+  color: var(--app-secondary-foreground);
 }
 </style>

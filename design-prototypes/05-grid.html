@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>方案五 · Matrix 极简卡片矩阵（三页全卡片网格化）</title>
+<link rel="stylesheet" href="shared/common.css">
+<style>
+:root {
+  --bg: #ffffff; --fg: #09090b; --muted: #71717a; --line: #e4e4e7; --card: #ffffff; --soft: #f4f4f5;
+  --accent: #09090b; --accent-fg: #fff; --ok: #15803d; --ok-bg: #dcfce7; --warn: #b45309; --warn-bg: #fef3c7; --radius: 8px;
+}
+.shell { display: flex; flex-direction: column; height: 100vh; }
+.top { height: 48px; padding: 0 20px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
+.brand { font-weight: 800; font-size: 15px; letter-spacing: -.02em; }
+.strip { padding: 10px 20px; border-bottom: 1px solid var(--line); background: var(--soft); }
+.cards-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; margin-top: 8px; }
+.mcard { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 9px 12px; cursor: pointer; }
+.mcard:hover { border-color: var(--fg); }
+.mcard.active { border-color: var(--fg); box-shadow: 0 0 0 1px var(--fg); }
+.work { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.matrix-page { flex: 1; overflow: auto; padding: 18px 24px; }
+.srv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 14px; margin-top: 14px; }
+.scard { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; background: var(--card); display: flex; flex-direction: column; gap: 10px; }
+.scard:hover { border-color: var(--fg); }
+.foot { height: 26px; padding: 0 20px; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="shell zen-hide" id="app"></div>
+<div class="zen-pill" data-act="toggle-zen">👁 壁纸沉浸观赏模式 · 点击此处或按 Esc 恢复工作台</div>
+<script src="shared/common.js"></script>
+<script>
+/* 页面 1：上方横向任务卡片带 + 下方全宽工作台 */
+function renderMatrixTasks() {
+  const projs = [...new Set(DATA.tasks.map((t) => t.project))];
+  const list = filteredTasks();
+  return `
+    <div class="strip">
+      <div class="between">
+        <div class="row">
+          <select class="select" data-bind="year">
+            <option value="all" ${UI.year === 'all' ? 'selected' : ''}>全部年份</option>
+            ${DATA.years.map((y) => `<option value="${y}" ${UI.year === y ? 'selected' : ''}>${y} 年</option>`).join('')}
+          </select>
+          <select class="select" data-bind="project">
+            <option value="all" ${UI.project === 'all' ? 'selected' : ''}>全部项目</option>
+            ${projs.map((p) => `<option value="${p}" ${UI.project === p ? 'selected' : ''}>${p}</option>`).join('')}
+          </select>
+          <button class="btn xs ${UI.onlyPending ? 'warn' : ''}" data-act="toggle-pending">⚡ 仅看待发 SQL</button>
+          <button class="btn xs ghost" data-act="reset-filter">↺ 重置</button>
+          <span class="muted">已匹配 ${list.length} / ${DATA.tasks.length} 个任务</span>
+        </div>
+        <button class="btn xs primary" data-act="modal-new-task">+ 新建任务</button>
+      </div>
+      <div class="cards-row">
+        ${list.map((t) => `
+          <div class="mcard ${t.id === UI.taskId ? 'active' : ''}" data-select-task="${t.id}">
+            <div class="between"><span class="row"><span class="dot ${t.status}"></span><span class="tag">${t.year} · ${esc(t.project)}</span></span>${taskPending(t) ? `<span class="tag warn">${taskPending(t)} 待发</span>` : `<span class="tag ok">${t.sqls.length} SQL</span>`}</div>
+            <div style="font-weight:600;margin-top:5px">${esc(t.title)}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="work">${renderTaskWorkspace()}</div>`;
+}
+
+/* 页面 2：无侧栏！顶部横向分类胶囊带 + 全屏命令卡片与彩色便签瀑布网格 */
+function renderMatrixNotes() {
+  const cats = ['all', 'pinned', ...new Set(DATA.commands.map((c) => c.cat))];
+  const cmds = DATA.commands.filter((c) => UI.cmdCat === 'all' ? true : UI.cmdCat === 'pinned' ? c.pinned : c.cat === UI.cmdCat);
+  return `
+    <div class="strip">
+      <div class="between">
+        <div class="row">
+          ${cats.map((c) => `<button class="btn xs ${UI.cmdCat === c ? 'primary' : ''}" data-cmd-cat="${c}">${c === 'all' ? '全部命令 (' + DATA.commands.length + ')' : c === 'pinned' ? '📌 置顶' : c}</button>`).join('')}
+          <button class="btn xs ghost" data-toast="新建分类">+ 新分类</button>
+        </div>
+        <div class="row">
+          <input class="input" placeholder="检索命令或便签 (/)…" style="width:220px">
+          <button class="btn xs" data-act="modal-txt-import">📄 TXT 导入</button>
+          <button class="btn xs primary" data-act="modal-new-cmd">+ 新增命令</button>
+        </div>
+      </div>
+    </div>
+    <div class="matrix-page">
+      <div class="between" style="margin-bottom:10px"><b>💻 命令卡片矩阵 (${cmds.length})</b><span class="muted">单击代码块即刻复制</span></div>
+      <div class="cmd-grid" style="margin-bottom:22px">
+        ${cmds.map((c) => `
+          <div class="scard">
+            <div class="between"><span class="tag">${esc(c.cat)}</span>${c.pinned ? '<span class="tag warn">📌 置顶</span>' : ''}</div>
+            <div style="font-weight:700;font-size:13.5px">${esc(c.title)}</div>
+            <pre class="mono" style="padding:8px;background:var(--soft);border-radius:6px;cursor:pointer" data-copy="${esc(c.cmd)}">${esc(c.cmd)}</pre>
+            <div class="between"><span class="muted" style="font-size:11px">点击上方代码块或右侧按钮复制</span><button class="btn xs primary" data-copy="${esc(c.cmd)}">复制命令</button></div>
+          </div>`).join('')}
+      </div>
+      <div class="between" style="margin-bottom:10px">
+        <b>📌 极速随手记卡片矩阵 (${DATA.memos.length})</b>
+        <div class="row"><input class="input" id="_memo_inp" placeholder="输入新便签内容…" style="width:260px"><button class="btn xs primary" data-act="add-memo">+ 记一笔</button></div>
+      </div>
+      <div class="memo-grid">
+        ${DATA.memos.map((m) => `<div class="scard"><div>${esc(m.text)}</div><div class="between muted" style="font-size:11px"><span>${m.time}</span><button class="btn xs" data-copy="${esc(m.text)}">复制</button></div></div>`).join('')}
+      </div>
+    </div>`;
+}
+
+/* 页面 3：无表格！全屏 Vercel 风服务器状态大卡片矩阵 + 顶部 Root 密码横幅 */
+function renderMatrixServers() {
+  const cats = ['all', '服务器账号', 'Web网站', 'iNode'];
+  const list = DATA.servers.filter((s) => UI.srvCat === 'all' || s.cat === UI.srvCat);
+  return `
+    <div class="strip">
+      <div class="between">
+        <div class="row">
+          ${cats.map((c) => `<button class="btn xs ${UI.srvCat === c ? 'primary' : ''}" data-srv-cat="${c}">${c === 'all' ? '全部资产 (' + DATA.servers.length + ')' : c}</button>`).join('')}
+          <span class="muted">|</span>
+          <span>👑 通用Root口令: <b class="mono">${UI.showRootPwd ? DATA.rootPwd : '••••••••••'}</b></span>
+          <button class="btn xs ghost" data-act="toggle-root-pwd">👁</button>
+          <button class="btn xs" data-copy="${esc(DATA.rootPwd)}">秒拷Root</button>
+        </div>
+        <div class="row">
+          <button class="btn xs warn" data-toast="已从 SVN 同步标蓝新密码">🔄 SVN同步 (${DATA.svnDoc})</button>
+          <button class="btn xs ${UI.srvMode === 'excerpt' ? 'primary' : ''}" data-act="toggle-srv-mode">${UI.srvMode === 'daily' ? '📖 去 Word 原档摘录' : '← 返回卡片矩阵'}</button>
+          <button class="btn xs primary" data-act="modal-new-srv">+ 手动新建</button>
+        </div>
+      </div>
+    </div>
+    <div class="matrix-page">
+      ${UI.srvMode === 'excerpt' ? renderWordBench() : `
+        <div class="srv-grid">
+          ${list.map((s) => `
+            <div class="scard">
+              <div class="between"><span class="row"><span class="dot in-progress"></span><b>${esc(s.name)}</b></span><span class="tag">${s.env} · ${esc(s.cat)}</span></div>
+              <div style="padding:10px;background:var(--soft);border-radius:6px;display:flex;flex-direction:column;gap:4px">
+                <div class="between"><span class="muted">目标地址</span><code class="mono" style="font-weight:700">${esc(s.target)}${s.port ? ':' + s.port : ''}</code></div>
+                <div class="between"><span class="muted">登录账号</span><code class="mono">${esc(s.user)}</code></div>
+                <div class="between"><span class="muted">认证口令</span>${s.inherit ? '<span class="tag ok">👑 继承全局 Root 口令</span>' : `<code class="mono">${esc(s.pwd)}</code>`}</div>
+              </div>
+              <div class="row" style="justify-content:space-between">
+                <button class="btn xs" data-copy="${esc(s.target)}">复制地址</button>
+                <button class="btn xs" data-copy="${esc(s.inherit ? DATA.rootPwd : s.pwd)}">复制密码</button>
+                ${s.cat === '服务器账号' ? `<button class="btn xs primary" data-copy="ssh ${esc(s.user)}@${esc(s.target)} -p ${s.port || 22}">一键复制 SSH</button>` : `<button class="btn xs primary" data-toast="已打开浏览器">打开网页 ↗</button>`}
+              </div>
+            </div>`).join('')}
+        </div>`}
+    </div>`;
+}
+
+window.renderApp = function () {
+  const pend = totalPending();
+  $('#app').innerHTML = `
+    <header class="top">
+      <div class="row" style="gap:16px">
+        <span class="brand">DevOrbit</span>
+        <div class="seg">
+          <button class="${UI.view === 'tasks' ? 'active' : ''}" data-view="tasks">任务工作台</button>
+          <button class="${UI.view === 'notes' ? 'active' : ''}" data-view="notes">随手记 &amp; 命令矩阵</button>
+          <button class="${UI.view === 'servers' ? 'active' : ''}" data-view="servers">服务器卡片矩阵</button>
+        </div>
+        <button class="btn xs ghost mono" data-act="modal-settings">📁 ${DATA.workspace}</button>
+      </div>
+      <div class="row">
+        ${pend ? `<span class="tag warn">⚠️ ${pend} 份产线 SQL 待发</span>` : ''}
+        <button class="btn xs" data-act="modal-search">🔍 全局搜索 <kbd>Ctrl K</kbd></button>
+        <button class="btn xs" data-act="modal-update">更新中心</button>
+        <button class="btn xs" data-act="modal-theme">🎨 外观</button>
+        <button class="btn xs" data-act="modal-settings">⚙️ 设置</button>
+        <button class="btn xs ghost" data-act="toggle-zen">👁</button>
+      </div>
+    </header>
+    ${UI.view === 'tasks' ? renderMatrixTasks() : ''}
+    ${UI.view === 'notes' ? renderMatrixNotes() : ''}
+    ${UI.view === 'servers' ? renderMatrixServers() : ''}
+    <footer class="foot">
+      <span>Matrix 卡片矩阵模式 · 任务、命令、服务器三大页面全部采用无侧栏卡片网格架构</span>
+      <span>Ctrl+K 全局搜索 · DevOrbit v1.3.0</span>
+    </footer>`;
+};
+renderApp();
+</script>
+</body>
+</html>

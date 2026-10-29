@@ -31,12 +31,25 @@
           type="primary"
           size="small"
           @click="sqlsState.sqlMergeModalOpen.value = true"
-          title="一键按序拼接、包裹事务并生成上线汇总单 (00_merged_all.sql)"
+          title="一键按序拼接本任务 SQL 并生成 00_merged_all.sql"
         >
           <template #icon>
             <Sparkles class="icon-small" />
           </template>
-          <span>一键合并上线 SQL</span>
+          <span>合并本任务 SQL</span>
+        </n-button>
+
+        <n-button
+          type="warning"
+          secondary
+          size="small"
+          @click="$emit('open-cross-merge')"
+          title="跨多个开发任务自由勾选并一键合并 SQL 脚本"
+        >
+          <template #icon>
+            <Sparkles class="icon-small" />
+          </template>
+          <span>跨多任务合并 SQL</span>
         </n-button>
 
         <n-button
@@ -73,9 +86,11 @@
       <div
         v-for="sql in sqlsState.currentSqls.value"
         :key="sql.fileName"
+        :id="'sql-card-' + sql.fileName"
         @click="$emit('open-file', sql.filePath, sql.fileName, true)"
         @contextmenu.prevent.stop="$emit('sql-contextmenu', $event, sql)"
         class="sql-item-card"
+        :class="{ 'is-highlight-target': highlightedSqlName === sql.fileName }"
         :title="`点击在软件内查看与编辑 · 右键查看更多操作: ${sql.fileName}`"
       >
         <!-- 文件名与大小 -->
@@ -211,7 +226,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { NButton, NTag, NPopconfirm, NModal, NInput } from 'naive-ui'
 import {
   Database,
@@ -226,10 +241,11 @@ import {
 } from 'lucide-vue-next'
 
 const props = defineProps({
-  sqlsState: { type: Object, required: true }
+  sqlsState: { type: Object, required: true },
+  highlightedSqlName: { type: String, default: '' }
 })
 
-defineEmits(['open-file', 'show-in-folder', 'copy-path', 'sql-contextmenu'])
+defineEmits(['open-file', 'show-in-folder', 'copy-path', 'sql-contextmenu', 'open-cross-merge'])
 
 const pendingCount = computed(() => {
   return props.sqlsState.currentSqls.value.filter(s => !s.prodReleased).length
@@ -237,6 +253,20 @@ const pendingCount = computed(() => {
 
 const showNewSqlModal = ref(false)
 const newSqlFileName = ref('')
+
+watch(
+  () => props.highlightedSqlName,
+  (name) => {
+    if (!name) return
+    nextTick(() => {
+      const el = document.getElementById(`sql-card-${name}`)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    })
+  },
+  { immediate: true }
+)
 
 function openNewSqlModal() {
   newSqlFileName.value = ''
@@ -276,7 +306,7 @@ async function handleCreateSql() {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--app-border);
   padding-bottom: 12px;
   flex-wrap: wrap;
   user-select: none;
@@ -291,7 +321,7 @@ async function handleCreateSql() {
 .toolbar-title {
   font-size: 13px;
   font-weight: 700;
-  color: #f1f5f9;
+  color: var(--app-primary-foreground);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -314,7 +344,7 @@ async function handleCreateSql() {
   padding: 48px 16px;
   text-align: center;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--app-secondary-foreground);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -335,8 +365,8 @@ async function handleCreateSql() {
   padding: 48px 16px;
   text-align: center;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--app-border);
+  background-color: var(--app-subcard-background);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -346,18 +376,18 @@ async function handleCreateSql() {
 .empty-icon {
   width: 40px;
   height: 40px;
-  color: #475569;
+  color: var(--app-muted-foreground);
 }
 
 .empty-text {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--app-secondary-foreground);
   margin: 0;
 }
 
 .empty-subtext {
   font-size: 11px;
-  color: #475569;
+  color: var(--app-muted-foreground);
   margin: 0;
 }
 
@@ -372,8 +402,8 @@ async function handleCreateSql() {
 .sql-item-card {
   padding: 10px 12px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  background-color: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--app-card-border);
+  background-color: var(--app-subcard-background);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -384,8 +414,25 @@ async function handleCreateSql() {
 }
 
 .sql-item-card:hover {
-  background-color: rgba(0, 0, 0, 0.6);
-  border-color: rgba(45, 212, 191, 0.35);
+  background-color: var(--app-list-hover-background);
+  border-color: var(--app-accent-teal-border);
+}
+
+.sql-item-card.is-highlight-target {
+  background: var(--app-accent-teal-bg) !important;
+  border-color: #14b8a6 !important;
+  border-left: 3px solid #14b8a6 !important;
+  box-shadow: 0 0 16px rgba(45, 212, 191, 0.25) !important;
+  animation: targetSqlPulse 2s ease-in-out infinite;
+}
+
+@keyframes targetSqlPulse {
+  0%, 100% {
+    box-shadow: 0 0 14px rgba(45, 212, 191, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 24px rgba(45, 212, 191, 0.5);
+  }
 }
 
 .sql-info {
@@ -399,7 +446,7 @@ async function handleCreateSql() {
 .sql-filename {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-weight: 700;
-  color: #e2e8f0;
+  color: var(--app-primary-foreground);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -407,12 +454,12 @@ async function handleCreateSql() {
 }
 
 .sql-item-card:hover .sql-filename {
-  color: #5eead4;
+  color: var(--app-accent-teal);
 }
 
 .sql-filesize {
   font-size: 10px;
-  color: #64748b;
+  color: var(--app-muted-foreground);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   flex-shrink: 0;
 }
@@ -448,20 +495,20 @@ async function handleCreateSql() {
 
 .form-label {
   font-size: 12px;
-  color: #cbd5e1;
+  color: var(--app-secondary-foreground);
   font-weight: 500;
 }
 
 .form-hint {
   font-size: 11px;
-  color: #64748b;
+  color: var(--app-muted-foreground);
   margin: 2px 0 0 0;
   line-height: 1.4;
 }
 
 .form-hint code {
-  color: #2dd4bf;
-  background-color: rgba(45, 212, 191, 0.1);
+  color: var(--app-accent-teal);
+  background-color: var(--app-accent-teal-bg);
   padding: 1px 4px;
   border-radius: 4px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;

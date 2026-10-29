@@ -2,6 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 彻底杜绝全局页面级跳动滚动，所有滚动必须发生在特定容器内 */
+*, *::before, *::after {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Roboto, sans-serif;
+}
+
 /* 隐藏滚动条并杜绝布局抖动跳动 */
 .hide-scrollbar,
 .no-scrollbar {
@@ -33,6 +50,28 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(148, 163, 184, 0.4);
+}
+
+/* ================= 方案六 · Spotlight 玻璃流光全局浮岛样式 ================= */
+.glass-island {
+  background: rgba(17, 23, 38, 0.66);
+  backdrop-filter: blur(24px) saturate(1.45);
+  -webkit-backdrop-filter: blur(24px) saturate(1.45);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.glass-subcard {
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 12px;
+  transition: all 0.15s ease;
+}
+
+.glass-subcard:hover {
+  background: rgba(255, 255, 255, 0.075);
+  border-color: rgba(45, 212, 191, 0.35);
 }
 
 /* 关键字高亮闪烁效果 */
@@ -586,4 +625,707 @@
 [data-theme-mode="light"] .app-context-menu .text-slate-300 {
   color: #0f172a !important;
 }
+
+/* ================= 浅色主题模式 (Light Mode) 全局工作台与悬浮岛适配 (JeikCode 语义化变量体系) ================= */
+:root {
+  color-scheme: dark;
+  --app-primary-foreground: #f1f5f9;
+  --app-secondary-foreground: #94a3b8;
+  --app-muted-foreground: #64748b;
+  --app-primary-background: #0d121d;
+  --app-secondary-background: rgba(2, 6, 23, 0.28);
+  --app-header-background: rgba(2, 6, 23, 0.25);
+  --app-card-background: rgba(15, 23, 42, 0.68);
+  --app-subcard-background: rgba(0, 0, 0, 0.4);
+  --app-tool-background: rgba(255, 255, 255, 0.06);
+  --app-border: rgba(255, 255, 255, 0.08);
+  --app-card-border: rgba(255, 255, 255, 0.09);
+  --app-input-foreground: #f1f5f9;
+  --app-input-background: rgba(2, 6, 23, 0.45);
+  --app-input-border: rgba(255, 255, 255, 0.1);
+  --app-input-placeholder: #64748b;
+  --app-input-secondary-background: rgba(2, 6, 23, 0.5);
+  --app-list-hover-background: rgba(255, 255, 255, 0.05);
+  --app-list-active-background: rgba(20, 184, 166, 0.14);
+  --app-list-active-border: rgba(45, 212, 191, 0.35);
+  --app-list-active-foreground: #f1f5f9;
+  --app-accent-teal: #5eead4;
+  --app-accent-teal-bg: rgba(20, 184, 166, 0.16);
+  --app-accent-teal-border: rgba(45, 212, 191, 0.35);
+  --app-accent-sky: #38bdf8;
+  --app-accent-sky-bg: rgba(56, 189, 248, 0.12);
+  --app-accent-sky-border: rgba(56, 189, 248, 0.35);
+  --app-accent-amber: #fcd34d;
+  --app-accent-amber-bg: rgba(245, 158, 11, 0.16);
+  --app-accent-amber-border: rgba(245, 158, 11, 0.45);
+  --app-primary-btn-text: #042f2e;
+  --app-memo-amber-bg: rgba(36, 28, 14, 0.88);
+  --app-memo-amber-border: rgba(245, 158, 11, 0.32);
+  --app-memo-teal-bg: rgba(11, 36, 32, 0.88);
+  --app-memo-teal-border: rgba(20, 184, 166, 0.32);
+  --app-memo-sky-bg: rgba(14, 29, 46, 0.88);
+  --app-memo-sky-border: rgba(14, 165, 233, 0.32);
+  --app-memo-default-bg: rgba(22, 31, 48, 0.88);
+  --app-memo-default-border: rgba(148, 163, 184, 0.25);
+  --app-memo-fade: rgba(15, 23, 42, 0.85);
+}
+
+:root[data-theme-mode="light"],
+[data-theme-mode="light"] {
+  color-scheme: light;
+  --app-primary-foreground: #0f172a;
+  --app-secondary-foreground: #475569;
+  --app-muted-foreground: #64748b;
+  --app-primary-background: #f4f5f7;
+  --app-secondary-background: #eaecee;
+  --app-header-background: #eaecee;
+  --app-card-background: #ffffff;
+  --app-subcard-background: #f4f5f7;
+  --app-tool-background: #e8ebef;
+  --app-border: #d2d6dc;
+  --app-card-border: #cbd2d9;
+  --app-input-foreground: #0f172a;
+  --app-input-background: #ffffff;
+  --app-input-border: #cbd2d9;
+  --app-input-placeholder: #64748b;
+  --app-input-secondary-background: #e2e6ea;
+  --app-list-hover-background: #e1e5ea;
+  --app-list-active-background: #d1fae5;
+  --app-list-active-border: #10b981;
+  --app-list-active-foreground: #064e3b;
+  --app-accent-teal: #0f766e;
+  --app-accent-teal-bg: #ccfbf1;
+  --app-accent-teal-border: #5eead4;
+  --app-accent-sky: #0369a1;
+  --app-accent-sky-bg: #e0f2fe;
+  --app-accent-sky-border: #7dd3fc;
+  --app-accent-amber: #b45309;
+  --app-accent-amber-bg: #fef3c7;
+  --app-accent-amber-border: #fcd34d;
+  --app-primary-btn-text: #ffffff;
+  --app-memo-amber-bg: #fffbeb;
+  --app-memo-amber-border: #fcd34d;
+  --app-memo-teal-bg: #f0fdfa;
+  --app-memo-teal-border: #5eead4;
+  --app-memo-sky-bg: #f0f9ff;
+  --app-memo-sky-border: #7dd3fc;
+  --app-memo-default-bg: #f8fafc;
+  --app-memo-default-border: #cbd2d9;
+  --app-memo-fade: rgba(248, 250, 252, 0.94);
+}
+
+[data-theme-mode="light"] .app-container {
+  background-color: #f4f5f7 !important;
+  color: #0f172a !important;
+}
+
+[data-theme-mode="light"] .glass-island {
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid #d2d6dc !important;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06), inset 0 1px 0 #ffffff !important;
+  color: #0f172a !important;
+}
+
+[data-theme-mode="light"] .glass-subcard {
+  background: #f4f5f7 !important;
+  border: 1px solid #d2d6dc !important;
+  color: #0f172a !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+}
+
+[data-theme-mode="light"] .glass-subcard:hover {
+  background: #eaecee !important;
+  border-color: #0d9488 !important;
+}
+
+/* 明亮模式全局悬浮岛内 Tailwind 浅色文字高对比度修正 */
+[data-theme-mode="light"] .glass-island .text-white,
+[data-theme-mode="light"] .glass-island .text-slate-100,
+[data-theme-mode="light"] .glass-island .text-slate-200 {
+  color: #0f172a !important;
+}
+
+[data-theme-mode="light"] .glass-island .text-slate-300 {
+  color: #334155 !important;
+}
+
+[data-theme-mode="light"] .glass-island .text-slate-400 {
+  color: #475569 !important;
+}
+
+[data-theme-mode="light"] .glass-island .text-slate-500,
+[data-theme-mode="light"] .glass-island .text-slate-600 {
+  color: #64748b !important;
+}
+
+[data-theme-mode="light"] .glass-island .text-teal-300,
+[data-theme-mode="light"] .glass-island .text-teal-400,
+[data-theme-mode="light"] .glass-island .text-teal-300\/80 {
+  color: #0f766e !important;
+}
+
+[data-theme-mode="light"] .glass-island .text-sky-300,
+[data-theme-mode="light"] .glass-island .text-sky-400 {
+  color: #0369a1 !important;
+}
+
+[data-theme-mode="light"] .glass-island .text-amber-300,
+[data-theme-mode="light"] .glass-island .text-amber-400 {
+  color: #b45309 !important;
+}
+
+[data-theme-mode="light"] .glass-island .text-purple-300 {
+  color: #6d28d9 !important;
+}
+
+[data-theme-mode="light"] .glass-island .bg-teal-500\/20,
+[data-theme-mode="light"] .glass-island .bg-teal-500\/15 {
+  background-color: rgba(13, 148, 136, 0.12) !important;
+  border-color: rgba(13, 148, 136, 0.3) !important;
+}
+
+[data-theme-mode="light"] .glass-island .bg-sky-500\/20,
+[data-theme-mode="light"] .glass-island .bg-sky-500\/10 {
+  background-color: rgba(2, 132, 199, 0.12) !important;
+  border-color: rgba(2, 132, 199, 0.3) !important;
+}
+
+[data-theme-mode="light"] .glass-island .bg-amber-500\/20 {
+  background-color: rgba(217, 119, 6, 0.12) !important;
+  border-color: rgba(217, 119, 6, 0.3) !important;
+}
+
+[data-theme-mode="light"] .glass-island .bg-purple-500\/20 {
+  background-color: rgba(124, 58, 237, 0.12) !important;
+  border-color: rgba(124, 58, 237, 0.3) !important;
+}
+
+[data-theme-mode="light"] .glass-island .bg-black\/45,
+[data-theme-mode="light"] .glass-island .bg-black\/30 {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+[data-theme-mode="light"] .glass-island .bg-white\/5,
+[data-theme-mode="light"] .glass-island .hover\:bg-white\/10:hover {
+  background-color: #f1f5f9 !important;
+}
+
+[data-theme-mode="light"] .glass-island .divide-white\/5 > * + * {
+  border-color: #e2e8f0 !important;
+}
+
+[data-theme-mode="light"] .glass-island .border-white\/10 {
+  border-color: #e2e8f0 !important;
+}
+
+[data-theme-mode="light"] .brand-logo-orb {
+  color: #ffffff !important;
+}
+
+/* ================= 三大工作台子组件全局明亮模式高优先级统一覆写 ================= */
+[data-theme-mode="light"] .credentials-spotlight-shell,
+[data-theme-mode="light"] .notes-spotlight-shell {
+  color: #0f172a !important;
+}
+
+/* 顶栏、工具栏、底栏、子导航统一为柔和结构灰 (#eaecee) */
+[data-theme-mode="light"] .srv-left-tools,
+[data-theme-mode="light"] .srv-left-footer,
+[data-theme-mode="light"] .srv-right-header,
+[data-theme-mode="light"] .filter-toolbar,
+[data-theme-mode="light"] .bottom-status-bar,
+[data-theme-mode="light"] .filter-header,
+[data-theme-mode="light"] .task-header-container,
+[data-theme-mode="light"] .vertical-subnav,
+[data-theme-mode="light"] .status-footer,
+[data-theme-mode="light"] .left-tools-box,
+[data-theme-mode="light"] .right-island-header {
+  background: #eaecee !important;
+  border-color: #d2d6dc !important;
+  color: #475569 !important;
+}
+
+/* 分段切换器轨道 */
+[data-theme-mode="light"] .right-view-seg,
+[data-theme-mode="light"] .sub-switch-pill,
+[data-theme-mode="light"] .view-mode-seg,
+[data-theme-mode="light"] .color-picker-pill {
+  background: #dce1e7 !important;
+  border-color: #cbd2d9 !important;
+}
+
+[data-theme-mode="light"] .r-seg-btn,
+[data-theme-mode="light"] .sub-switch-btn,
+[data-theme-mode="light"] .mode-btn {
+  color: #475569 !important;
+}
+
+[data-theme-mode="light"] .r-seg-btn.is-on,
+[data-theme-mode="light"] .sub-switch-btn.is-active-cmd,
+[data-theme-mode="light"] .mode-btn.is-on {
+  background: #ffffff !important;
+  color: #0f766e !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08) !important;
+}
+
+[data-theme-mode="light"] .sub-switch-btn.is-active-memo {
+  background: #ffffff !important;
+  color: #b45309 !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08) !important;
+}
+
+/* 搜索框与输入框 */
+[data-theme-mode="light"] .srv-search-wrap,
+[data-theme-mode="light"] .search-input-wrap,
+[data-theme-mode="light"] .root-pwd-input,
+[data-theme-mode="light"] .new-cat-inline-input,
+[data-theme-mode="light"] .search-box-input,
+[data-theme-mode="light"] .doc-search-input,
+[data-theme-mode="light"] .slot-input {
+  background: #ffffff !important;
+  border-color: #cbd2d9 !important;
+  color: #0f172a !important;
+}
+
+[data-theme-mode="light"] .srv-search-input,
+[data-theme-mode="light"] .glass-search-input,
+[data-theme-mode="light"] .composer-title-input,
+[data-theme-mode="light"] .composer-textarea {
+  color: #0f172a !important;
+}
+
+[data-theme-mode="light"] .srv-search-input::placeholder,
+[data-theme-mode="light"] .glass-search-input::placeholder,
+[data-theme-mode="light"] .composer-title-input::placeholder,
+[data-theme-mode="light"] .composer-textarea::placeholder {
+  color: #64748b !important;
+}
+
+/* 内部卡片、详情块、表格 */
+[data-theme-mode="light"] .spotlight-detail-card,
+[data-theme-mode="light"] .doc-card,
+[data-theme-mode="light"] .sql-item-card,
+[data-theme-mode="light"] .note-card,
+[data-theme-mode="light"] .smart-params-panel,
+[data-theme-mode="light"] .docs-empty-state,
+[data-theme-mode="light"] .sql-empty-state,
+[data-theme-mode="light"] .notes-empty-state,
+[data-theme-mode="light"] .related-cmd-row,
+[data-theme-mode="light"] .memo-composer-card,
+[data-theme-mode="light"] .pwd-strategy-box {
+  background: #f4f5f7 !important;
+  border-color: #cbd2d9 !important;
+  color: #0f172a !important;
+}
+
+[data-theme-mode="light"] .notion-table-wrapper,
+[data-theme-mode="light"] .note-preview-content,
+[data-theme-mode="light"] .param-capsule,
+[data-theme-mode="light"] .note-editor-card,
+[data-theme-mode="light"] .preview-body {
+  background: #ffffff !important;
+  border-color: #cbd2d9 !important;
+  color: #0f172a !important;
+}
+
+[data-theme-mode="light"] .table-header-row {
+  background: #eaecee !important;
+  border-bottom-color: #d2d6dc !important;
+  color: #475569 !important;
+}
+
+[data-theme-mode="light"] .table-data-row:hover {
+  background: #f4f5f7 !important;
+}
+
+/* 核心文字高对比度 (#0f172a) */
+[data-theme-mode="light"] .srv-item-name,
+[data-theme-mode="light"] .kv-val,
+[data-theme-mode="light"] .task-title,
+[data-theme-mode="light"] .toolbar-title,
+[data-theme-mode="light"] .doc-filename,
+[data-theme-mode="light"] .sql-filename,
+[data-theme-mode="light"] .card-title,
+[data-theme-mode="light"] .capsule-value,
+[data-theme-mode="light"] .spot-item-title,
+[data-theme-mode="light"] .memo-card-title,
+[data-theme-mode="light"] .preview-title,
+[data-theme-mode="light"] .empty-title {
+  color: #0f172a !important;
+}
+
+[data-theme-mode="light"] .srv-item-target,
+[data-theme-mode="light"] .kv-label,
+[data-theme-mode="light"] .srv-group-title,
+[data-theme-mode="light"] .group-section-title,
+[data-theme-mode="light"] .match-count-text,
+[data-theme-mode="light"] .path-row,
+[data-theme-mode="light"] .path-text,
+[data-theme-mode="light"] .spot-item-sub,
+[data-theme-mode="light"] .list-group-header,
+[data-theme-mode="light"] .memo-card-body-fixed {
+  color: #475569 !important;
+}
+
+/* 列表项与任务卡片 */
+[data-theme-mode="light"] .task-card {
+  background: #f8fafc !important;
+  border-color: #d2d6dc !important;
+  color: #334155 !important;
+}
+
+[data-theme-mode="light"] .task-card:hover,
+[data-theme-mode="light"] .srv-list-item:hover,
+[data-theme-mode="light"] .spot-list-item:hover,
+[data-theme-mode="light"] .v-nav-btn:hover {
+  background: #e1e5ea !important;
+  color: #0f172a !important;
+}
+
+[data-theme-mode="light"] .task-card.is-focused,
+[data-theme-mode="light"] .srv-list-item.is-active,
+[data-theme-mode="light"] .spot-list-item.is-selected {
+  background: #d1fae5 !important;
+  border-color: #10b981 !important;
+  color: #064e3b !important;
+}
+
+[data-theme-mode="light"] .task-card.is-focused .task-title,
+[data-theme-mode="light"] .srv-list-item.is-active .srv-item-name,
+[data-theme-mode="light"] .spot-list-item.is-selected .spot-item-title {
+  color: #064e3b !important;
+  font-weight: 700 !important;
+}
+
+/* 按钮、胶囊与标签 */
+[data-theme-mode="light"] .root-pwd-capsule,
+[data-theme-mode="light"] .spotlight-code-block {
+  background: #f0fdfa !important;
+  border-color: #5eead4 !important;
+  color: #0f766e !important;
+}
+
+[data-theme-mode="light"] .srv-foot-btn,
+[data-theme-mode="light"] .glass-action-btn,
+[data-theme-mode="light"] .add-manual-btn,
+[data-theme-mode="light"] .kv-copy-btn,
+[data-theme-mode="light"] .cat-chip,
+[data-theme-mode="light"] .tag-quick-chip {
+  background: #ffffff !important;
+  border-color: #cbd2d9 !important;
+  color: #334155 !important;
+}
+
+[data-theme-mode="light"] .srv-foot-btn.is-primary,
+[data-theme-mode="light"] .glass-action-btn.is-primary {
+  background: linear-gradient(135deg, #14b8a6, #0d9488) !important;
+  border-color: transparent !important;
+  color: #ffffff !important;
+}
+
+[data-theme-mode="light"] .nav-tab-btn.is-active,
+[data-theme-mode="light"] .v-nav-btn.is-active,
+[data-theme-mode="light"] .cat-chip.is-active,
+[data-theme-mode="light"] .copy-root-btn,
+[data-theme-mode="light"] .badge-count,
+[data-theme-mode="light"] .inherit-pwd-badge,
+[data-theme-mode="light"] .todo-insert-btn {
+  background: #ccfbf1 !important;
+  border-color: #5eead4 !important;
+  color: #0f766e !important;
+}
+
+[data-theme-mode="light"] .srv-env-tag,
+[data-theme-mode="light"] .v-nav-count,
+[data-theme-mode="light"] .count-tag {
+  background: #dce1e7 !important;
+  color: #334155 !important;
+  border-color: #cbd2d9 !important;
+}
+
+/* 随手记便签四色卡片 */
+[data-theme-mode="light"] .memo-box-amber {
+  background: #fffbeb !important;
+  border-color: #fcd34d !important;
+}
+[data-theme-mode="light"] .memo-box-teal {
+  background: #f0fdfa !important;
+  border-color: #5eead4 !important;
+}
+[data-theme-mode="light"] .memo-box-sky {
+  background: #f0f9ff !important;
+  border-color: #7dd3fc !important;
+}
+[data-theme-mode="light"] .memo-box-default {
+  background: #f8fafc !important;
+  border-color: #cbd2d9 !important;
+}
+[data-theme-mode="light"] .memo-bottom-fade {
+  background: linear-gradient(to top, rgba(248, 250, 252, 0.94), transparent) !important;
+}
+
+[data-theme-mode="light"] .brand-title {
+  color: #0f172a !important;
+}
+
+[data-theme-mode="light"] .workspace-path-btn {
+  color: #64748b !important;
+}
+
+[data-theme-mode="light"] .workspace-path-btn:hover {
+  color: #0f172a !important;
+}
+
+[data-theme-mode="light"] .center-nav-pill {
+  background: rgba(241, 245, 249, 0.9) !important;
+  border-color: rgba(226, 232, 240, 0.9) !important;
+}
+
+[data-theme-mode="light"] .nav-pill-item {
+  color: #64748b !important;
+}
+
+[data-theme-mode="light"] .nav-pill-item:hover {
+  color: #0f172a !important;
+  background: rgba(0, 0, 0, 0.05) !important;
+}
+
+[data-theme-mode="light"] .nav-pill-item.is-active {
+  background: #ffffff !important;
+  color: #0f766e !important;
+  border-color: rgba(20, 184, 166, 0.4) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+[data-theme-mode="light"] .pill-count {
+  background: rgba(0, 0, 0, 0.06) !important;
+  color: #334155 !important;
+}
+
+[data-theme-mode="light"] .pill-kbd {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  color: #64748b !important;
+}
+
+[data-theme-mode="light"] .omni-search-pill {
+  background: rgba(241, 245, 249, 0.9) !important;
+  border-color: rgba(226, 232, 240, 0.9) !important;
+  color: #64748b !important;
+}
+
+[data-theme-mode="light"] .omni-search-pill:hover {
+  background: #ffffff !important;
+  border-color: rgba(20, 184, 166, 0.5) !important;
+  color: #0f172a !important;
+}
+
+[data-theme-mode="light"] .shortcut-badge {
+  background-color: rgba(0, 0, 0, 0.06) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  color: #64748b !important;
+}
+
+[data-theme-mode="light"] .tool-icon-btn {
+  background: rgba(241, 245, 249, 0.9) !important;
+  border-color: rgba(226, 232, 240, 0.95) !important;
+  color: #64748b !important;
+}
+
+[data-theme-mode="light"] .tool-icon-btn:hover {
+  background: #ffffff !important;
+  border-color: rgba(20, 184, 166, 0.4) !important;
+  color: #0f172a !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* ================= 常用命令与随手记军火库 (QuickNotesView) 浅色模式高对比度统一色块适配 ================= */
+[data-theme-mode="light"] .notes-hub-card {
+  background: #ffffff !important;
+  border-color: #d2d6dc !important;
+  color: #0f172a !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08) !important;
+}
+
+[data-theme-mode="light"] .notes-command-bar {
+  background: #eaecee !important;
+  border-color: #d2d6dc !important;
+  color: #0f172a !important;
+}
+
+[data-theme-mode="light"] .notes-cat-pill {
+  background: #dce1e7 !important;
+  border-color: #cbd2d9 !important;
+}
+
+[data-theme-mode="light"] .notes-left-wing {
+  background: #f8fafc !important;
+  border-color: #d2d6dc !important;
+}
+
+[data-theme-mode="light"] .notes-left-header {
+  background: #eaecee !important;
+  border-color: #d2d6dc !important;
+  color: #475569 !important;
+}
+
+[data-theme-mode="light"] .notes-right-stage {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+
+[data-theme-mode="light"] .notes-info-card {
+  background: #f4f5f7 !important;
+  border-color: #d2d6dc !important;
+  color: #0f172a !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05) !important;
+}
+
+[data-theme-mode="light"] .notes-info-card h2 {
+  color: #0f172a !important;
+}
+
+[data-theme-mode="light"] .notes-code-display {
+  background: #f0fdfa !important;
+  border-color: #5eead4 !important;
+  color: #0f766e !important;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+}
+
+[data-theme-mode="light"] .notes-code-display span.text-teal-300 {
+  color: #0f766e !important;
+}
+
+[data-theme-mode="light"] .notes-bottom-bar {
+  background: #eaecee !important;
+  border-color: #d2d6dc !important;
+  color: #475569 !important;
+}
+
+[data-theme-mode="light"] .note-item-card {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #334155 !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03) !important;
+}
+
+[data-theme-mode="light"] .note-item-card:hover {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+[data-theme-mode="light"] .note-item-card.is-focused {
+  background-color: #d1fae5 !important;
+  border-color: #10b981 !important;
+  color: #064e3b !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15) !important;
+}
+
+[data-theme-mode="light"] .note-title-text {
+  color: #0f172a !important;
+  font-weight: 600 !important;
+}
+
+[data-theme-mode="light"] .note-item-card.is-focused .note-title-text {
+  color: #064e3b !important;
+  font-weight: 700 !important;
+}
+
+[data-theme-mode="light"] .note-cmd-preview {
+  color: #475569 !important;
+  opacity: 0.9 !important;
+}
+
+[data-theme-mode="light"] .copy-quick-btn {
+  color: #64748b !important;
+}
+
+[data-theme-mode="light"] .copy-quick-btn:hover {
+  background-color: #e0f2fe !important;
+  color: #0284c7 !important;
+}
+
+/* 随手记卡片与便签在浅色下的高对比度细节修正 (解决白底看不清问题) */
+[data-theme-mode="light"] .memo-card-fixed {
+  border-color: #d2d6dc !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06) !important;
+}
+
+[data-theme-mode="light"] .memo-card-top-bar {
+  border-bottom-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+[data-theme-mode="light"] .memo-card-title-row {
+  border-bottom-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+[data-theme-mode="light"] .memo-card-title {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+}
+
+[data-theme-mode="light"] .memo-card-body-fixed {
+  color: #1e293b !important;
+  font-weight: 500 !important;
+}
+
+[data-theme-mode="light"] .memo-card-body-fixed div {
+  color: #1e293b !important;
+}
+
+[data-theme-mode="light"] .memo-card-top-bar .bg-white\/10 {
+  background-color: rgba(0, 0, 0, 0.06) !important;
+  color: #334155 !important;
+}
+
+[data-theme-mode="light"] .notes-left-island,
+[data-theme-mode="light"] .right-workspace-island {
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-color: #d2d6dc !important;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06) !important;
+}
+
+[data-theme-mode="light"] .search-input-wrap input {
+  color: #0f172a !important;
+}
+
+[data-theme-mode="light"] .search-input-wrap input::placeholder {
+  color: #64748b !important;
+}
+
+[data-theme-mode="light"] .spot-list-item {
+  color: #334155 !important;
+}
+
+[data-theme-mode="light"] .spot-list-item .spot-item-title {
+  color: #0f172a !important;
+}
+
+[data-theme-mode="light"] .spot-list-item .spot-item-sub {
+  color: #475569 !important;
+}
+
+[data-theme-mode="light"] .glass-action-btn {
+  background: #ffffff !important;
+  border-color: #cbd2d9 !important;
+  color: #334155 !important;
+}
+
+[data-theme-mode="light"] .glass-action-btn:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+[data-theme-mode="light"] .glass-action-btn.is-primary {
+  background: linear-gradient(135deg, #14b8a6, #0d9488) !important;
+  border-color: transparent !important;
+  color: #ffffff !important;
+}
+
+
 

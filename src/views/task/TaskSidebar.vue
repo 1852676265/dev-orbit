@@ -1,8 +1,8 @@
 <template>
-  <aside class="sidebar-container">
-    <!-- 1. 顶部控制栏 (年份 + 项目筛选) -->
+  <aside class="sidebar-container glass-island">
+    <!-- 1. 顶部控制栏 (年份 + 项目筛选 + 待发SQL筛选) -->
     <div class="filter-header">
-      <!-- 第一行：年份与产线快速开关 -->
+      <!-- 第一行：年份与所属项目下拉 -->
       <div class="filter-row">
         <n-select
           v-model:value="selectedYear"
@@ -11,23 +11,6 @@
           class="flex-1"
           placeholder="年份筛选"
         />
-
-        <n-button
-          size="small"
-          :type="onlyPendingSql ? 'warning' : 'default'"
-          secondary
-          @click="onlyPendingSql = !onlyPendingSql"
-          title="仅看有待发产线 SQL 的任务"
-        >
-          <template #icon>
-            <Database class="icon-small text-amber-400" />
-          </template>
-          <span>待发 SQL</span>
-        </n-button>
-      </div>
-
-      <!-- 第二行：所属项目快速下拉 -->
-      <div class="filter-row">
         <n-select
           v-model:value="selectedProject"
           size="small"
@@ -36,25 +19,72 @@
           placeholder="所有所属项目"
           filterable
         />
+      </div>
+
+      <!-- 第二行：操作按钮行（新建任务 + 待发 SQL 跨任务合并） -->
+      <div class="filter-row sidebar-action-row">
+        <n-button
+          v-if="totalPendingSqls > 0"
+          type="warning"
+          secondary
+          size="small"
+          class="pending-merge-btn flex-1"
+          title="点击打开跨任务 SQL 一键合并总单"
+          @click="$emit('open-cross-merge')"
+        >
+          <template #icon>
+            <Database class="icon-tiny text-amber-400" />
+          </template>
+          <span>{{ totalPendingSqls }} 待发 SQL · 合并</span>
+        </n-button>
+
+        <n-button
+          type="primary"
+          size="small"
+          class="new-task-btn"
+          :class="{ 'flex-1': totalPendingSqls > 0, 'w-full': totalPendingSqls === 0 }"
+          @click="$emit('open-new-task')"
+          title="新建研发任务脚手架"
+        >
+          <template #icon>
+            <Plus class="icon-small" />
+          </template>
+          <span>新建任务</span>
+        </n-button>
+      </div>
+
+      <!-- 第三行：待发 SQL 筛选 + 重置 -->
+      <div class="filter-row">
+        <n-button
+          size="tiny"
+          :type="onlyPendingSql ? 'warning' : 'default'"
+          secondary
+          @click="onlyPendingSql = !onlyPendingSql"
+          title="仅看有待发产线 SQL 的任务"
+        >
+          <template #icon>
+            <Database class="icon-tiny text-amber-400" />
+          </template>
+          <span>仅看待发 SQL</span>
+        </n-button>
+
         <n-button
           v-if="selectedYear !== 'all' || selectedProject !== 'all' || onlyPendingSql"
-          size="small"
+          size="tiny"
           quaternary
           @click="resetAllFilters"
           title="重置全部筛选"
         >
-          <RotateCcw class="icon-small text-slate-400" />
+          <RotateCcw class="icon-tiny text-slate-400" />
         </n-button>
-      </div>
 
-      <!-- 统计指标与提示 -->
-      <div class="filter-stats">
-        <span>已匹配: <b class="highlight-num">{{ filteredTasks.length }}</b> / {{ totalTasksCount }} 个任务</span>
-        <span class="tip-text">双击定位 · 右键操作</span>
+        <span class="match-count-text">
+          匹配 <b class="highlight-num">{{ filteredTasks.length }}</b>/{{ totalTasksCount }}
+        </span>
       </div>
     </div>
 
-    <!-- 2. 任务卡片列表 -->
+    <!-- 2. 按状态分组的任务列表 (方案 6 Spotlight 风格) -->
     <div class="task-list-container custom-scrollbar">
       <!-- 空状态 -->
       <div v-if="filteredTasks.length === 0" class="empty-state">
@@ -77,85 +107,71 @@
         </n-button>
       </div>
 
-      <!-- 任务条目卡片 -->
-      <div
-        v-for="(task, idx) in filteredTasks"
-        :key="task.fullPath"
-        @click="selectTask(task, idx)"
-        @dblclick="$emit('open-in-explorer', task.fullPath)"
-        @contextmenu.prevent.stop="$emit('task-contextmenu', $event, task)"
-        class="task-card"
-        :class="{ 'is-focused': isTaskFocused(task, idx) }"
-      >
-        <!-- 聚焦微光条 -->
-        <div v-if="isTaskFocused(task, idx)" class="active-indicator" />
+      <!-- 按状态分组渲染 (进行中 / 挂起延期 / 已上线归档) -->
+      <template v-else>
+        <div
+          v-for="group in groupedTasks"
+          :key="group.status"
+          class="status-group-block"
+        >
+          <div class="group-section-title">
+            <span>{{ group.label }} · {{ group.items.length }}</span>
+          </div>
 
-        <div class="task-main">
-          <!-- 状态呼吸灯 -->
-          <span
-            class="status-dot"
-            :class="getStatusDotClass(task.status)"
-          />
+          <div
+            v-for="item in group.items"
+            :key="item.task.fullPath"
+            @click="selectTask(item.task, item.idx)"
+            @dblclick="$emit('open-in-explorer', item.task.fullPath)"
+            @contextmenu.prevent.stop="$emit('task-contextmenu', $event, item.task)"
+            class="task-card"
+            :class="{ 'is-focused': isTaskFocused(item.task, item.idx) }"
+          >
+            <div v-if="isTaskFocused(item.task, item.idx)" class="active-indicator" />
 
-          <div class="task-meta">
-            <!-- 标签行 -->
-            <div class="task-tags">
-              <n-tag size="tiny" :bordered="false" class="meta-tag">
-                {{ task.year }}
-              </n-tag>
-              <n-tag
-                v-if="task.project"
-                size="tiny"
-                type="info"
-                :bordered="false"
-                class="meta-tag project-tag"
-              >
-                {{ task.project }}
-              </n-tag>
-              <span class="task-date">
-                {{ formatTaskDate(task.updatedAt || task.createdAt) }}
-              </span>
+            <div class="task-main">
+              <span
+                class="status-dot"
+                :class="getStatusDotClass(item.task.status)"
+              />
+
+              <div class="task-meta">
+                <h3 class="task-title" :title="item.task.title">
+                  {{ item.task.title }}
+                </h3>
+                <div class="task-tags">
+                  <span class="sub-meta-text">{{ item.task.year }} · {{ item.task.project || '常规' }}</span>
+                  <span v-if="item.task.updatedAt || item.task.createdAt" class="sub-meta-text">
+                    · {{ formatTaskDate(item.task.updatedAt || item.task.createdAt) }}
+                  </span>
+                </div>
+              </div>
             </div>
 
-            <!-- 任务标题 -->
-            <h3 class="task-title" :title="task.title">
-              {{ task.title }}
-            </h3>
+            <!-- SQL 标签徽章 -->
+            <div class="task-badges">
+              <n-tag
+                v-if="item.task.prodPendingCount > 0"
+                size="tiny"
+                type="warning"
+                round
+                class="sql-tag-pending"
+              >
+                {{ item.task.prodPendingCount }} 待发
+              </n-tag>
+              <n-tag
+                v-else-if="item.task.sqlCount > 0"
+                size="tiny"
+                type="success"
+                :bordered="false"
+                class="sql-tag-normal"
+              >
+                {{ item.task.sqlCount }} SQL
+              </n-tag>
+            </div>
           </div>
         </div>
-
-        <!-- SQL 标签徽章 -->
-        <div class="task-badges">
-          <n-tag
-            v-if="task.prodPendingCount > 0"
-            size="tiny"
-            type="warning"
-            round
-            class="sql-tag-pending"
-          >
-            <template #icon>
-              <Database class="icon-tiny text-amber-400" />
-            </template>
-            {{ task.prodPendingCount }} 待发
-          </n-tag>
-          <n-tag
-            v-else-if="task.sqlCount > 0"
-            size="tiny"
-            type="success"
-            :bordered="false"
-            class="sql-tag-normal"
-          >
-            <template #icon>
-              <Database class="icon-tiny text-teal-400" />
-            </template>
-            {{ task.sqlCount }} SQL
-          </n-tag>
-          <span v-else class="no-sql-hint">
-            无SQL
-          </span>
-          <ChevronRight class="arrow-icon" />
-        </div>
-      </div>
+      </template>
     </div>
   </aside>
 </template>
@@ -164,10 +180,10 @@
 import { computed } from 'vue'
 import { NSelect, NButton, NTag } from 'naive-ui'
 import {
-  Layers,
-  Database,
   RotateCcw,
-  ChevronRight
+  Database,
+  Layers,
+  Plus
 } from 'lucide-vue-next'
 
 const props = defineProps({
@@ -175,6 +191,7 @@ const props = defineProps({
   projectList: { type: Array, default: () => [] },
   filteredTasks: { type: Array, default: () => [] },
   totalTasksCount: { type: Number, default: 0 },
+  totalPendingSqls: { type: Number, default: 0 },
   focusedTaskIndex: { type: Number, default: 0 },
   currentTask: { type: Object, default: null }
 })
@@ -183,8 +200,31 @@ const emit = defineEmits([
   'select-task',
   'open-in-explorer',
   'task-contextmenu',
-  'project-contextmenu'
+  'project-contextmenu',
+  'open-new-task',
+  'open-cross-merge'
 ])
+
+const STATUS_GROUPS = [
+  { status: 'in-progress', label: '进行中' },
+  { status: 'suspended', label: '挂起延期' },
+  { status: 'archived', label: '已上线归档' }
+]
+
+const groupedTasks = computed(() => {
+  const buckets = {
+    'in-progress': [],
+    suspended: [],
+    archived: []
+  }
+  props.filteredTasks.forEach((task, idx) => {
+    const st = task.status === 'suspended' || task.status === 'archived' ? task.status : 'in-progress'
+    buckets[st].push({ task, idx })
+  })
+  return STATUS_GROUPS
+    .map(g => ({ ...g, items: buckets[g.status] }))
+    .filter(g => g.items.length > 0)
+})
 
 function isTaskFocused(task, idx) {
   if (props.currentTask && props.currentTask.fullPath) {
@@ -245,28 +285,21 @@ function formatTaskDate(dateStr) {
 </script>
 
 <style scoped>
-/* 侧边栏主体容器 */
+/* 侧边栏主体容器（方案 6 玻璃悬浮岛） */
 .sidebar-container {
-  width: 320px;
+  width: 350px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
-  background-color: rgba(13, 17, 26, 0.95);
   overflow: hidden;
   user-select: none;
-}
-@media (min-width: 768px) {
-  .sidebar-container {
-    width: 384px;
-  }
 }
 
 /* 顶部过滤控制区 */
 .filter-header {
   padding: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  background-color: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-secondary-background);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -275,25 +308,60 @@ function formatTaskDate(dateStr) {
 .filter-row {
   display: flex;
   align-items: center;
+  gap: 6px;
+}
+
+.sidebar-action-row {
+  margin-top: 1px;
   gap: 8px;
 }
 
-.filter-stats {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.pending-merge-btn {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 700;
+  font-size: 11px;
+}
+
+.new-task-btn {
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.match-count-text {
+  margin-left: auto;
   font-size: 11px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  color: #94a3b8;
-  padding: 2px 2px 0 2px;
+  color: var(--app-secondary-foreground);
+}
+
+.status-group-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.group-section-title {
+  padding: 6px 8px 2px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--app-secondary-foreground);
+  letter-spacing: 0.02em;
+}
+
+.sub-meta-text {
+  font-size: 11px;
+  color: var(--app-muted-foreground);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .highlight-num {
-  color: #2dd4bf;
+  color: var(--app-accent-teal);
+  font-weight: 700;
 }
 
 .tip-text {
-  color: #64748b;
+  color: var(--app-muted-foreground);
 }
 
 /* 任务列表滚动区 */
@@ -320,19 +388,19 @@ function formatTaskDate(dateStr) {
 .empty-icon {
   width: 40px;
   height: 40px;
-  color: #475569;
+  color: var(--app-muted-foreground);
   margin-bottom: 12px;
 }
 
 .empty-title {
   font-size: 12px;
   font-weight: 500;
-  color: #cbd5e1;
+  color: var(--app-primary-foreground);
 }
 
 .empty-subtitle {
   font-size: 11px;
-  color: #64748b;
+  color: var(--app-muted-foreground);
   margin-top: 4px;
 }
 
@@ -345,28 +413,28 @@ function formatTaskDate(dateStr) {
   position: relative;
   padding: 10px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  background-color: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--app-border);
+  background-color: var(--app-card-background);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   transition: all 0.15s ease-in-out;
-  color: #cbd5e1;
+  color: var(--app-secondary-foreground);
 }
 
 .task-card:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+  background-color: var(--app-list-hover-background);
+  border-color: var(--app-card-border);
+  color: var(--app-primary-foreground);
 }
 
 .task-card.is-focused {
-  background-color: rgba(19, 78, 74, 0.35);
-  border-color: rgba(45, 212, 191, 0.65);
-  box-shadow: 0 4px 16px rgba(13, 148, 136, 0.2);
-  color: #ffffff;
+  background-color: var(--app-list-active-background);
+  border-color: var(--app-list-active-border);
+  box-shadow: 0 4px 14px rgba(13, 148, 136, 0.14);
+  color: var(--app-list-active-foreground);
 }
 
 /* 激活指示光条 */
@@ -377,9 +445,9 @@ function formatTaskDate(dateStr) {
   transform: translateY(-50%);
   width: 4px;
   height: 80%;
-  background-color: #2dd4bf;
+  background-color: #14b8a6;
   border-radius: 0 4px 4px 0;
-  box-shadow: 0 0 8px rgba(45, 212, 191, 0.6);
+  box-shadow: 0 0 8px rgba(45, 212, 191, 0.5);
 }
 
 /* 卡片主要内容与状态灯 */
@@ -402,7 +470,7 @@ function formatTaskDate(dateStr) {
 }
 
 .status-dot--active {
-  background-color: #2dd4bf;
+  background-color: #14b8a6;
   box-shadow: 0 0 6px rgba(45, 212, 191, 0.6);
   animation: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
@@ -443,7 +511,7 @@ function formatTaskDate(dateStr) {
 
 .task-date {
   font-size: 10px;
-  color: #64748b;
+  color: var(--app-muted-foreground);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
@@ -455,16 +523,16 @@ function formatTaskDate(dateStr) {
   overflow: hidden;
   text-overflow: ellipsis;
   margin: 0;
-  color: #e2e8f0;
+  color: var(--app-primary-foreground);
   transition: color 0.15s ease;
 }
 
 .task-card:hover .task-title {
-  color: #5eead4;
+  color: var(--app-accent-teal);
 }
 
 .task-card.is-focused .task-title {
-  color: #99f6e4;
+  color: var(--app-list-active-foreground);
   font-weight: 700;
 }
 
@@ -487,7 +555,7 @@ function formatTaskDate(dateStr) {
 
 .no-sql-hint {
   font-size: 10px;
-  color: #64748b;
+  color: var(--app-muted-foreground);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   opacity: 0.6;
 }
@@ -495,12 +563,12 @@ function formatTaskDate(dateStr) {
 .arrow-icon {
   width: 14px;
   height: 14px;
-  color: #475569;
+  color: var(--app-muted-foreground);
   transition: color 0.15s ease;
 }
 
 .task-card:hover .arrow-icon {
-  color: #2dd4bf;
+  color: var(--app-accent-teal);
 }
 
 .icon-small {

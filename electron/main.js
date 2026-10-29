@@ -119,7 +119,7 @@ function createWindow() {
   mainWindow.setMenu(null)
 
   if (isDev) {
-    mainWindow.loadURL('http://localhost:5173')
+    mainWindow.loadURL('http://localhost:9527')
   } else {
     const indexPath = path.join(__dirname, '../dist/index.html')
     mainWindow.loadFile(indexPath).catch(err => {
@@ -1376,32 +1376,7 @@ ipcMain.handle('get-quick-notes', async () => {
       return []
     }
   }
-  // 预置几条常见的默认命令作为示例
-  const defaultNotes = [
-    {
-      id: 'n1',
-      title: 'Docker 查看指定容器实时日志',
-      tag: 'Docker',
-      content: 'docker logs -f --tail 100 <container_id>',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'n2',
-      title: 'Git 撤销最近一次未推送的 commit 且保留修改',
-      tag: 'Git',
-      content: 'git reset --soft HEAD~1',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'n3',
-      title: 'Linux 查找占用指定端口的进程并杀死',
-      tag: 'Linux',
-      content: 'netstat -tulnp | grep :8080\nkill -9 <PID>',
-      createdAt: new Date().toISOString()
-    }
-  ]
-  fs.writeFileSync(noteFile, JSON.stringify(defaultNotes, null, 2), 'utf-8')
-  return defaultNotes
+  return []
 })
 
 ipcMain.handle('save-quick-note', async (event, note) => {
@@ -1489,6 +1464,64 @@ ipcMain.handle('save-quick-note-categories', async (event, categories) => {
   const catFile = getQuickNotesCategoriesPath()
   fs.writeFileSync(catFile, JSON.stringify(categories, null, 2), 'utf-8')
   return categories
+})
+
+// 6.1 随手记 / 备忘录独立存储 (_quick_notes/memos.json)
+function getMemosPath() {
+  const config = loadConfig()
+  const dir = path.join(config.workspacePath, '_quick_notes')
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+  return path.join(dir, 'memos.json')
+}
+
+ipcMain.handle('get-memos', async () => {
+  const memoFile = getMemosPath()
+  if (fs.existsSync(memoFile)) {
+    try {
+      return readJsonSafely(memoFile, []) || []
+    } catch (e) {
+      return []
+    }
+  }
+  return []
+})
+
+ipcMain.handle('save-memo', async (event, memo) => {
+  const memoFile = getMemosPath()
+  let memos = []
+  if (fs.existsSync(memoFile)) {
+    try {
+      memos = readJsonSafely(memoFile, []) || []
+    } catch (e) {}
+  }
+  if (memo.id) {
+    const idx = memos.findIndex(m => m.id === memo.id)
+    if (idx !== -1) {
+      memos[idx] = { ...memos[idx], ...memo, updatedAt: new Date().toISOString() }
+    } else {
+      memos.unshift(memo)
+    }
+  } else {
+    const newMemo = {
+      ...memo,
+      id: 'memo_' + Date.now(),
+      createdAt: new Date().toISOString()
+    }
+    memos.unshift(newMemo)
+  }
+  fs.writeFileSync(memoFile, JSON.stringify(memos, null, 2), 'utf-8')
+  return memos
+})
+
+ipcMain.handle('delete-memo', async (event, id) => {
+  const memoFile = getMemosPath()
+  if (fs.existsSync(memoFile)) {
+    let memos = readJsonSafely(memoFile, []) || []
+    memos = memos.filter(m => m.id !== id)
+    fs.writeFileSync(memoFile, JSON.stringify(memos, null, 2), 'utf-8')
+    return memos
+  }
+  return []
 })
 
 // 7. 智能全文检索 & 关键字精准行定位 (秒搜 .txt, .md, .sql)
@@ -1612,7 +1645,7 @@ function parseDocxXml(xmlString) {
     }
   }
 
-  const servers = []
+  const assets = []
   let globalId = 1
 
   for (const rows of tables) {
@@ -1620,18 +1653,19 @@ function parseDocxXml(xmlString) {
     const firstRow = rows[0]
     const colMap = {
       name: -1,
-      ip: -1,
+      target: -1,
       port: -1,
       env: -1,
       username: -1,
       password: -1,
-      remark: -1
+      remark: -1,
+      type: -1
     }
 
     firstRow.forEach((col, idx) => {
       const c = col.toLowerCase().replace(/\s+/g, '')
-      if (c.includes('ip') || c.includes('主机') || c.includes('地址') || c.includes('host')) {
-        if (colMap.ip === -1) colMap.ip = idx
+      if (c.includes('ip') || c.includes('主机') || c.includes('地址') || c.includes('host') || c.includes('url') || c.includes('网址') || c.includes('链接')) {
+        if (colMap.target === -1) colMap.target = idx
       } else if (c.includes('端口') || c.includes('port')) {
         if (colMap.port === -1) colMap.port = idx
       } else if (c.includes('密码') || c.includes('口令') || c.includes('pass') || c.includes('pwd')) {
@@ -1640,6 +1674,8 @@ function parseDocxXml(xmlString) {
         if (colMap.username === -1) colMap.username = idx
       } else if (c.includes('环境') || c.includes('env')) {
         if (colMap.env === -1) colMap.env = idx
+      } else if (c.includes('类型') || c.includes('类别') || c.includes('type')) {
+        if (colMap.type === -1) colMap.type = idx
       } else if (c.includes('名') || c.includes('系统') || c.includes('服务') || c.includes('项目') || c.includes('应用') || c.includes('用途')) {
         if (colMap.name === -1) colMap.name = idx
       } else if (c.includes('说明') || c.includes('备注') || c.includes('remark') || c.includes('desc')) {
@@ -1647,7 +1683,7 @@ function parseDocxXml(xmlString) {
       }
     })
 
-    const hasHeader = (colMap.ip !== -1 || colMap.username !== -1 || colMap.password !== -1)
+    const hasHeader = (colMap.target !== -1 || colMap.username !== -1 || colMap.password !== -1)
     const startIndex = hasHeader ? 1 : 0
 
     for (let r = startIndex; r < rows.length; r++) {
@@ -1655,20 +1691,23 @@ function parseDocxXml(xmlString) {
       if (row.every(c => !c)) continue
 
       let name = colMap.name !== -1 ? row[colMap.name] : ''
-      let ip = colMap.ip !== -1 ? row[colMap.ip] : ''
+      let target = colMap.target !== -1 ? row[colMap.target] : ''
       let port = colMap.port !== -1 ? row[colMap.port] : ''
       let env = colMap.env !== -1 ? row[colMap.env] : ''
       let username = colMap.username !== -1 ? row[colMap.username] : ''
       let password = colMap.password !== -1 ? row[colMap.password] : ''
       let remark = colMap.remark !== -1 ? row[colMap.remark] : ''
+      let rawType = colMap.type !== -1 ? row[colMap.type] : ''
 
       if (!hasHeader) {
         row.forEach(cell => {
-          if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/.test(cell)) {
-            ip = cell
+          if (/^https?:\/\//i.test(cell)) {
+            target = cell
+          } else if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/.test(cell)) {
+            target = cell
           } else if (/^(root|admin|administrator|oracle|dmdbms|deploy|app)/i.test(cell)) {
             username = cell
-          } else if (/^(22|3306|5432|1521|5236|6379|8080|9000|80|443)$/.test(cell)) {
+          } else if (/^(22|3306|5432|1521|5236|6379|8080|8848|9000|80|443)$/.test(cell)) {
             port = cell
           } else if (/环境|生产|测试|开发|预发|uat|prod|dev|test/i.test(cell)) {
             env = cell
@@ -1676,40 +1715,58 @@ function parseDocxXml(xmlString) {
         })
       }
 
+      // 智能识别类型
+      let type = 'server'
+      const combined = `${name} ${target} ${rawType} ${remark}`.toLowerCase()
+      if (/^https?:\/\//i.test(target) || /web|控制台|平台|swagger|nacos|jenkins|dem|portal|前端|后台/i.test(combined)) {
+        type = 'web'
+      } else if (/inode|vpn|网关|802\.1|校园网|内网认证|拨号/i.test(combined)) {
+        type = 'network'
+      } else if (/达梦|dm8|dmdbms|oracle|mysql|redis|postgres|db|数据库|中间件/i.test(combined)) {
+        type = 'database'
+      }
+
+      // 端口提取
+      if (target && target.includes(':') && !port) {
+        const urlMatch = target.match(/:(\d+)/)
+        if (urlMatch) port = urlMatch[1]
+      }
+      if (type === 'server' && !port) port = '22'
+      if (!username) {
+        username = type === 'server' ? 'root' : (type === 'web' ? 'admin' : '')
+      }
+
+      // 环境归一化
       if (!env) {
-        const textToTest = `${name} ${remark}`
-        if (/生产|prod|release/i.test(textToTest)) env = '生产环境'
-        else if (/测试|test|qa|uat/i.test(textToTest)) env = '测试环境'
-        else if (/开发|dev/i.test(textToTest)) env = '开发环境'
-        else if (/数据库|db|oracle|mysql|dm/i.test(textToTest)) env = '数据库/中间件'
+        if (/生产|prod|release/i.test(combined)) env = '生产环境'
+        else if (/测试|test|qa|uat/i.test(combined)) env = '测试环境'
+        else if (/开发|dev/i.test(combined)) env = '开发环境'
         else env = '常规环境'
       }
 
-      if (ip && ip.includes(':') && !port) {
-        const parts = ip.split(':')
-        ip = parts[0]
-        port = parts[1]
-      }
+      const isDefaultPwd = !password || /同上|默认|通用|继承|root/i.test(password.trim())
 
-      servers.push({
-        id: 'srv_' + (globalId++),
-        name: name || `服务器-${globalId}`,
-        ip: ip || '未标注IP',
-        port: port || '22',
+      assets.push({
+        id: 'asset_' + (globalId++),
+        type, // 'server' | 'web' | 'network' | 'database'
+        name: name || (type === 'server' ? `服务器-${globalId}` : `资产-${globalId}`),
+        target: target || '未标注地址',
+        port: port || '',
         env: env || '常规环境',
-        username: username || 'root',
-        password: password || '',
+        username: username || '',
+        password: isDefaultPwd ? '' : password,
+        useDefaultPassword: isDefaultPwd,
         remark: remark || ''
       })
     }
   }
 
-  return servers
+  return assets
 }
 
 function parseTextCredentials(rawText) {
   const lines = rawText.split(/\r?\n/)
-  const servers = []
+  const assets = []
   let globalId = 1
   let current = null
 
@@ -1717,17 +1774,24 @@ function parseTextCredentials(rawText) {
     const trimmed = line.trim()
     if (!trimmed) continue
 
+    const urlMatch = trimmed.match(/(https?:\/\/[^\s]+)/i)
     const ipMatch = trimmed.match(/\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?::(\d+))?\b/)
-    if (ipMatch) {
-      if (current) servers.push(current)
+
+    if (urlMatch || ipMatch) {
+      if (current) assets.push(current)
+      const target = urlMatch ? urlMatch[1] : ipMatch[1]
+      const port = urlMatch ? (target.match(/:(\d+)/)?.[1] || '') : (ipMatch[2] || '22')
+      const isWeb = Boolean(urlMatch)
       current = {
-        id: 'srv_' + (globalId++),
-        name: trimmed.split(/[\s:：]/)[0] || `服务器-${globalId}`,
-        ip: ipMatch[1],
-        port: ipMatch[2] || '22',
+        id: 'asset_' + (globalId++),
+        type: isWeb ? 'web' : 'server',
+        name: trimmed.split(/[\s:：]/)[0] || (isWeb ? 'Web系统' : `服务器-${globalId}`),
+        target: target,
+        port: port,
         env: /生产|prod/i.test(trimmed) ? '生产环境' : /测试|test/i.test(trimmed) ? '测试环境' : '常规环境',
-        username: 'root',
+        username: isWeb ? 'admin' : 'root',
         password: '',
+        useDefaultPassword: true,
         remark: trimmed
       }
       continue
@@ -1737,12 +1801,73 @@ function parseTextCredentials(rawText) {
       const userMatch = trimmed.match(/(?:账号|用户|user|username)[：:\s]+(\S+)/i)
       if (userMatch) current.username = userMatch[1]
       const pwdMatch = trimmed.match(/(?:密码|口令|password|pwd)[：:\s]+(\S+)/i)
-      if (pwdMatch) current.password = pwdMatch[1]
+      if (pwdMatch) {
+        current.password = pwdMatch[1]
+        current.useDefaultPassword = false
+      }
+      if (/inode|vpn|网络/i.test(trimmed)) current.type = 'network'
+      if (/达梦|dm|oracle|mysql|redis/i.test(trimmed)) current.type = 'database'
     }
   }
-  if (current) servers.push(current)
-  return servers
+  if (current) assets.push(current)
+  return assets
 }
+
+function getCredentialsPath() {
+  const config = loadConfig()
+  const dir = path.join(config.workspacePath, '_quick_notes')
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+  return path.join(dir, 'server_credentials.json')
+}
+
+function getCredentialsMetaPath() {
+  const config = loadConfig()
+  const dir = path.join(config.workspacePath, '_quick_notes')
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+  return path.join(dir, 'credentials_meta.json')
+}
+
+ipcMain.handle('get-server-credentials', async () => {
+  const file = getCredentialsPath()
+  if (fs.existsSync(file)) {
+    return readJsonSafely(file, []) || []
+  }
+  return []
+})
+
+ipcMain.handle('save-server-credentials', async (event, list) => {
+  const file = getCredentialsPath()
+  const cleanList = Array.isArray(list) ? list : []
+  fs.writeFileSync(file, JSON.stringify(cleanList, null, 2), 'utf-8')
+  return cleanList
+})
+
+ipcMain.handle('get-credentials-meta', async () => {
+  const file = getCredentialsMetaPath()
+  const cfg = loadConfig()
+  const meta = fs.existsSync(file) ? readJsonSafely(file, {}) : {}
+  return {
+    globalRootPassword: meta.globalRootPassword || '',
+    svnWordPath: cfg.svnWordPath || meta.svnWordPath || '',
+    categories: Array.isArray(meta.categories) && meta.categories.length > 0
+      ? meta.categories
+      : ['服务器账号', 'Web网站', 'iNode'],
+    inodeAccount: meta.inodeAccount || { username: '', password: '', gateway: '' }
+  }
+})
+
+ipcMain.handle('save-credentials-meta', async (event, metaUpdates) => {
+  const file = getCredentialsMetaPath()
+  const existing = fs.existsSync(file) ? readJsonSafely(file, {}) : {}
+  const merged = { ...existing, ...metaUpdates }
+  fs.writeFileSync(file, JSON.stringify(merged, null, 2), 'utf-8')
+  if (metaUpdates && metaUpdates.svnWordPath !== undefined) {
+    const cfg = loadConfig()
+    cfg.svnWordPath = metaUpdates.svnWordPath
+    saveConfig(cfg)
+  }
+  return merged
+})
 
 ipcMain.handle('get-svn-doc-config', async () => {
   const cfg = loadConfig()
@@ -1810,6 +1935,8 @@ ipcMain.handle('parse-word-credentials', async (event, targetPath) => {
     const stats = fs.statSync(filePath)
     const ext = path.extname(filePath).toLowerCase()
     let servers = []
+    let rawXml = ''
+    let rawText = ''
 
     if (ext === '.docx') {
       const AdmZip = require('adm-zip')
@@ -1818,10 +1945,10 @@ ipcMain.handle('parse-word-credentials', async (event, targetPath) => {
       if (!xmlEntry) {
         return { success: false, message: '该 Word 文件未包含标准 word/document.xml 内容' }
       }
-      const xmlString = zip.readAsText(xmlEntry, 'utf-8')
-      servers = parseDocxXml(xmlString)
+      rawXml = zip.readAsText(xmlEntry, 'utf-8')
+      servers = parseDocxXml(rawXml)
     } else {
-      const rawText = fs.readFileSync(filePath, 'utf-8')
+      rawText = fs.readFileSync(filePath, 'utf-8')
       servers = parseTextCredentials(rawText)
     }
 
@@ -1830,6 +1957,9 @@ ipcMain.handle('parse-word-credentials', async (event, targetPath) => {
       filePath,
       fileName: path.basename(filePath),
       mtime: stats.mtime.toLocaleString(),
+      rawXml,
+      rawText,
+      assets: servers,
       servers
     }
   } catch (err) {

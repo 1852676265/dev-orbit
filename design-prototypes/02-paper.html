@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>方案二 · Carbon 深色终端（三栏同屏军火库 & 终端主机卡片）</title>
+<link rel="stylesheet" href="shared/common.css">
+<style>
+:root {
+  --bg: #0b0f17; --fg: #e5e7eb; --muted: #7d8594; --line: #1e2636; --card: #111723; --soft: #171f2e;
+  --accent: #14b8a6; --accent-fg: #042f2e; --ok: #10b981; --ok-bg: rgba(16,185,129,.14); --warn: #f59e0b; --warn-bg: rgba(245,158,11,.15); --radius: 6px;
+}
+.shell { display: grid; grid-template-columns: 52px 1fr; height: 100vh; }
+.rail { background: #080b11; border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 6px; }
+.logo { width: 32px; height: 32px; border-radius: 999px; border: 1px solid var(--accent); color: var(--accent); font-weight: 800; display: grid; place-items: center; margin-bottom: 8px; }
+.rbtn { width: 36px; height: 34px; border-radius: 6px; color: var(--muted); font-size: 11px; }
+.rbtn:hover { background: var(--soft); color: var(--fg); }
+.rbtn.active { background: var(--ok-bg); color: var(--accent); font-weight: 700; }
+.stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.omni { height: 40px; padding: 0 16px; border-bottom: 1px solid var(--line); background: #0d121c; display: flex; align-items: center; justify-content: space-between; }
+.main { flex: 1; display: grid; grid-template-columns: 300px 1fr; min-height: 0; }
+.main.single { grid-template-columns: 1fr; }
+.side { border-right: 1px solid var(--line); background: #0d121c; display: flex; flex-direction: column; min-height: 0; }
+.work { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.foot { height: 26px; padding: 0 16px; border-top: 1px solid var(--line); background: #080b11; display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--muted); }
+
+/* 方案二专属：随手记 = 左分类 + 中终端命令流 + 右常驻便签墙（免切换） */
+.carbon-notes { display: grid; grid-template-columns: 170px 1fr 310px; height: 100%; min-height: 0; }
+.term-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--card); }
+.term-row:hover { background: var(--soft); }
+.memo-wall { border-left: 1px solid var(--line); background: #0d121c; padding: 12px; display: flex; flex-direction: column; gap: 8px; overflow: auto; }
+
+/* 方案二专属：服务器 = 左环境/分类树 + 右 SSH 终端主机卡矩阵 */
+.carbon-srv { display: grid; grid-template-columns: 220px 1fr; height: 100%; min-height: 0; }
+.srv-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 10px; }
+.host-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.host-card:hover { border-color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="shell zen-hide" id="app"></div>
+<div class="zen-pill" data-act="toggle-zen">👁 壁纸沉浸观赏模式 · 点击此处或按 Esc 恢复工作台</div>
+<script src="shared/common.js"></script>
+<script>
+/* 方案二专属页面 2：左分类 + 中终端命令行 + 右常驻便签墙（同屏三栏，无需切Tab） */
+function renderCarbonNotes() {
+  const cats = [...new Set(DATA.commands.map((c) => c.cat))];
+  const cmds = DATA.commands.filter((c) => UI.cmdCat === 'all' ? true : UI.cmdCat === 'pinned' ? c.pinned : c.cat === UI.cmdCat);
+  return `
+    <div class="carbon-notes">
+      <aside class="cmd-side">
+        <div class="between" style="padding:4px 6px;font-size:11px;color:var(--muted)"><span>命令分类</span><button class="btn xs ghost" data-toast="新建分类">+ 新建</button></div>
+        <button class="cat-item ${UI.cmdCat === 'all' ? 'active' : ''}" data-cmd-cat="all"><span>全部命令</span><span class="mono">${DATA.commands.length}</span></button>
+        <button class="cat-item ${UI.cmdCat === 'pinned' ? 'active' : ''}" data-cmd-cat="pinned"><span>📌 常用置顶</span><span class="mono">${DATA.commands.filter((c) => c.pinned).length}</span></button>
+        ${cats.map((c) => `<button class="cat-item ${UI.cmdCat === c ? 'active' : ''}" data-cmd-cat="${c}"><span>${esc(c)}</span><span class="mono">${DATA.commands.filter((x) => x.cat === c).length}</span></button>`).join('')}
+      </aside>
+      <div class="scroll" style="padding:14px 16px">
+        <div class="between" style="margin-bottom:10px">
+          <div class="row"><b>💻 终端命令流 (${cmds.length})</b><input class="input" placeholder="过滤命令 (/ 聚焦)…" style="width:200px"></div>
+          <div class="row"><button class="btn xs" data-act="modal-txt-import">📄 TXT 导入</button><button class="btn xs primary" data-act="modal-new-cmd">+ 新增命令</button></div>
+        </div>
+        <div style="border:1px solid var(--line);border-radius:var(--radius);overflow:hidden">
+          ${cmds.map((c) => `
+            <div class="term-row">
+              <div style="min-width:0">
+                <div class="row"><span class="tag accent">${esc(c.cat)}</span><b>${esc(c.title)}</b></div>
+                <div class="mono muted" style="margin-top:3px">$ ${esc(c.cmd)}</div>
+              </div>
+              <div class="row"><button class="btn xs primary" data-copy="${esc(c.cmd)}">复制命令</button><button class="btn xs ghost" data-toast="编辑">✏️</button></div>
+            </div>`).join('')}
+        </div>
+      </div>
+      <aside class="memo-wall">
+        <div class="between"><b>📌 极速随手记 (${DATA.memos.length})</b><span class="muted" style="font-size:11px">右侧常驻免切换</span></div>
+        <div class="row"><input class="input" id="_memo_inp" placeholder="随手记一笔…" style="flex:1"><button class="btn xs primary" data-act="add-memo">记下</button></div>
+        ${DATA.memos.map((m) => `
+          <div class="memo-box ${m.color}">
+            <div style="margin-bottom:6px">${esc(m.text)}</div>
+            <div class="between muted" style="font-size:11px"><span>${m.time}</span><button class="btn xs ghost" data-copy="${esc(m.text)}">复制</button></div>
+          </div>`).join('')}
+      </aside>
+    </div>`;
+}
+
+/* 方案二专属页面 3：左控制树(含Root口令与SVN) + 右 SSH 终端主机卡片矩阵 */
+function renderCarbonServers() {
+  const cats = ['all', '服务器账号', 'Web网站', 'iNode'];
+  const list = DATA.servers.filter((s) => UI.srvCat === 'all' || s.cat === UI.srvCat);
+  return `
+    <div class="carbon-srv">
+      <aside class="cmd-side" style="gap:8px">
+        <div class="ncard" style="margin:0;padding:9px">
+          <div class="muted" style="font-size:11px">👑 通用 Root 口令</div>
+          <div class="between" style="margin-top:4px">
+            <code class="mono" style="color:var(--accent)">${UI.showRootPwd ? DATA.rootPwd : '••••••••••'}</code>
+            <div class="row"><button class="btn xs ghost" data-act="toggle-root-pwd">👁</button><button class="btn xs" data-copy="${esc(DATA.rootPwd)}">秒拷</button></div>
+          </div>
+        </div>
+        <div class="ncard" style="margin:0;padding:9px">
+          <div class="muted" style="font-size:11px">📘 SVN 关联文档</div>
+          <div class="mono" style="font-size:11px;margin:4px 0">${DATA.svnDoc}</div>
+          <button class="btn xs warn" style="width:100%;justify-content:center" data-toast="已从 SVN 同步标蓝新密码">🔄 SVN 同步新密码</button>
+        </div>
+        <div class="muted" style="padding:4px 4px 0;font-size:11px">资产分类过滤</div>
+        ${cats.map((c) => `<button class="cat-item ${UI.srvCat === c ? 'active' : ''}" data-srv-cat="${c}"><span>${c === 'all' ? '全部精选资产' : c}</span><span class="mono">${c === 'all' ? DATA.servers.length : DATA.servers.filter((x) => x.cat === c).length}</span></button>`).join('')}
+        <button class="btn xs ghost" data-toast="新建自定义分类">+ 新建分类</button>
+      </aside>
+      <div class="scroll" style="padding:14px 18px">
+        <div class="between" style="margin-bottom:12px">
+          <div class="row">
+            <b>🖥️ 终端主机与凭据矩阵 (${list.length})</b>
+            <input class="input" placeholder="搜索 IP / 域名 / 名称…" style="width:210px">
+          </div>
+          <div class="row">
+            <button class="btn ${UI.srvMode === 'excerpt' ? 'active' : ''}" data-act="toggle-srv-mode">${UI.srvMode === 'daily' ? '📖 展开 Word 原档摘录台' : '← 返回主机卡片矩阵'}</button>
+            <button class="btn primary" data-act="modal-new-srv">+ 手动新建</button>
+          </div>
+        </div>
+        ${UI.srvMode === 'excerpt' ? renderWordBench() : `
+          <div class="srv-cards">
+            ${list.map((s) => `
+              <div class="host-card">
+                <div class="between"><span class="tag accent">${esc(s.cat)}</span><span class="tag">${s.env}</span></div>
+                <div style="font-weight:700;font-size:13.5px">${esc(s.name)}</div>
+                <div class="ncard" style="margin:0;padding:7px 9px;background:var(--soft)">
+                  <div class="between"><span class="muted">地址:</span><code class="mono" data-copy="${esc(s.target)}" style="cursor:pointer">${esc(s.target)}${s.port ? ':' + s.port : ''}</code></div>
+                  <div class="between" style="margin-top:3px"><span class="muted">账号:</span><code class="mono">${esc(s.user)}</code></div>
+                  <div class="between" style="margin-top:3px"><span class="muted">密码:</span>${s.inherit ? '<span class="tag accent">👑 继承Root</span>' : `<code class="mono">${esc(s.pwd)}</code>`}</div>
+                </div>
+                <div class="row" style="justify-content:flex-end">
+                  <button class="btn xs" data-copy="${esc(s.target)}">拷地址</button>
+                  <button class="btn xs" data-copy="${esc(s.inherit ? DATA.rootPwd : s.pwd)}">拷密码</button>
+                  ${s.cat === '服务器账号' ? `<button class="btn xs primary" data-copy="ssh ${esc(s.user)}@${esc(s.target)} -p ${s.port || 22}">复制 SSH</button>` : `<button class="btn xs primary" data-toast="打开网页">打开 ↗</button>`}
+                </div>
+              </div>`).join('')}
+          </div>`}
+      </div>
+    </div>`;
+}
+
+window.renderApp = function () {
+  const pend = totalPending();
+  $('#app').innerHTML = `
+    <aside class="rail">
+      <div class="logo">DO</div>
+      <button class="rbtn ${UI.view === 'tasks' ? 'active' : ''}" data-view="tasks">任务</button>
+      <button class="rbtn ${UI.view === 'notes' ? 'active' : ''}" data-view="notes">军火</button>
+      <button class="rbtn ${UI.view === 'servers' ? 'active' : ''}" data-view="servers">矩阵</button>
+      <div class="spacer"></div>
+      <button class="rbtn" data-act="modal-theme" title="外观与超透壁纸">🎨</button>
+      <button class="rbtn" data-act="modal-settings" title="系统设置">⚙️</button>
+      <span class="dot in-progress"></span>
+    </aside>
+    <div class="stage">
+      <header class="omni">
+        <div class="row"><span class="tag accent mono">DEVORBIT HUD</span><button class="btn xs ghost mono" data-act="modal-settings">📁 ${DATA.workspace}</button></div>
+        <div class="row">
+          ${pend ? `<span class="tag warn">🗄️ ${pend} 份产线 SQL 待发布</span>` : ''}
+          <button class="btn xs primary" data-act="modal-new-task">+ 新建任务</button>
+          <button class="btn xs" data-act="modal-search">🔍 全局搜索… <kbd>Ctrl K</kbd></button>
+          <button class="btn xs" data-act="modal-update">🔄 更新中心</button>
+          <button class="btn xs ghost" data-act="toggle-zen">👁 沉浸壁纸</button>
+        </div>
+      </header>
+      <main class="main ${UI.view !== 'tasks' ? 'single' : ''}">
+        ${UI.view === 'tasks' ? `<aside class="side">${renderTaskSidebar()}</aside><section class="work">${renderTaskWorkspace()}</section>` : ''}
+        ${UI.view === 'notes' ? `<section class="work">${renderCarbonNotes()}</section>` : ''}
+        ${UI.view === 'servers' ? `<section class="work">${renderCarbonServers()}</section>` : ''}
+      </main>
+      <footer class="foot">
+        <div class="row"><span class="dot in-progress"></span><span>DevOrbit HUD 就绪 · 已加载 ${DATA.tasks.length} 个任务资产</span></div>
+        <div class="row"><span>↑↓ 切换任务</span><span>Ctrl+O IDE打开</span><span>Ctrl+E 资源管理器</span><span class="mono">⚡ v1.3.0</span></div>
+      </footer>
+    </div>`;
+};
+renderApp();
+</script>
+</body>
+</html>

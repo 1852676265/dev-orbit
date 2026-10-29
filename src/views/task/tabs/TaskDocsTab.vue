@@ -167,7 +167,7 @@ defineEmits(['open-file', 'show-in-folder', 'doc-contextmenu'])
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--app-border);
   padding-bottom: 8px;
   user-select: none;
 }
@@ -175,7 +175,7 @@ defineEmits(['open-file', 'show-in-folder', 'doc-contextmenu'])
 .toolbar-title {
   font-size: 13px;
   font-weight: 700;
-  color: #f1f5f9;
+  color: var(--app-primary-foreground);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -184,7 +184,7 @@ defineEmits(['open-file', 'show-in-folder', 'doc-contextmenu'])
 
 .toolbar-hint {
   font-size: 11px;
-  color: #64748b;
+  color: var(--app-muted-foreground);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   display: none;
 }
@@ -199,8 +199,8 @@ defineEmits(['open-file', 'show-in-folder', 'doc-contextmenu'])
   padding: 48px 16px;
   text-align: center;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--app-border);
+  background-color: var(--app-subcard-background);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -210,18 +210,18 @@ defineEmits(['open-file', 'show-in-folder', 'doc-contextmenu'])
 .empty-icon {
   width: 40px;
   height: 40px;
-  color: #475569;
+  color: var(--app-muted-foreground);
 }
 
 .empty-text {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--app-secondary-foreground);
   margin: 0;
 }
 
 .empty-subtext {
   font-size: 11px;
-  color: #475569;
+  color: var(--app-muted-foreground);
   margin: 0;
 }
 
@@ -241,21 +241,21 @@ defineEmits(['open-file', 'show-in-folder', 'doc-contextmenu'])
 .doc-card {
   padding: 8px 12px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  background-color: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--app-card-border);
+  background-color: var(--app-subcard-background);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   cursor: pointer;
   transition: all 0.15s ease-in-out;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   min-width: 0;
 }
 
 .doc-card:hover {
-  background-color: rgba(0, 0, 0, 0.6);
-  border-color: rgba(45, 212, 191, 0.4);
+  background-color: var(--app-list-hover-background);
+  border-color: var(--app-accent-teal-border);
 }
 
 .doc-info {
@@ -273,9 +273,9 @@ defineEmits(['open-file', 'show-in-folder', 'doc-contextmenu'])
 
 .doc-filename {
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  color: #e2e8f0;
+  color: var(--app-primary-foreground);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -284,12 +284,12 @@ defineEmits(['open-file', 'show-in-folder', 'doc-contextmenu'])
 }
 
 .doc-card:hover .doc-filename {
-  color: #5eead4;
+  color: var(--app-accent-teal);
 }
 
 .doc-filesize {
   font-size: 10px;
-  color: #64748b;
+  color: var(--app-muted-foreground);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   display: block;
   margin-top: 2px;

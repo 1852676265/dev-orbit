@@ -105,16 +105,15 @@ function formatDetailDate(dateStr) {
 
 <style scoped>
 .task-header-container {
-  padding: 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--app-border);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 14px;
-  background-color: rgba(18, 24, 38, 0.9);
+  gap: 12px;
+  background-color: var(--app-header-background);
   flex-shrink: 0;
   user-select: none;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 @media (min-width: 768px) {
@@ -149,7 +148,7 @@ function formatDetailDate(dateStr) {
 
 .update-time {
   font-size: 11px;
-  color: #64748b;
+  color: var(--app-muted-foreground);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
@@ -162,7 +161,7 @@ function formatDetailDate(dateStr) {
 .task-title {
   font-size: 18px;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--app-primary-foreground);
   letter-spacing: -0.02em;
   white-space: nowrap;
   overflow: hidden;
@@ -176,7 +175,7 @@ function formatDetailDate(dateStr) {
   gap: 8px;
   font-size: 11px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  color: #94a3b8;
+  color: var(--app-secondary-foreground);
   overflow: hidden;
 }
 
@@ -187,7 +186,7 @@ function formatDetailDate(dateStr) {
   max-width: 600px;
   user-select: all;
   cursor: text;
-  color: #cbd5e1;
+  color: var(--app-secondary-foreground);
 }
 
 .header-actions {

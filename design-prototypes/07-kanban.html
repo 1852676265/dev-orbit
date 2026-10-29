@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>方案七 · Kanban 状态看板（卡片 + 右侧抽屉）</title>
+<link rel="stylesheet" href="shared/common.css">
+<style>
+:root {
+  --bg: #f4f5f9; --fg: #1d2033; --muted: #6b7086; --line: #e1e4ee; --card: #ffffff; --soft: #eceef5;
+  --accent: #4f46e5; --accent-fg: #fff; --ok: #059669; --ok-bg: #e6f6ef; --warn: #d97706; --warn-bg: #fdf2dc; --radius: 8px;
+}
+.tag.accent { background: rgba(79,70,229,.1); }
+.shell { display: flex; flex-direction: column; height: 100vh; }
+.top { height: 50px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; background: var(--card); border-bottom: 1px solid var(--line); }
+.nav-link { height: 50px; padding: 0 4px; margin-right: 18px; color: var(--muted); border-bottom: 2px solid transparent; font-weight: 500; }
+.nav-link.active { color: var(--fg); border-color: var(--accent); font-weight: 700; }
+.page { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.toolbar { padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.board { flex: 1; display: flex; gap: 14px; padding: 2px 20px 16px; overflow-x: auto; min-height: 0; }
+.col { width: 310px; flex: none; display: flex; flex-direction: column; background: var(--soft); border-radius: 10px; min-height: 0; }
+.col-head { padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; font-weight: 700; }
+.col-body { flex: 1; overflow: auto; padding: 0 10px 10px; display: flex; flex-direction: column; gap: 8px; }
+.kcard { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 7px; }
+.kcard.click { cursor: pointer; }
+.kcard.click:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(30,32,51,.06); }
+.kcard.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.kcard pre { padding: 7px 9px; background: var(--soft); border-radius: 5px; white-space: pre-wrap; font-size: 11.5px; cursor: pointer; }
+.kstats { display: flex; gap: 10px; font-size: 11px; color: var(--muted); }
+.lanes { flex: 1; overflow: auto; padding: 2px 20px 16px; display: flex; flex-direction: column; gap: 12px; }
+.lane { display: grid; grid-template-columns: 120px 1fr; background: var(--soft); border-radius: 10px; min-height: 128px; }
+.lane-label { padding: 12px; border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; }
+.lane-cards { padding: 10px; display: flex; gap: 10px; overflow-x: auto; }
+.lane-cards .kcard { width: 290px; flex: none; }
+.drawer-mask { position: fixed; inset: 0; background: rgba(15,17,30,.28); z-index: 50; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(900px, 74vw); background: var(--bg); border-left: 1px solid var(--line); z-index: 60; display: flex; flex-direction: column; box-shadow: -12px 0 32px rgba(15,17,30,.14); }
+.drawer-bar { height: 46px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; background: var(--card); border-bottom: 1px solid var(--line); }
+.foot { height: 28px; padding: 0 20px; border-top: 1px solid var(--line); background: var(--card); display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="shell zen-hide" id="app"></div>
+<div class="zen-pill" data-act="toggle-zen">👁 壁纸沉浸观赏模式 · 点击此处或按 Esc 恢复工作台</div>
+<script src="shared/common.js"></script>
+<script>
+UI.drawer = false;
+const COLS = [['in-progress', '进行中'], ['suspended', '挂起延期'], ['archived', '已上线归档']];
+const ENVS = [['PROD', '生产环境'], ['UAT', '预发布'], ['TEST', '测试环境'], ['DEV', '研发内网']];
+const SRV_CATS = ['all', '服务器账号', 'Web网站', 'iNode'];
+const chip = (attr, val, cur, label) => `<button class="btn xs ${cur === val ? 'active' : ''}" ${attr}="${val}">${label}</button>`;
+
+/* ---------- 页面 1：任务按状态分三列，点卡片从右侧滑出详情抽屉 ---------- */
+function taskCard(t) {
+  const pend = taskPending(t);
+  return `
+    <div class="kcard click ${UI.drawer && t.id === UI.taskId ? 'active' : ''}" data-select-task="${t.id}">
+      <div class="between"><span class="row"><span class="tag">${t.year}</span><span class="tag accent">${esc(t.project)}</span></span>${pend ? `<span class="tag warn">${pend} 待发</span>` : '<span class="tag ok">SQL 已清</span>'}</div>
+      <b style="font-size:13px">${esc(t.title)}</b>
+      ${t.params.length ? `<div class="row" style="flex-wrap:wrap">${t.params.slice(0, 2).map((p) => `<span class="tag mono">${esc(p.k)}</span>`).join('')}${t.params.length > 2 ? `<span class="muted">+${t.params.length - 2}</span>` : ''}</div>` : ''}
+      <div class="between"><div class="kstats"><span>📝 ${t.notes.length}</span><span>🗄️ ${t.sqls.length}</span><span>📂 ${t.docs.length}</span></div><span class="muted" style="font-size:11px">${t.updated.slice(5, 10)}</span></div>
+    </div>`;
+}
+
+function kanbanTasks() {
+  const projs = [...new Set(DATA.tasks.map((t) => t.project))];
+  const list = filteredTasks();
+  return `
+    <div class="toolbar">
+      <div class="row">
+        <select class="select" data-bind="year"><option value="all">全部年份</option>${DATA.years.map((y) => `<option value="${y}" ${UI.year === y ? 'selected' : ''}>${y} 年</option>`).join('')}</select>
+        <select class="select" data-bind="project"><option value="all">全部项目</option>${projs.map((p) => `<option value="${p}" ${UI.project === p ? 'selected' : ''}>${p}</option>`).join('')}</select>
+        <button class="btn ${UI.onlyPending ? 'warn' : ''}" data-act="toggle-pending">⚡ 仅看待发 SQL</button>
+        <button class="btn ghost" data-act="reset-filter">↺ 重置</button>
+        <span class="muted">已匹配 ${list.length} / ${DATA.tasks.length}</span>
+      </div>
+      <div class="row"><button class="btn ghost mono" data-act="modal-settings">📁 ${DATA.workspace}</button><button class="btn primary" data-act="modal-new-task">+ 新建任务</button></div>
+    </div>
+    <div class="board">
+      ${COLS.map(([st, label]) => { const g = list.filter((t) => t.status === st); return `
+        <section class="col">
+          <div class="col-head"><span class="row"><span class="dot ${st}"></span>${label}<span class="tag">${g.length}</span></span><button class="btn xs ghost" data-act="modal-new-task">+</button></div>
+          <div class="col-body">${g.map(taskCard).join('') || '<div class="empty">暂无任务</div>'}</div>
+        </section>`; }).join('')}
+    </div>`;
+}
+
+/* ---------- 页面 2：随手记收件箱 + 置顶 + 每个命令分类一列（横向滚动） ---------- */
+function kanbanNotes() {
+  const cats = [...new Set(DATA.commands.map((c) => c.cat))];
+  const cols = [];
+  if (UI.cmdCat === 'all' || UI.cmdCat === 'pinned') cols.push(['📌 常用置顶', DATA.commands.filter((c) => c.pinned)]);
+  cats.filter((c) => UI.cmdCat === 'all' || UI.cmdCat === c).forEach((c) => cols.push(['💻 ' + c, DATA.commands.filter((x) => x.cat === c)]));
+  const cmdCard = (c) => `
+    <div class="kcard">
+      <div class="between"><b>${esc(c.title)}</b>${c.pinned ? '<span class="tag warn">📌</span>' : ''}</div>
+      <pre class="mono" data-copy="${esc(c.cmd)}">${esc(c.cmd)}</pre>
+      <div class="row" style="justify-content:flex-end"><button class="btn xs" data-copy="${esc(c.cmd)}">📋 复制</button><button class="btn xs ghost" data-act="modal-new-cmd">✏️</button></div>
+    </div>`;
+  return `
+    <div class="toolbar">
+      <div class="row">
+        <input class="input" placeholder="检索命令 / 便签 (按 / 聚焦)…" style="width:230px">
+        ${chip('data-cmd-cat', 'all', UI.cmdCat, '全部列')}${chip('data-cmd-cat', 'pinned', UI.cmdCat, '📌 置顶')}${cats.map((c) => chip('data-cmd-cat', c, UI.cmdCat, esc(c))).join('')}
+      </div>
+      <div class="row"><button class="btn" data-act="modal-txt-import">📄 TXT 导入</button><button class="btn" data-toast="已新建命令分类列">+ 新建分类列</button><button class="btn primary" data-act="modal-new-cmd">+ 新增命令</button></div>
+    </div>
+    <div class="board">
+      <section class="col">
+        <div class="col-head"><span class="row">📝 随手记收件箱<span class="tag">${DATA.memos.length}</span></span></div>
+        <div class="col-body">
+          <div class="row"><input class="input" id="_memo_inp" placeholder="记一笔，回车保存…" style="flex:1"><button class="btn xs primary" data-act="add-memo">记下</button></div>
+          ${DATA.memos.map((m) => `<div class="memo-box ${m.color}"><div style="line-height:1.6">${esc(m.text)}</div><div class="between muted" style="font-size:11px;margin-top:6px"><span>${m.time}</span><button class="btn xs ghost" data-copy="${esc(m.text)}">复制</button></div></div>`).join('')}
+        </div>
+      </section>
+      ${cols.map(([title, list]) => `
+        <section class="col">
+          <div class="col-head"><span class="row">${esc(title)}<span class="tag">${list.length}</span></span><button class="btn xs ghost" data-act="modal-new-cmd">+</button></div>
+          <div class="col-body">${list.map(cmdCard).join('') || '<div class="empty">暂无命令</div>'}</div>
+        </section>`).join('')}
+    </div>`;
+}
+
+/* ---------- 页面 3：按环境分泳道（PROD / UAT / TEST / DEV），Word 摘录从抽屉打开 ---------- */
+function srvCard(s) {
+  return `
+    <div class="kcard">
+      <div class="between"><b>${esc(s.name)}</b><span class="tag accent">${esc(s.cat)}</span></div>
+      <div class="mono" style="font-size:11.5px">${esc(s.target)}${s.port ? ':' + s.port : ''}</div>
+      <div class="between" style="font-size:11.5px"><span class="muted">账号 <b class="mono" style="color:var(--fg)">${esc(s.user)}</b></span>${s.inherit ? '<span class="tag accent">👑 继承 Root</span>' : `<code class="mono">${esc(s.pwd)}</code>`}</div>
+      <div class="row">
+        <button class="btn xs" data-copy="${esc(s.target)}">拷地址</button>
+        <button class="btn xs" data-copy="${esc(s.inherit ? DATA.rootPwd : s.pwd)}">拷密码</button>
+        ${s.cat === '服务器账号' ? `<button class="btn xs primary" data-copy="ssh ${esc(s.user)}@${esc(s.target)} -p ${s.port || 22}">复制 SSH</button>` : `<button class="btn xs primary" data-toast="已在浏览器打开 ${esc(s.target)}">打开 ↗</button>`}
+      </div>
+    </div>`;
+}
+
+function kanbanServers() {
+  const list = DATA.servers.filter((s) => UI.srvCat === 'all' || s.cat === UI.srvCat);
+  return `
+    <div class="toolbar">
+      <div class="row">
+        <div class="row" style="padding:3px 9px;background:var(--card);border:1px solid var(--line);border-radius:8px">
+          <span class="muted">👑 通用 Root</span><code class="mono">${UI.showRootPwd ? DATA.rootPwd : '••••••••••'}</code>
+          <button class="btn xs ghost" data-act="toggle-root-pwd">${UI.showRootPwd ? '🙈' : '👁'}</button><button class="btn xs" data-copy="${esc(DATA.rootPwd)}">秒拷</button><button class="btn xs ghost" data-act="modal-new-srv">修改</button>
+        </div>
+        ${SRV_CATS.map((c) => chip('data-srv-cat', c, UI.srvCat, c === 'all' ? '全部' : c)).join('')}
+        <button class="btn xs ghost" data-toast="新建自定义凭据分类">+ 分类</button>
+        <input class="input" placeholder="搜索名称 / IP / URL…" style="width:180px">
+      </div>
+      <div class="row">
+        <button class="btn" data-toast="已拉取最新 SVN Word 文档并自动同步标蓝密码">🔄 SVN 同步</button>
+        <button class="btn" data-act="toggle-srv-mode">📖 Word 原档摘录</button>
+        <button class="btn primary" data-act="modal-new-srv">+ 手动新建</button>
+      </div>
+    </div>
+    <div class="lanes">
+      ${ENVS.map(([env, label]) => { const g = list.filter((s) => s.env === env); return `
+        <section class="lane">
+          <div class="lane-label"><b>${env}</b><span class="muted" style="font-size:11px">${label} · ${g.length} 项</span></div>
+          <div class="lane-cards">${g.map(srvCard).join('') || '<span class="muted" style="align-self:center">该环境暂无凭据</span>'}</div>
+        </section>`; }).join('')}
+    </div>`;
+}
+
+/* 右侧抽屉：任务详情（含状态流转） / Word 原档摘录台 */
+function renderDrawer() {
+  if (UI.view === 'tasks' && UI.drawer) {
+    const t = currentTask();
+    return `
+      <div class="drawer-mask" data-kb-close></div>
+      <aside class="drawer">
+        <div class="drawer-bar">
+          <div class="row"><b>任务详情</b><span class="muted" style="margin-left:8px">流转状态:</span>${COLS.map(([st, label]) => `<button class="btn xs ${t.status === st ? 'active' : ''}" data-set-status="${st}">${label}</button>`).join('')}</div>
+          <button class="btn xs ghost" data-kb-close>✕ 关闭 <kbd>Esc</kbd></button>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;min-height:0">${renderTaskWorkspace(t)}</div>
+      </aside>`;
+  }
+  if (UI.view === 'servers' && UI.srvMode === 'excerpt') return `
+    <div class="drawer-mask" data-act="toggle-srv-mode"></div>
+    <aside class="drawer">
+      <div class="drawer-bar"><b>📘 Word 原档交互摘录台 · ${DATA.svnDoc}</b><button class="btn xs ghost" data-act="toggle-srv-mode">✕ 关闭 <kbd>Esc</kbd></button></div>
+      ${renderWordBench('padding:14px 16px;flex:1;min-height:0')}
+    </aside>`;
+  return '';
+}
+
+/* 本方案专属交互（捕获阶段先于公共引擎）：点卡片开抽屉、关闭抽屉、状态流转 */
+document.addEventListener('click', (e) => {
+  if (UI.view === 'tasks' && e.target.closest('.kcard[data-select-task]')) UI.drawer = true;
+  if (e.target.closest('[data-kb-close]')) { UI.drawer = false; return renderApp(); }
+  const st = e.target.closest('[data-set-status]');
+  if (st) {
+    currentTask().status = st.dataset.setStatus;
+    toast(`已流转为【${STATUS_MAP[st.dataset.setStatus]}】`);
+    renderApp();
+  }
+}, true);
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || $('#_modal')?.classList.contains('open')) return;
+  if (UI.drawer) { UI.drawer = false; renderApp(); }
+  else if (UI.srvMode === 'excerpt') { UI.srvMode = 'daily'; renderApp(); }
+}, true);
+
+window.renderApp = function () {
+  const pend = totalPending();
+  const views = [['tasks', `📋 任务看板 (${DATA.tasks.length})`], ['notes', '💻 命令 & 随手记看板'], ['servers', '🖥️ 环境泳道 · 凭据']];
+  const page = { tasks: kanbanTasks, notes: kanbanNotes, servers: kanbanServers }[UI.view]();
+  $('#app').innerHTML = `
+    <header class="top">
+      <div class="row" style="gap:22px"><b style="font-size:15px">DevOrbit</b><nav>${views.map(([id, label]) => `<button class="nav-link ${UI.view === id ? 'active' : ''}" data-view="${id}">${label}</button>`).join('')}</nav></div>
+      <div class="row">
+        ${pend ? `<span class="tag warn">⚠️ ${pend} 份产线 SQL 待发</span>` : ''}
+        <button class="btn xs" data-act="modal-search">🔍 全局搜索 <kbd>Ctrl K</kbd></button>
+        <button class="btn xs" data-act="modal-update">🔄 更新中心</button>
+        <button class="btn xs" data-act="modal-theme">🎨 外观</button>
+        <button class="btn xs" data-act="modal-settings">⚙️ 设置</button>
+        <button class="btn xs ghost" data-act="toggle-zen">👁</button>
+      </div>
+    </header>
+    <main class="page">${page}</main>
+    <footer class="foot"><span>看板模式 · 点任务卡片打开右侧详情抽屉，可直接流转状态</span><span>Esc 关闭抽屉 · Ctrl+K 搜索 · DevOrbit v1.3.0</span></footer>
+    ${renderDrawer()}`;
+};
+renderApp();
+</script>
+</body>
+</html>

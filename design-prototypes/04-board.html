@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>方案四 · Cockpit 全景分舱（三页全部同屏免切 Tab）</title>
+<link rel="stylesheet" href="shared/common.css">
+<style>
+:root {
+  --bg: #f3f5f8; --fg: #141821; --muted: #6c7483; --line: #dfe3eb; --card: #ffffff; --soft: #ebeff5;
+  --accent: #2563eb; --accent-fg: #fff; --ok: #059669; --ok-bg: #e7f8f0; --warn: #d97706; --warn-bg: #fef3dc; --radius: 8px;
+}
+.shell { display: grid; grid-template-columns: 52px 1fr; height: 100vh; }
+.rail { background: var(--card); border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 6px; }
+.logo { width: 32px; height: 32px; border-radius: 8px; background: var(--accent); color: #fff; font-weight: 800; display: grid; place-items: center; margin-bottom: 8px; }
+.rbtn { width: 38px; height: 36px; border-radius: 7px; color: var(--muted); font-size: 11px; }
+.rbtn.active { background: var(--soft); color: var(--accent); font-weight: 700; }
+.stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.omni { height: 42px; padding: 0 16px; border-bottom: 1px solid var(--line); background: var(--card); display: flex; align-items: center; justify-content: space-between; }
+.main { flex: 1; display: grid; grid-template-columns: 280px 1fr; min-height: 0; }
+.main.single { grid-template-columns: 1fr; }
+.side { border-right: 1px solid var(--line); background: var(--card); display: flex; flex-direction: column; min-height: 0; }
+.work { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.tri-board { flex: 1; display: grid; grid-template-columns: 1.15fr 1fr; gap: 12px; padding: 12px 16px; min-height: 0; overflow: hidden; }
+.tri-right { display: grid; grid-template-rows: 1.1fr .9fr; gap: 12px; min-height: 0; }
+.tri-3col { flex: 1; display: grid; grid-template-columns: .9fr 1.3fr .95fr; gap: 12px; padding: 12px 16px; min-height: 0; overflow: hidden; }
+.srv-split { flex: 1; display: grid; grid-template-rows: 1fr 1.05fr; gap: 12px; padding: 12px 16px; min-height: 0; overflow: hidden; }
+.tri-col { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); display: flex; flex-direction: column; min-height: 0; }
+.tri-head { padding: 9px 12px; border-bottom: 1px solid var(--line); font-weight: 600; display: flex; justify-content: space-between; align-items: center; background: var(--soft); }
+.tri-body { flex: 1; padding: 10px 12px; overflow: auto; }
+.foot { height: 26px; padding: 0 16px; border-top: 1px solid var(--line); background: var(--card); display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="shell zen-hide" id="app"></div>
+<div class="zen-pill" data-act="toggle-zen">👁 壁纸沉浸观赏模式 · 点击此处或按 Esc 恢复工作台</div>
+<script src="shared/common.js"></script>
+<script>
+/* 页面 1：任务三舱同屏 */
+function renderCockpitTask(t = currentTask()) {
+  const saved = UI.wsTab;
+  UI.wsTab = 'notes'; const notesCol = renderTaskTabBody(t);
+  UI.wsTab = 'sqls';  const sqlsCol  = renderTaskTabBody(t);
+  UI.wsTab = 'docs';  const docsCol  = renderTaskTabBody(t);
+  UI.wsTab = saved;
+  return `
+    <div class="t-head">
+      <div>
+        <div class="row"><span class="tag">${t.year} 年</span><span class="tag accent">${esc(t.project)}</span><span class="tag ok">${STATUS_MAP[t.status]}</span><span class="muted" style="font-size:11px">更新于: ${t.updated} · 📁 ${esc(t.path)}</span></div>
+        <h1>${esc(t.title)}</h1>
+      </div>
+      <div class="row">
+        <button class="btn" data-toast="已在 IDE 打开">在 IDE 打开</button>
+        <button class="btn primary" data-toast="已打开资源管理器">打开资源管理器</button>
+        <button class="btn ghost" data-copy="${esc(t.path)}">复制路径</button>
+      </div>
+    </div>
+    <div class="tri-board">
+      <div class="tri-col"><div class="tri-head"><span>📝 开发备忘与联调参数</span><span class="tag">${t.notes.length}</span></div><div class="tri-body">${notesCol}</div></div>
+      <div class="tri-right">
+        <div class="tri-col"><div class="tri-head"><span>🗄️ 上线 SQL 资产</span><span class="tag warn">${taskPending(t)} 待发</span></div><div class="tri-body">${sqlsCol}</div></div>
+        <div class="tri-col"><div class="tri-head"><span>📂 交付与需求文档</span><span class="tag">${t.docs.length}</span></div><div class="tri-body">${docsCol}</div></div>
+      </div>
+    </div>`;
+}
+
+/* 页面 2：随手记与命令看板（三列同屏：置顶高频 | 分类命令库 | 极速随手记便签） */
+function renderCockpitNotes() {
+  const cats = ['all', ...new Set(DATA.commands.map((c) => c.cat))];
+  const cmds = DATA.commands.filter((c) => UI.cmdCat === 'all' || c.cat === UI.cmdCat);
+  return `
+    <div class="tri-3col">
+      <div class="tri-col">
+        <div class="tri-head"><span>📌 常用置顶命令</span><span class="tag warn">${DATA.commands.filter((c) => c.pinned).length}</span></div>
+        <div class="tri-body">
+          ${DATA.commands.filter((c) => c.pinned).map((c) => `
+            <div class="cmd-card" style="margin-bottom:8px">
+              <div class="between"><b>${esc(c.title)}</b><button class="btn xs primary" data-copy="${esc(c.cmd)}">秒拷</button></div>
+              <pre class="mono" data-copy="${esc(c.cmd)}">${esc(c.cmd)}</pre>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="tri-col">
+        <div class="tri-head">
+          <span>💻 命令军火库 (${cmds.length})</span>
+          <div class="row"><button class="btn xs" data-act="modal-txt-import">TXT 导入</button><button class="btn xs primary" data-act="modal-new-cmd">+ 新增命令</button></div>
+        </div>
+        <div class="tri-body">
+          <div class="row" style="margin-bottom:10px;flex-wrap:wrap">
+            ${cats.map((c) => `<button class="btn xs ${UI.cmdCat === c ? 'active' : ''}" data-cmd-cat="${c}">${c === 'all' ? '全部分类' : c}</button>`).join('')}
+          </div>
+          ${cmds.map((c) => `
+            <div class="cmd-card" style="margin-bottom:8px">
+              <div class="between"><div class="row"><span class="tag accent">${esc(c.cat)}</span><b>${esc(c.title)}</b></div><button class="btn xs" data-copy="${esc(c.cmd)}">📋 复制</button></div>
+              <pre class="mono" data-copy="${esc(c.cmd)}">${esc(c.cmd)}</pre>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="tri-col">
+        <div class="tri-head"><span>📝 极速随手记便签</span><span class="tag">${DATA.memos.length}</span></div>
+        <div class="tri-body">
+          <div class="row" style="margin-bottom:10px"><input class="input" id="_memo_inp" placeholder="记一笔便签…" style="flex:1"><button class="btn xs primary" data-act="add-memo">保存</button></div>
+          ${DATA.memos.map((m) => `<div class="memo-box ${m.color}" style="margin-bottom:8px"><div>${esc(m.text)}</div><div class="between muted" style="margin-top:6px;font-size:11px"><span>${m.time}</span><button class="btn xs ghost" data-copy="${esc(m.text)}">复制</button></div></div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+/* 页面 3：服务器上下双舱同屏（上舱：日常精选账本 / 下舱常驻：Word 原档交互摘录台，免切换！） */
+function renderCockpitServers() {
+  const cats = ['all', '服务器账号', 'Web网站', 'iNode'];
+  const list = DATA.servers.filter((s) => UI.srvCat === 'all' || s.cat === UI.srvCat);
+  return `
+    <div class="srv-split">
+      <div class="tri-col">
+        <div class="tri-head">
+          <div class="row">
+            <span>🖥️ 上舱：日常精选凭据账本 (${list.length})</span>
+            ${cats.map((c) => `<button class="btn xs ${UI.srvCat === c ? 'active' : ''}" data-srv-cat="${c}">${c === 'all' ? '全部' : c}</button>`).join('')}
+          </div>
+          <div class="row">
+            <span class="tag accent">👑 通用Root: ${UI.showRootPwd ? DATA.rootPwd : '••••••••'}</span>
+            <button class="btn xs ghost" data-act="toggle-root-pwd">👁</button>
+            <button class="btn xs" data-copy="${esc(DATA.rootPwd)}">秒拷Root</button>
+            <button class="btn xs primary" data-act="modal-new-srv">+ 手动新建</button>
+          </div>
+        </div>
+        <div class="tri-body">
+          <table class="tbl">
+            <thead><tr><th>分类</th><th>名称</th><th>目标地址</th><th>账号</th><th>口令</th><th>环境</th><th>操作</th></tr></thead>
+            <tbody>
+              ${list.map((s) => `<tr><td><span class="tag">${esc(s.cat)}</span></td><td><b>${esc(s.name)}</b></td><td class="mono">${esc(s.target)}${s.port ? ':' + s.port : ''}</td><td class="mono">${esc(s.user)}</td><td>${s.inherit ? '<span class="tag accent">👑 继承Root</span>' : `<code class="mono">${esc(s.pwd)}</code>`}</td><td><span class="tag">${s.env}</span></td><td><div class="row"><button class="btn xs" data-copy="${esc(s.target)}">拷地址</button><button class="btn xs" data-copy="${esc(s.inherit ? DATA.rootPwd : s.pwd)}">拷密码</button><button class="btn xs primary" data-copy="ssh ${esc(s.user)}@${esc(s.target)}">SSH</button></div></td></tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="tri-col">
+        <div class="tri-head">
+          <span>📘 下舱常驻：Word 原档交互摘录台 (${DATA.svnDoc}) — 点左侧蓝字/单元格直接入上舱账本</span>
+          <button class="btn xs warn" data-toast="已拉取 SVN 最新 Word 并同步标蓝密码">🔄 SVN 同步新密码</button>
+        </div>
+        <div class="tri-body">
+          <div class="bench" style="height:auto">
+            <div>
+              <table class="tbl">
+                <thead><tr><th>系统模块 (点选)</th><th>主机 IP (点选)</th><th>账号</th><th>最新口令 (点蓝字拾取)</th></tr></thead>
+                <tbody>
+                  <tr><td class="w-cell" data-pick-name="MZ 生产主库节点">MZ 生产主库节点</td><td class="w-cell mono" data-pick-target="10.10.8.101">10.10.8.101</td><td class="w-cell mono" data-pick-user="root">root</td><td><span class="w-blue mono" data-pick-pwd="MzProd#2026!Blue">MzProd#2026!Blue (🔵标蓝)</span></td></tr>
+                  <tr><td class="w-cell" data-pick-name="财务电子发票前置机">财务电子发票前置机</td><td class="w-cell mono" data-pick-target="10.10.8.205">10.10.8.205</td><td class="w-cell mono" data-pick-user="taxadmin">taxadmin</td><td><span class="w-blue mono" data-pick-pwd="Tax@Inv9981">Tax@Inv9981 (🔵标蓝)</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="row" style="flex-wrap:wrap;align-content:flex-start;gap:8px">
+              <input class="input" style="width:48%" value="${esc(UI.draft.name)}" placeholder="点击左侧模块名拾取">
+              <input class="input mono" style="width:48%" value="${esc(UI.draft.target)}" placeholder="点击左侧 IP 拾取">
+              <input class="input mono" style="width:48%" value="${esc(UI.draft.user)}" placeholder="账号">
+              <input class="input mono" style="width:48%" value="${esc(UI.draft.pwd)}" placeholder="点击蓝字密码拾取">
+              <button class="btn primary" style="width:100%;justify-content:center" data-act="save-draft">↑ 确认摘录并即时升入上舱日常账本</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+window.renderApp = function () {
+  const pend = totalPending();
+  $('#app').innerHTML = `
+    <aside class="rail">
+      <div class="logo">DO</div>
+      <button class="rbtn ${UI.view === 'tasks' ? 'active' : ''}" data-view="tasks">任务</button>
+      <button class="rbtn ${UI.view === 'notes' ? 'active' : ''}" data-view="notes">随手</button>
+      <button class="rbtn ${UI.view === 'servers' ? 'active' : ''}" data-view="servers">凭据</button>
+      <div class="spacer"></div>
+      <button class="rbtn" data-act="modal-theme">🎨</button>
+      <button class="rbtn" data-act="modal-settings">⚙️</button>
+    </aside>
+    <div class="stage">
+      <header class="omni">
+        <div class="row"><span class="tag accent">COCKPIT 全景分舱</span><button class="btn xs ghost mono" data-act="modal-settings">📁 ${DATA.workspace}</button></div>
+        <div class="row">
+          ${pend ? `<span class="tag warn">⚠️ ${pend} 份产线 SQL 待发布</span>` : ''}
+          <button class="btn xs primary" data-act="modal-new-task">+ 新建任务</button>
+          <button class="btn xs" data-act="modal-search">🔍 全局搜索 <kbd>Ctrl K</kbd></button>
+          <button class="btn xs" data-act="modal-update">更新中心</button>
+          <button class="btn xs ghost" data-act="toggle-zen">👁</button>
+        </div>
+      </header>
+      <main class="main ${UI.view !== 'tasks' ? 'single' : ''}">
+        ${UI.view === 'tasks' ? `<aside class="side">${renderTaskSidebar()}</aside><section class="work">${renderCockpitTask()}</section>` : ''}
+        ${UI.view === 'notes' ? `<section class="work">${renderCockpitNotes()}</section>` : ''}
+        ${UI.view === 'servers' ? `<section class="work">${renderCockpitServers()}</section>` : ''}
+      </main>
+      <footer class="foot">
+        <span>Cockpit 全景驾驶舱 · 任务三舱同屏 / 命令便签三列同屏 / 账本与Word摘录上下同屏</span>
+        <span>↑↓ 切换任务 · Ctrl+K 搜索 · DevOrbit v1.3.0</span>
+      </footer>
+    </div>`;
+};
+renderApp();
+</script>
+</body>
+</html>

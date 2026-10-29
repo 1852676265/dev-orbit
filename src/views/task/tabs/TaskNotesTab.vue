@@ -460,25 +460,17 @@ function getParamCapsuleClass(type) {
   flex-direction: column;
   padding: 12px 16px;
   gap: 10px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.notes-tab-container::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
+  overflow: hidden;
 }
 
 /* 顶部智能参数面板 */
 .smart-params-panel {
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background-color: rgba(18, 24, 38, 0.9);
+  border: 1px solid var(--app-card-border);
+  background-color: var(--app-subcard-background);
   transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .params-header {
@@ -488,7 +480,7 @@ function getParamCapsuleClass(type) {
   gap: 8px;
   margin-bottom: 8px;
   padding-bottom: 6px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--app-border);
   user-select: none;
 }
 
@@ -500,7 +492,7 @@ function getParamCapsuleClass(type) {
 
 .view-mode-hint {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--app-secondary-foreground);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
@@ -526,28 +518,28 @@ function getParamCapsuleClass(type) {
 .param-capsule {
   padding: 4px 10px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--app-card-border);
   font-size: 12px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   display: flex;
   align-items: center;
   gap: 8px;
   transition: all 0.15s ease;
-  background-color: rgba(0, 0, 0, 0.4);
+  background-color: var(--app-card-background);
   flex-shrink: 0;
 }
 
 .capsule--key {
-  border-color: rgba(45, 212, 191, 0.4);
-  background-color: rgba(45, 212, 191, 0.1);
+  border-color: var(--app-accent-teal-border);
+  background-color: var(--app-accent-teal-bg);
 }
 .capsule--secret {
-  border-color: rgba(245, 158, 11, 0.4);
-  background-color: rgba(245, 158, 11, 0.1);
+  border-color: var(--app-accent-amber-border);
+  background-color: var(--app-accent-amber-bg);
 }
 .capsule--token {
-  border-color: rgba(56, 189, 248, 0.4);
-  background-color: rgba(56, 189, 248, 0.1);
+  border-color: var(--app-accent-sky-border);
+  background-color: var(--app-accent-sky-bg);
 }
 .capsule--network {
   border-color: rgba(6, 182, 212, 0.4);
@@ -558,17 +550,17 @@ function getParamCapsuleClass(type) {
   background-color: rgba(168, 85, 247, 0.1);
 }
 .capsule--default {
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: var(--app-card-border);
 }
 
 .capsule-label {
   font-weight: 700;
-  color: #5eead4;
+  color: var(--app-accent-teal);
   white-space: nowrap;
 }
 
 .capsule-value {
-  color: #e2e8f0;
+  color: var(--app-primary-foreground);
   max-width: 260px;
   white-space: nowrap;
   overflow: hidden;
@@ -581,15 +573,15 @@ function getParamCapsuleClass(type) {
   background: none;
   border: none;
   padding: 2px;
-  color: #64748b;
+  color: var(--app-muted-foreground);
   cursor: pointer;
   display: flex;
   align-items: center;
   border-radius: 4px;
 }
 .copy-btn:hover {
-  color: #2dd4bf;
-  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--app-accent-teal);
+  background-color: var(--app-list-hover-background);
 }
 
 /* 备忘录工具栏 */
@@ -599,9 +591,10 @@ function getParamCapsuleClass(type) {
   justify-content: space-between;
   gap: 8px;
   flex-wrap: wrap;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--app-border);
   padding-bottom: 10px;
   user-select: none;
+  flex-shrink: 0;
 }
 
 .category-filters {
@@ -630,20 +623,37 @@ function getParamCapsuleClass(type) {
 .cards-view-container {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.cards-view-container::-webkit-scrollbar {
+  width: 6px;
+}
+.cards-view-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+.cards-view-container::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 4px;
+}
+.cards-view-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(45, 212, 191, 0.4);
 }
 
 /* 新增就地输入卡片 */
 .note-editor-card {
   padding: 14px;
   border-radius: 12px;
-  border: 1px solid rgba(45, 212, 191, 0.4);
-  background-color: #151c2c;
+  border: 1px solid var(--app-accent-teal-border);
+  background-color: var(--app-card-background);
   display: flex;
   flex-direction: column;
   gap: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
 .editor-header-row {
@@ -672,14 +682,14 @@ function getParamCapsuleClass(type) {
 .note-card {
   padding: 14px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  background-color: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--app-card-border);
+  background-color: var(--app-subcard-background);
   transition: all 0.15s ease-in-out;
 }
 
 .note-card:hover {
-  background-color: rgba(0, 0, 0, 0.6);
-  border-color: rgba(45, 212, 191, 0.35);
+  background-color: var(--app-card-background);
+  border-color: var(--app-accent-teal-border);
 }
 
 .card-view-mode {
@@ -713,7 +723,7 @@ function getParamCapsuleClass(type) {
 .card-title {
   font-size: 13px;
   font-weight: 700;
-  color: #f1f5f9;
+  color: var(--app-primary-foreground);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -739,22 +749,41 @@ function getParamCapsuleClass(type) {
 
 .note-preview-content {
   margin: 0;
-  padding: 10px;
+  padding: 12px 14px;
   border-radius: 8px;
-  background-color: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background-color: var(--app-card-background);
+  border: 1px solid var(--app-border);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 12px;
-  color: #e2e8f0;
+  line-height: 1.6;
+  color: var(--app-primary-foreground);
+  max-height: min(440px, calc(100vh - 340px));
+  overflow-y: auto;
   overflow-x: auto;
   white-space: pre-wrap;
   word-break: break-all;
   user-select: text;
 }
 
+.note-preview-content::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.note-preview-content::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+.note-preview-content::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 4px;
+}
+.note-preview-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(45, 212, 191, 0.4);
+}
+
 .note-time-footer {
   font-size: 10px;
-  color: #64748b;
+  color: var(--app-muted-foreground);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   text-align: right;
 }
@@ -770,8 +799,8 @@ function getParamCapsuleClass(type) {
   padding: 48px 16px;
   text-align: center;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--app-border);
+  background-color: var(--app-subcard-background);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -781,18 +810,18 @@ function getParamCapsuleClass(type) {
 .empty-icon {
   width: 40px;
   height: 40px;
-  color: #475569;
+  color: var(--app-muted-foreground);
 }
 
 .empty-text {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--app-secondary-foreground);
   margin: 0;
 }
 
 .empty-subtext {
   font-size: 11px;
-  color: #475569;
+  color: var(--app-muted-foreground);
   margin: 0;
 }
 
@@ -809,11 +838,11 @@ function getParamCapsuleClass(type) {
   align-items: center;
   justify-content: space-between;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--app-secondary-foreground);
 }
 
 .sync-file-path {
-  color: #e2e8f0;
+  color: var(--app-primary-foreground);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
@@ -826,8 +855,8 @@ function getParamCapsuleClass(type) {
 /* 弹窗样式 */
 .params-modal {
   max-width: 640px;
-  background-color: #111726;
-  border: 1px solid #334155;
+  background-color: var(--app-card-background);
+  border: 1px solid var(--app-card-border);
 }
 
 .params-modal-body {
@@ -844,7 +873,7 @@ function getParamCapsuleClass(type) {
 
 .summary-text {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--app-secondary-foreground);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
@@ -860,8 +889,8 @@ function getParamCapsuleClass(type) {
 .modal-param-card {
   padding: 10px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background-color: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--app-card-border);
+  background-color: var(--app-subcard-background);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -876,13 +905,13 @@ function getParamCapsuleClass(type) {
 }
 
 .param-card-label {
-  color: #2dd4bf;
+  color: var(--app-accent-teal);
   font-weight: 700;
   display: block;
 }
 
 .param-card-value {
-  color: #e2e8f0;
+  color: var(--app-primary-foreground);
   user-select: all;
   word-break: break-all;
   display: block;

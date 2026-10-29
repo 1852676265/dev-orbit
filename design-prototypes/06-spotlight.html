@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>方案六 · Spotlight 玻璃流光版（列表 + 预览）</title>
+<link rel="stylesheet" href="shared/common.css">
+<style>
+:root {
+  --bg: #eef2ff; --fg: #18181b; --muted: #64687a; --line: rgba(255,255,255,.75);
+  --card: rgba(255,255,255,.68); --soft: rgba(109,40,217,.07);
+  --accent: #6d28d9; --accent-fg: #fff;
+  --ok: #059669; --ok-bg: rgba(5,150,105,.12);
+  --warn: #d97706; --warn-bg: rgba(217,119,6,.13); --radius: 10px;
+}
+body {
+  background:
+    radial-gradient(1100px 680px at 8% 4%, rgba(167,139,250,.42) 0%, transparent 58%),
+    radial-gradient(950px 640px at 92% 12%, rgba(125,211,252,.44) 0%, transparent 55%),
+    radial-gradient(1000px 680px at 52% 98%, rgba(244,180,214,.38) 0%, transparent 58%),
+    linear-gradient(135deg, #eef2ff 0%, #f0f9ff 50%, #fdf4ff 100%);
+}
+.tag.accent { background: rgba(109,40,217,.11); color: var(--accent); }
+.modal { background: rgba(255,255,255,.92); backdrop-filter: blur(24px); }
+.shell { display: flex; flex-direction: column; height: 100vh; padding: 12px 16px 10px; gap: 12px; }
+.bar {
+  height: 52px; padding: 0 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: rgba(255,255,255,.62); backdrop-filter: blur(24px) saturate(1.5);
+  border: 1px solid rgba(255,255,255,.85); border-radius: 16px;
+  box-shadow: 0 8px 28px rgba(31,41,55,.06);
+}
+.brand { font-weight: 800; font-size: 14.5px; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.brand i { width: 24px; height: 24px; border-radius: 8px; background: linear-gradient(135deg, #7c3aed, #3b82f6); flex: none; }
+.nav-pill {
+  display: inline-flex; align-items: center; gap: 4px; padding: 4px; flex-shrink: 0;
+  background: rgba(17,24,39,.055); border: 1px solid rgba(255,255,255,.7); border-radius: 999px;
+}
+.scope { display: inline-flex; align-items: center; gap: 6px; padding: 5px 13px; border-radius: 999px; color: var(--muted); font-size: 12.5px; font-weight: 500; white-space: nowrap; }
+.scope:hover { color: var(--fg); background: rgba(255,255,255,.55); }
+.scope.active { background: rgba(255,255,255,.95); color: var(--accent); font-weight: 700; box-shadow: 0 2px 10px rgba(109,40,217,.14); }
+.omni-btn {
+  display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 999px; flex-shrink: 0; white-space: nowrap;
+  background: rgba(255,255,255,.65); border: 1px solid rgba(255,255,255,.85); color: var(--muted); font-size: 12px; cursor: pointer;
+}
+.stage-wrap { flex: 1; display: flex; gap: 12px; min-height: 0; }
+.side-rail {
+  width: 68px; padding: 12px 6px; background: rgba(255,255,255,.62); backdrop-filter: blur(24px) saturate(1.5);
+  border: 1px solid rgba(255,255,255,.85); border-radius: 16px; display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.rail-btn { width: 54px; padding: 8px 4px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--muted); font-size: 11px; }
+.rail-btn.active { background: rgba(255,255,255,.95); color: var(--accent); font-weight: 700; box-shadow: 0 4px 12px rgba(109,40,217,.14); }
+.ld { flex: 1; display: grid; grid-template-columns: 350px 1fr; gap: 12px; min-height: 0; }
+.ld-list, .ld-detail {
+  background: rgba(255,255,255,.64); backdrop-filter: blur(24px) saturate(1.5);
+  border: 1px solid rgba(255,255,255,.85); border-radius: 16px; box-shadow: 0 10px 32px rgba(31,41,55,.07);
+  display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden;
+}
+.ld-tools { padding: 11px 12px; border-bottom: 1px solid rgba(17,24,39,.07); display: flex; flex-direction: column; gap: 8px; }
+.ld-group { padding: 10px 14px 4px; font-size: 11px; color: var(--muted); font-weight: 600; }
+.ld-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; margin: 1px 8px; border-radius: 10px; cursor: pointer; border: 1px solid transparent; }
+.ld-item:hover { background: rgba(255,255,255,.65); }
+.ld-item.active { background: rgba(255,255,255,.92); border-color: rgba(109,40,217,.22); box-shadow: 0 4px 14px rgba(109,40,217,.08); }
+.ld-item .ico { width: 28px; height: 28px; border-radius: 8px; background: rgba(109,40,217,.08); color: var(--accent); display: grid; place-items: center; flex: none; }
+.ld-item .tt { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ld-item .st { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sub-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: rgba(17,24,39,.055); border-radius: 10px; }
+.sub-switch button { padding: 6px 8px; border-radius: 7px; font-size: 12px; color: var(--muted); }
+.sub-switch button.active { background: rgba(255,255,255,.95); color: var(--accent); font-weight: 700; box-shadow: 0 2px 8px rgba(109,40,217,.12); }
+.t-head { background: transparent; border-bottom: 1px solid rgba(17,24,39,.07); }
+.dt-split { flex: 1; display: grid; grid-template-columns: 168px 1fr; min-height: 0; }
+.dt-nav { padding: 12px 10px; border-right: 1px solid rgba(17,24,39,.07); display: flex; flex-direction: column; gap: 4px; }
+.preview { flex: 1; overflow: auto; padding: 22px 26px; }
+.kv { display: grid; grid-template-columns: 90px 1fr auto; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(17,24,39,.07); }
+.big-code { padding: 14px 16px; background: rgba(255,255,255,.78); border: 1px solid rgba(255,255,255,.9); border-radius: 12px; font-size: 13px; white-space: pre-wrap; margin: 14px 0; cursor: pointer; }
+.ncard, .sql-row, .doc-card, .smart-bar, .input, .select, .btn { background: rgba(255,255,255,.72); border-color: rgba(17,24,39,.1); }
+.btn.primary { background: var(--accent); border-color: var(--accent); }
+.foot { height: 26px; padding: 0 14px; display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="shell zen-hide" id="app"></div>
+<div class="zen-pill" data-act="toggle-zen">👁 壁纸沉浸观赏模式 · 点击此处或按 Esc 恢复工作台</div>
+<script src="shared/common.js"></script>
+<script>
+UI.spot = { cmdIdx: 0, memoIdx: 0, srv: 0, navPos: 'center', splitMemo: false, noteTab: 'cmd' };
+const getViews = () => UI.spot.splitMemo
+  ? [{ id: 'tasks', ico: '📋', label: '开发任务', key: '1' }, { id: 'notes', ico: '💻', label: '命令军火库', key: '2' }, { id: 'memos', ico: '📌', label: '极速随手记', key: '3' }, { id: 'servers', ico: '🖥️', label: '服务器与凭据', key: '4' }]
+  : [{ id: 'tasks', ico: '📋', label: '开发任务', key: '1' }, { id: 'notes', ico: '💻', label: '命令 & 随手记', key: '2' }, { id: 'servers', ico: '🖥️', label: '服务器与凭据', key: '3' }];
+const renderSubSwitch = () => UI.spot.splitMemo ? '' : `<div class="sub-switch"><button class="${UI.spot.noteTab === 'cmd' ? 'active' : ''}" data-note-tab="cmd">💻 常用命令 (${DATA.commands.length})</button><button class="${UI.spot.noteTab === 'memo' ? 'active' : ''}" data-note-tab="memo">📌 极速随手记 (${DATA.memos.length})</button></div>`;
+const STATUS_ORDER = ['in-progress', 'suspended', 'archived'];
+const SRV_GROUPS = [['服务器账号', '🖥️'], ['Web网站', '🌐'], ['iNode', '🔐']];
+const spotItem = (attr, key, active, ico, tt, st, badge = '') => `
+  <div class="ld-item ${active ? 'active' : ''}" ${attr}="${key}">
+    <span class="ico mono">${ico}</span>
+    <div style="min-width:0;flex:1"><div class="tt">${esc(tt)}</div><div class="st mono">${esc(st)}</div></div>${badge}
+  </div>`;
+
+/* ---------- 页面 1：按状态分组的任务列表 + 详情（竖向子导航替代横向 Tab） ---------- */
+function spotTaskList() {
+  const projs = [...new Set(DATA.tasks.map((t) => t.project))];
+  const list = filteredTasks();
+  const groups = STATUS_ORDER.map((st) => [st, list.filter((t) => t.status === st)]).filter(([, g]) => g.length);
+  return `
+    <div class="ld-tools">
+      <div class="row">
+        <select class="select" style="flex:1" data-bind="year"><option value="all">全部年份</option>${DATA.years.map((y) => `<option value="${y}" ${UI.year === y ? 'selected' : ''}>${y} 年</option>`).join('')}</select>
+        <select class="select" style="flex:1" data-bind="project"><option value="all">全部项目</option>${projs.map((p) => `<option value="${p}" ${UI.project === p ? 'selected' : ''}>${p}</option>`).join('')}</select>
+      </div>
+      <div class="between">
+        <div class="row"><button class="btn xs ${UI.onlyPending ? 'warn' : ''}" data-act="toggle-pending">⚡ 仅看待发 SQL</button><button class="btn xs ghost" data-act="reset-filter">↺ 重置</button></div>
+        <span class="muted" style="font-size:11px">匹配 ${list.length} / ${DATA.tasks.length}</span>
+      </div>
+    </div>
+    <div class="scroll" style="flex:1;padding-bottom:10px">
+      ${groups.map(([st, g]) => `<div class="ld-group">${STATUS_MAP[st]} · ${g.length}</div>${g.map((t) => spotItem('data-select-task', t.id, t.id === UI.taskId, `<span class="dot ${t.status}"></span>`, t.title, `${t.year} · ${t.project} · ${t.updated.slice(5, 10)}`, taskPending(t) ? `<span class="tag warn">${taskPending(t)} 待发</span>` : '')).join('')}`).join('') || '<div class="empty">当前筛选无任务</div>'}
+    </div>`;
+}
+
+function spotTaskDetail(t = currentTask()) {
+  const pend = taskPending(t);
+  const nav = [['notes', '📝 开发备忘', t.notes.length], ['sqls', '🗄️ 上线 SQL', pend ? pend + ' 待发' : t.sqls.length], ['docs', '📂 交付文档', t.docs.length]];
+  return `
+    <div class="t-head">
+      <div>
+        <div class="row"><span class="tag">${t.year} 年</span><span class="tag accent">${esc(t.project)}</span><span class="tag ${t.status === 'in-progress' ? 'ok' : 'warn'}">${STATUS_MAP[t.status]}</span><span class="muted" style="font-size:11px">更新于 ${t.updated}</span></div>
+        <h1>${esc(t.title)}</h1>
+        <div class="t-path mono">📁 ${esc(t.path)}</div>
+      </div>
+      <div class="row">
+        <button class="btn" data-toast="已在 IDE 打开任务目录">IDE 打开</button>
+        <button class="btn primary" data-toast="已打开资源管理器">资源管理器</button>
+        <button class="btn ghost" data-copy="${esc(t.path)}">复制路径</button>
+      </div>
+    </div>
+    <div class="dt-split">
+      <nav class="dt-nav">
+        ${nav.map(([id, label, n]) => `<button class="cat-item ${UI.wsTab === id ? 'active' : ''}" data-ws-tab="${id}"><span>${label}</span><span class="mono">${n}</span></button>`).join('')}
+        <div class="spacer"></div>
+        <span class="muted" style="font-size:11px;padding:6px">● 已同步 task.json</span>
+      </nav>
+      <div class="preview" style="padding:16px 20px">${renderTaskTabBody(t)}</div>
+    </div>`;
+}
+
+/* ---------- 页面 2A：命令军火库（默认先看命令，不混杂随手记） ---------- */
+function spotCmdList() {
+  const cats = [...new Set(DATA.commands.map((c) => c.cat))];
+  const cmds = DATA.commands.map((c, i) => ({ ...c, i })).filter((c) => UI.cmdCat === 'all' ? true : UI.cmdCat === 'pinned' ? c.pinned : c.cat === UI.cmdCat);
+  const groups = [...new Set(cmds.map((c) => c.cat))];
+  return `
+    <div class="ld-tools">
+      ${renderSubSwitch()}
+      <input class="input" placeholder="检索命令说明、参数、服务名 (按 / 聚焦)…">
+      <div class="row" style="flex-wrap:wrap">
+        ${['all', 'pinned', ...cats].map((c) => `<button class="btn xs ${UI.cmdCat === c ? 'active' : ''}" data-cmd-cat="${c}">${c === 'all' ? '全部' : c === 'pinned' ? '📌 置顶' : esc(c)}</button>`).join('')}
+        <button class="btn xs ghost" data-toast="新建命令分类">+ 分类</button>
+      </div>
+      <div class="row"><button class="btn xs" data-act="modal-txt-import">📄 TXT 批量导入</button><button class="btn xs primary" data-act="modal-new-cmd">+ 新增命令</button></div>
+    </div>
+    <div class="scroll" style="flex:1;padding-bottom:10px">
+      ${groups.map((g) => `<div class="ld-group">💻 ${esc(g)}</div>${cmds.filter((c) => c.cat === g).map((c) => spotItem('data-spot-cmd', c.i, UI.spot.cmdIdx === c.i, '›_', c.title, c.cmd, c.pinned ? '<span class="tag warn">📌</span>' : '')).join('')}`).join('')}
+    </div>`;
+}
+
+function spotCmdPreview() {
+  const it = DATA.commands[UI.spot.cmdIdx] || DATA.commands[0];
+  const related = DATA.commands.filter((c) => c.cat === it.cat && c !== it);
+  return `
+    <div class="preview">
+      <div class="row"><span class="tag accent">${esc(it.cat)}</span>${it.pinned ? '<span class="tag warn">📌 常用置顶</span>' : ''}</div>
+      <h2 style="font-size:18px;margin-top:10px">${esc(it.title)}</h2>
+      <pre class="big-code mono" data-copy="${esc(it.cmd)}">$ ${esc(it.cmd)}</pre>
+      <div class="row">
+        <button class="btn primary" data-copy="${esc(it.cmd)}">📋 复制命令</button>
+        <button class="btn" data-spot-pin>${it.pinned ? '取消置顶' : '📌 设为置顶'}</button>
+        <button class="btn" data-act="modal-new-cmd">✏️ 编辑</button>
+        <button class="btn ghost" data-toast="命令已删除">🗑️ 删除</button>
+      </div>
+      ${related.length ? `<div class="ld-group" style="padding:24px 0 8px">同分类其他命令</div>${related.map((c) => `<div class="sql-row"><div><b>${esc(c.title)}</b><div class="mono muted">${esc(c.cmd)}</div></div><button class="btn xs" data-copy="${esc(c.cmd)}">复制</button></div>`).join('')}` : ''}
+    </div>`;
+}
+
+/* ---------- 页面 2B：极速随手记（彻底从命令列表分离出来） ---------- */
+function spotMemoList() {
+  return `
+    <div class="ld-tools">
+      ${renderSubSwitch()}
+      <div class="row"><input class="input" id="_memo_inp" placeholder="随手记一笔临时备忘，回车即存…" style="flex:1"><button class="btn xs primary" data-act="add-memo">+ 记下</button></div>
+      <div class="between" style="font-size:11px;color:var(--muted)"><span>共 ${DATA.memos.length} 条随手记便签</span><span>回车快速保存</span></div>
+    </div>
+    <div class="scroll" style="flex:1;padding:6px 0 10px">
+      ${DATA.memos.map((m, i) => spotItem('data-spot-memo', i, UI.spot.memoIdx === i, '📌', m.text, m.time)).join('')}
+    </div>`;
+}
+
+function spotMemoPreview() {
+  const it = DATA.memos[UI.spot.memoIdx] || DATA.memos[0];
+  return `
+    <div class="preview">
+      <div class="between">
+        <div class="row"><span class="tag ${it.color === 'amber' ? 'warn' : 'accent'}">📌 随手记便签</span><span class="muted">记录于 ${it.time}</span></div>
+        <div class="row"><button class="btn xs primary" data-copy="${esc(it.text)}">📋 复制内容</button><button class="btn xs" data-toast="已切换便签颜色">🎨 换色</button><button class="btn xs ghost" data-toast="便签已删除">🗑️ 删除</button></div>
+      </div>
+      <div class="big-code" style="font-size:15px;line-height:1.75">${esc(it.text)}</div>
+      <div class="ld-group" style="padding:16px 0 8px">全部随手记便签墙 (${DATA.memos.length})</div>
+      <div class="memo-grid" style="margin-top:4px">
+        ${DATA.memos.map((m, i) => `<div class="memo-box ${m.color}" style="cursor:pointer;background:rgba(255,255,255,.78)" data-spot-memo="${i}"><div style="margin-bottom:8px;line-height:1.6">${esc(m.text)}</div><div class="between muted" style="font-size:11px"><span>${m.time}</span><button class="btn xs ghost" data-copy="${esc(m.text)}">复制</button></div></div>`).join('')}
+      </div>
+    </div>`;
+}
+
+/* ---------- 页面 3：凭据列表（Root 口令置顶）+ 右侧逐字段复制详情 / Word 摘录台 ---------- */
+function spotSrvList() {
+  const list = DATA.servers.map((s, i) => ({ ...s, i })).filter((s) => UI.srvCat === 'all' || s.cat === UI.srvCat);
+  return `
+    <div class="ld-tools">
+      <div class="between" style="padding:6px 10px;background:var(--soft);border-radius:8px">
+        <span class="muted">👑 通用 Root</span>
+        <code class="mono">${UI.showRootPwd ? DATA.rootPwd : '••••••••••'}</code>
+        <div class="row"><button class="btn xs ghost" data-act="toggle-root-pwd">${UI.showRootPwd ? '🙈' : '👁'}</button><button class="btn xs" data-copy="${esc(DATA.rootPwd)}">秒拷</button><button class="btn xs ghost" data-act="modal-new-srv">修改</button></div>
+      </div>
+      <input class="input" placeholder="搜索名称 / IP / URL (按 / 聚焦)…">
+      <div class="row" style="flex-wrap:wrap">
+        ${['all', ...SRV_GROUPS.map(([g]) => g)].map((c) => `<button class="btn xs ${UI.srvCat === c ? 'active' : ''}" data-srv-cat="${c}">${c === 'all' ? '全部' : c}</button>`).join('')}
+        <button class="btn xs ghost" data-toast="新建自定义凭据分类">+ 分类</button>
+      </div>
+    </div>
+    <div class="scroll" style="flex:1">
+      ${SRV_GROUPS.map(([g, ico]) => { const gl = list.filter((s) => s.cat === g); return gl.length ? `<div class="ld-group">${g} · ${gl.length}</div>${gl.map((s) => spotItem('data-spot-srv', s.i, UI.srvMode === 'daily' && UI.spot.srv === s.i, ico, s.name, s.target, `<span class="tag">${s.env}</span>`)).join('')}` : ''; }).join('')}
+    </div>
+    <div class="ld-tools" style="border-top:1px solid var(--line);border-bottom:0">
+      <span class="mono muted" style="font-size:11px">📘 ${DATA.svnDoc}</span>
+      <div class="row">
+        <button class="btn xs" data-toast="已拉取最新 SVN Word 文档并自动同步标蓝密码">🔄 SVN 同步</button>
+        <button class="btn xs ${UI.srvMode === 'excerpt' ? 'active' : ''}" data-act="toggle-srv-mode">📖 Word 原档摘录</button>
+        <button class="btn xs primary" data-act="modal-new-srv">+ 手动新建</button>
+      </div>
+    </div>`;
+}
+
+function spotSrvDetail() {
+  if (UI.srvMode === 'excerpt') return `<div class="preview" style="padding:16px 20px">${renderWordBench()}</div>`;
+  const s = DATA.servers[UI.spot.srv] || DATA.servers[0];
+  const rows = [['目标地址', s.target, s.target], ['端口', s.port || '—', s.port], ['登录账号', s.user, s.user], ['认证口令', s.inherit ? '👑 继承全局 Root 口令' : s.pwd, s.inherit ? DATA.rootPwd : s.pwd]];
+  return `
+    <div class="preview">
+      <div class="row"><span class="tag accent">${esc(s.cat)}</span><span class="tag">${s.env}</span></div>
+      <h2 style="font-size:20px;margin:10px 0 6px">${esc(s.name)}</h2>
+      <div style="max-width:620px">
+        ${rows.map(([k, v, c]) => `<div class="kv"><span class="muted">${k}</span><code class="mono">${esc(v)}</code>${c ? `<button class="btn xs" data-copy="${esc(c)}">复制</button>` : '<span></span>'}</div>`).join('')}
+        <div class="row" style="margin-top:18px">
+          ${s.cat === '服务器账号' ? `<button class="btn primary" data-copy="ssh ${esc(s.user)}@${esc(s.target)} -p ${s.port || 22}">复制 SSH 命令</button>` : `<button class="btn primary" data-toast="已在浏览器打开 ${esc(s.target)}">打开网页 ↗</button>`}
+          <button class="btn" data-act="modal-new-srv">✏️ 编辑</button>
+          <button class="btn ghost" data-toast="已删除凭据">🗑️ 删除</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* 本方案专属交互：列表选中、置顶切换、数字键切视图（捕获阶段先于公共引擎处理） */
+document.addEventListener('click', (e) => {
+  const nt = e.target.closest('[data-note-tab]');
+  if (nt) { UI.spot.noteTab = nt.dataset.noteTab; return renderApp(); }
+  const c = e.target.closest('[data-spot-cmd]');
+  if (c) { UI.spot.cmdIdx = +c.dataset.spotCmd; return renderApp(); }
+  const m = e.target.closest('[data-spot-memo]');
+  if (m) { UI.spot.memoIdx = +m.dataset.spotMemo; return renderApp(); }
+  const s = e.target.closest('[data-spot-srv]');
+  if (s) { UI.spot.srv = +s.dataset.spotSrv; UI.srvMode = 'daily'; return renderApp(); }
+  if (e.target.closest('[data-spot-pin]')) {
+    const item = DATA.commands[UI.spot.cmdIdx]; item.pinned = !item.pinned;
+    toast(item.pinned ? '已置顶' : '已取消置顶'); return renderApp();
+  }
+  if (e.target.closest('[data-toggle-navpos]')) { UI.spot.navPos = UI.spot.navPos === 'center' ? 'rail' : 'center'; return renderApp(); }
+  if (e.target.closest('[data-toggle-splitmemo]')) {
+    UI.spot.splitMemo = !UI.spot.splitMemo;
+    if (!UI.spot.splitMemo && UI.view === 'memos') { UI.view = 'notes'; UI.spot.noteTab = 'memo'; }
+    if (UI.spot.splitMemo && UI.view === 'notes' && UI.spot.noteTab === 'memo') { UI.view = 'memos'; }
+    return renderApp();
+  }
+}, true);
+document.addEventListener('keydown', (e) => {
+  if (e.target.matches('input, textarea, select') || e.ctrlKey) return;
+  const v = getViews().find((x) => x.key === e.key);
+  if (v) { UI.view = v.id; renderApp(); }
+});
+
+window.renderApp = function () {
+  const pend = totalPending(), views = getViews();
+  const showMemoInNotes = UI.view === 'notes' && !UI.spot.splitMemo && UI.spot.noteTab === 'memo';
+  const pages = {
+    tasks: () => [spotTaskList(), spotTaskDetail()],
+    notes: () => showMemoInNotes ? [spotMemoList(), spotMemoPreview()] : [spotCmdList(), spotCmdPreview()],
+    memos: () => [spotMemoList(), spotMemoPreview()],
+    servers: () => [spotSrvList(), spotSrvDetail()]
+  };
+  const [list, detail] = (pages[UI.view] || pages.tasks)();
+  $('#app').innerHTML = `
+    <header class="bar">
+      <div class="row" style="gap:10px"><div class="brand"><i></i><span>DevOrbit</span></div><button class="btn xs ghost mono" data-act="modal-settings">📁 ${DATA.workspace}</button></div>
+      ${UI.spot.navPos === 'center' ? `<nav class="nav-pill">${views.map((v) => `<button class="scope ${UI.view === v.id ? 'active' : ''}" data-view="${v.id}">${v.ico} ${v.label} <kbd>${v.key}</kbd></button>`).join('')}</nav>` : `<div class="omni-btn" style="min-width:340px" data-act="modal-search"><span>🔍</span><span style="flex:1">搜索任务、备忘、SQL、命令、IP…</span><kbd>Ctrl K</kbd></div>`}
+      <div class="row" style="justify-content:flex-end">
+        ${UI.spot.navPos === 'center' ? `<button class="omni-btn" data-act="modal-search"><span>🔍 搜索…</span><kbd>Ctrl K</kbd></button>` : ''}
+        ${pend ? `<span class="tag warn">🗄️ ${pend} 待发 SQL</span>` : ''}
+        <button class="btn xs primary" data-act="modal-new-task">+ 新建任务</button>
+        <button class="btn xs" data-toggle-navpos>🧭 ${UI.spot.navPos === 'center' ? '导航:顶栏居中' : '导航:左侧玻璃岛'}</button>
+        <button class="btn xs" data-toggle-splitmemo>🔀 ${UI.spot.splitMemo ? '随手记:独立4页' : '随手记:Tab内分开'}</button>
+        <button class="btn xs ghost" data-act="modal-update">🔄</button>
+        <button class="btn xs ghost" data-act="modal-theme">🎨</button>
+        <button class="btn xs ghost" data-act="modal-settings">⚙️</button>
+        <button class="btn xs ghost" data-act="toggle-zen">👁</button>
+      </div>
+    </header>
+    <div class="stage-wrap">
+      ${UI.spot.navPos === 'rail' ? `<aside class="side-rail">${views.map((v) => `<button class="rail-btn ${UI.view === v.id ? 'active' : ''}" data-view="${v.id}"><b>${v.ico}</b><span>${v.label.slice(0, 4)}</span></button>`).join('')}</aside>` : ''}
+      <main class="ld"><aside class="ld-list">${list}</aside><section class="ld-detail">${detail}</section></main>
+    </div>
+    <footer class="foot"><span>Spotlight 玻璃流光版 · 默认先看命令库，随手记已彻底分离</span><span>按 1~${views.length} 快速切换 · <b>v1.3.0</b></span></footer>`;
+};
+renderApp();
+</script>
+</body>
+</html>

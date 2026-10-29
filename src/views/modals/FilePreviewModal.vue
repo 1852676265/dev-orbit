@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <div
-      v-if="visible"
+      v-if="isModalVisible"
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-150 select-none"
       @click.self="closeModal"
     >
@@ -47,19 +47,39 @@
               ref="searchInputRef"
               v-model="searchQuery"
               @input="handleSearch"
-              @keydown.enter="jumpNextMatch"
-              @keydown.esc="clearSearch"
+              @keydown.enter.exact="jumpNextMatch"
+              @keydown.shift.enter.exact="jumpPrevMatch"
+              @keydown.esc.prevent.stop="handleSearchEsc"
               type="text"
               placeholder="查找关键字 (Enter 下一个)..."
               class="bg-transparent text-xs text-white placeholder-slate-500 focus:outline-none w-44 font-mono"
             />
-            <span v-if="searchMatches.length > 0" class="text-[10px] font-mono px-1 rounded bg-teal-500/20 text-teal-300">
+            <span v-if="searchMatches.length > 0" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-teal-500/20 text-teal-300 font-semibold">
               {{ currentMatchIndex + 1 }}/{{ searchMatches.length }}
             </span>
+            <div v-if="searchMatches.length > 0" class="flex items-center gap-0.5">
+              <button
+                type="button"
+                @click="jumpPrevMatch"
+                title="上一个 (Shift+Enter)"
+                class="text-slate-400 hover:text-white p-0.5 rounded hover:bg-white/10 transition cursor-pointer"
+              >
+                <ChevronUp class="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                @click="jumpNextMatch"
+                title="下一个 (Enter)"
+                class="text-slate-400 hover:text-white p-0.5 rounded hover:bg-white/10 transition cursor-pointer"
+              >
+                <ChevronDown class="w-3.5 h-3.5" />
+              </button>
+            </div>
             <button
               v-if="searchQuery"
               @click="clearSearch"
-              class="text-slate-400 hover:text-white p-0.5"
+              class="text-slate-400 hover:text-white p-0.5 rounded hover:bg-white/10 transition cursor-pointer"
+              title="清除搜索"
             >
               <X class="w-3 h-3" />
             </button>
@@ -152,17 +172,26 @@
 
             <!-- 代码编辑 / 预览区 -->
             <div class="flex-1 min-h-0 relative flex flex-col overflow-hidden">
-              <!-- 编辑模式：原生 TextArea -->
-              <textarea
-                v-if="isEditing"
-                ref="editorTextareaRef"
-                v-model="textContent"
-                @scroll="syncScroll"
-                @keydown.ctrl.s.prevent="saveContent"
-                class="flex-1 w-full bg-transparent p-4 font-mono text-xs leading-5 text-slate-200 resize-none outline-none custom-scrollbar whitespace-pre tab-4"
-                placeholder="在此直接输入或修改内容，按 Ctrl+S 立即保存..."
-                spellcheck="false"
-              ></textarea>
+              <!-- 编辑模式：镜像高亮衬底 + 原生 TextArea -->
+              <div v-if="isEditing" class="relative flex-1 min-h-0 w-full overflow-hidden">
+                <!-- 镜像高亮底衬：与 textarea 严格 1:1 像素与排版对齐 -->
+                <div
+                  ref="editorBackdropRef"
+                  aria-hidden="true"
+                  class="editor-layer editor-backdrop"
+                  v-html="renderedEditorBackdrop"
+                ></div>
+                <textarea
+                  ref="editorTextareaRef"
+                  v-model="textContent"
+                  @scroll="syncScroll"
+                  @input="handleTextareaInput"
+                  @keydown.ctrl.s.prevent="saveContent"
+                  class="editor-layer editor-textarea custom-scrollbar"
+                  placeholder="在此直接输入或修改内容，按 Ctrl+S 立即保存..."
+                  spellcheck="false"
+                ></textarea>
+              </div>
 
               <!-- 预览模式：代码视图 (双击进入编辑) -->
               <div
@@ -177,7 +206,7 @@
                   v-for="(line, idx) in highlightedLines"
                   :key="idx"
                   class="leading-5 min-h-[20px] transition-colors"
-                  :class="{ 'bg-teal-500/20 text-teal-200 font-bold -mx-4 px-4': isLineMatched(idx + 1) }"
+                  :class="{ 'bg-teal-500/15 text-teal-100 font-medium -mx-4 px-4': isLineMatched(idx + 1) }"
                   v-html="line"
                 ></div>
               </div>
@@ -362,17 +391,24 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import {
   FileText, Database, Code, FileCode, Sheet, Image as ImageIcon,
-  ExternalLink, FolderOpen, Copy, Check, Search, X, Pencil, Save, RefreshCw
+  ExternalLink, FolderOpen, Copy, Check, Search, X, Pencil, Save, RefreshCw,
+  ChevronUp, ChevronDown
 } from 'lucide-vue-next'
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
+  show: { type: Boolean, default: false },
+  isOpen: { type: Boolean, default: false },
   filePath: { type: String, default: '' },
   fileName: { type: String, default: '' },
-  initialEdit: { type: Boolean, default: false }
+  initialEdit: { type: Boolean, default: false },
+  initialEditMode: { type: Boolean, default: false },
+  targetLine: { type: Number, default: 0 }
 })
 
-const emit = defineEmits(['update:visible', 'toast', 'file-saved'])
+const emit = defineEmits(['update:visible', 'update:show', 'update:isOpen', 'close', 'toast', 'file-saved'])
+
+const isModalVisible = computed(() => props.visible || props.show || props.isOpen)
 
 const loading = ref(false)
 const textContent = ref('')
@@ -390,6 +426,16 @@ const searchInputRef = ref(null)
 const lineGutterRef = ref(null)
 const viewerContainerRef = ref(null)
 const editorTextareaRef = ref(null)
+const editorBackdropRef = ref(null)
+
+// 辅助 HTML 转义
+function escapeHtml(str) {
+  if (!str) return ''
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
 
 // 判定文件类型元数据
 const fileTypeMeta = computed(() => {
@@ -494,23 +540,102 @@ const lineCount = computed(() => {
   return textContent.value.split('\n').length
 })
 
-// 简单转义并高亮匹配项
-const highlightedLines = computed(() => {
-  if (!textContent.value) return []
-  const lines = textContent.value.split('\n')
+// 编辑模式下的背景高亮衬底 (文字透明，仅渲染高亮底色与当前项焦点)
+const renderedEditorBackdrop = computed(() => {
+  const text = textContent.value
+  if (!text) return ''
   const q = (searchQuery.value || '').trim()
+  if (!q || searchMatches.value.length === 0) {
+    return escapeHtml(text) + (text.endsWith('\n') ? ' ' : '')
+  }
+
+  const matches = searchMatches.value
+  const activeIdx = currentMatchIndex.value
+  const fragments = []
+  let lastEnd = 0
+
+  for (let i = 0; i < matches.length; i++) {
+    const m = matches[i]
+    if (m.startIndex > lastEnd) {
+      fragments.push(escapeHtml(text.slice(lastEnd, m.startIndex)))
+    }
+    const matchText = escapeHtml(text.slice(m.startIndex, m.endIndex))
+    const isCurrent = i === activeIdx
+    const markClass = isCurrent ? 'editor-search-mark is-current' : 'editor-search-mark'
+    fragments.push(`<mark class="${markClass}">${matchText}</mark>`)
+    lastEnd = m.endIndex
+  }
+
+  if (lastEnd < text.length) {
+    fragments.push(escapeHtml(text.slice(lastEnd)))
+  }
+
+  if (text.endsWith('\n')) {
+    fragments.push(' ')
+  }
+
+  return fragments.join('')
+})
+
+// 预览模式下的代码行高亮渲染 (当前项强高亮、其它匹配项柔和高亮)
+const highlightedLines = computed(() => {
+  const text = textContent.value
+  if (!text) return []
+  const lines = text.split('\n')
+  const q = (searchQuery.value || '').trim()
+  if (!q || searchMatches.value.length === 0) {
+    return lines.map((line) => escapeHtml(line) || '&nbsp;')
+  }
+
+  const activeIdx = currentMatchIndex.value
+  const matches = searchMatches.value
+
+  let matchCursor = 0
+  let lineStartOffset = 0
 
   return lines.map((line) => {
-    let escaped = line
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
+    const lineEndOffset = lineStartOffset + line.length
+    const lineMatches = []
 
-    if (q) {
-      const regex = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
-      escaped = escaped.replace(regex, '<mark class="bg-teal-500/40 text-teal-100 rounded px-0.5 font-bold">$1</mark>')
+    while (matchCursor < matches.length && matches[matchCursor].startIndex < lineEndOffset) {
+      if (matches[matchCursor].endIndex <= lineEndOffset) {
+        lineMatches.push(matches[matchCursor])
+      }
+      matchCursor++
     }
-    return escaped || '&nbsp;'
+
+    if (lineMatches.length === 0) {
+      lineStartOffset = lineEndOffset + 1
+      return escapeHtml(line) || '&nbsp;'
+    }
+
+    const fragments = []
+    let currentInLine = 0
+
+    for (const m of lineMatches) {
+      const startInLine = m.startIndex - lineStartOffset
+      const endInLine = m.endIndex - lineStartOffset
+
+      if (startInLine > currentInLine) {
+        fragments.push(escapeHtml(line.slice(currentInLine, startInLine)))
+      }
+
+      const matchText = escapeHtml(line.slice(startInLine, endInLine))
+      const isCurrent = m.id === activeIdx
+      const markClass = isCurrent
+        ? 'px-1 py-0.5 rounded bg-amber-400 text-slate-950 font-bold ring-2 ring-amber-300 shadow-md transition-all inline-block leading-tight'
+        : 'px-0.5 py-0.5 rounded bg-teal-500/30 text-teal-200 font-semibold inline-block leading-tight'
+      const idAttr = isCurrent ? 'id="active-preview-match"' : ''
+      fragments.push(`<mark ${idAttr} class="${markClass}">${matchText}</mark>`)
+      currentInLine = endInLine
+    }
+
+    if (currentInLine < line.length) {
+      fragments.push(escapeHtml(line.slice(currentInLine)))
+    }
+
+    lineStartOffset = lineEndOffset + 1
+    return fragments.join('') || '&nbsp;'
   })
 })
 
@@ -532,7 +657,8 @@ async function loadFile(openInEdit = false) {
   try {
     if (isTextFile.value) {
       const raw = await window.electronAPI.readTextFile(props.filePath)
-      textContent.value = raw || ''
+      // 统一将 Windows CRLF 换行符归一化为 LF，防止 textarea selectionRange 出现字符索引偏差
+      textContent.value = (raw || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n')
       if (isEditing.value) {
         nextTick(() => {
           if (editorTextareaRef.value) editorTextareaRef.value.focus()
@@ -551,22 +677,44 @@ async function loadFile(openInEdit = false) {
   }
 }
 
-watch(() => props.visible, (val) => {
+watch(isModalVisible, (val) => {
   if (val) {
-    loadFile(props.initialEdit)
+    loadFile(props.initialEdit || props.initialEditMode)
+    if (props.targetLine > 0) {
+      nextTick(() => {
+        setTimeout(() => {
+          scrollToTargetLine(props.targetLine)
+        }, 120)
+      })
+    }
   }
 })
+
+function scrollToTargetLine(lineNum) {
+  if (!lineNum || lineNum < 1) return
+  const container = isEditing.value ? editorTextareaRef.value : viewerContainerRef.value
+  if (container) {
+    const lineTop = (lineNum - 1) * 20
+    container.scrollTo({ top: Math.max(0, lineTop - 80), behavior: 'smooth' })
+  }
+}
 
 watch(() => props.filePath, (val) => {
-  if (props.visible && val) {
-    loadFile(props.initialEdit)
+  if (isModalVisible.value && val) {
+    loadFile(props.initialEdit || props.initialEditMode)
   }
 })
 
-// 滚动同步 (行号栏与代码容器同步滚动)
+// 滚动同步 (行号栏、背景高亮层与代码容器同步滚动)
 function syncScroll(e) {
-  if (lineGutterRef.value && e.target) {
-    lineGutterRef.value.scrollTop = e.target.scrollTop
+  if (!e || !e.target) return
+  const target = e.target
+  if (lineGutterRef.value) {
+    lineGutterRef.value.scrollTop = target.scrollTop
+  }
+  if (editorBackdropRef.value) {
+    editorBackdropRef.value.scrollTop = target.scrollTop
+    editorBackdropRef.value.scrollLeft = target.scrollLeft
   }
 }
 
@@ -586,11 +734,20 @@ async function copyContent() {
 // 切换编辑模式
 function toggleEditMode() {
   isEditing.value = !isEditing.value
-  if (isEditing.value) {
-    nextTick(() => {
-      if (editorTextareaRef.value) editorTextareaRef.value.focus()
-    })
-  }
+  nextTick(() => {
+    if (isEditing.value) {
+      if (editorTextareaRef.value) {
+        editorTextareaRef.value.focus()
+        if (searchMatches.value.length > 0 && currentMatchIndex.value >= 0) {
+          scrollToMatch(currentMatchIndex.value)
+        }
+      }
+    } else {
+      if (searchMatches.value.length > 0 && currentMatchIndex.value >= 0) {
+        scrollToMatch(currentMatchIndex.value)
+      }
+    }
+  })
 }
 
 // 保存修改
@@ -609,45 +766,145 @@ async function saveContent() {
   }
 }
 
-// 站内搜索定位
+// 站内搜索定位 (基于全文精确索引查找，支持跨行定位与字符选区)
 function handleSearch() {
-  const q = (searchQuery.value || '').trim().toLowerCase()
+  const q = (searchQuery.value || '').trim()
   searchMatches.value = []
   currentMatchIndex.value = -1
   if (!q || !textContent.value) return
 
-  const lines = textContent.value.split('\n')
-  lines.forEach((line, idx) => {
-    if (line.toLowerCase().includes(q)) {
-      searchMatches.value.push({ line: idx + 1 })
+  // 确保换行符统一为 LF，杜绝因 CRLF 多出 \r 导致的 textarea setSelectionRange 累积漂移
+  if (textContent.value.includes('\r')) {
+    textContent.value = textContent.value.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+  }
+
+  const textarea = editorTextareaRef.value
+  const text = (isEditing.value && textarea) ? textarea.value : textContent.value
+  const lowerText = text.toLowerCase()
+  const lowerQ = q.toLowerCase()
+  const qLen = q.length
+  const matches = []
+
+  let searchIndex = lowerText.indexOf(lowerQ, 0)
+  let count = 0
+
+  // 记录每一行的起始下标，以便快速计算行号
+  const lineStartIndices = [0]
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '\n') {
+      lineStartIndices.push(i + 1)
     }
-  })
-  if (searchMatches.value.length > 0) {
+  }
+
+  function getLineFromIndex(idx) {
+    let low = 0
+    let high = lineStartIndices.length - 1
+    while (low <= high) {
+      const mid = Math.floor((low + high) / 2)
+      if (lineStartIndices[mid] <= idx) {
+        low = mid + 1
+      } else {
+        high = mid - 1
+      }
+    }
+    return high + 1
+  }
+
+  while (searchIndex !== -1) {
+    const lineNum = getLineFromIndex(searchIndex)
+    matches.push({
+      id: count++,
+      startIndex: searchIndex,
+      endIndex: searchIndex + qLen,
+      line: lineNum
+    })
+    searchIndex = lowerText.indexOf(lowerQ, searchIndex + qLen)
+  }
+
+  searchMatches.value = matches
+  if (matches.length > 0) {
     currentMatchIndex.value = 0
     scrollToMatch(0)
   }
 }
 
+function handleTextareaInput() {
+  if (searchQuery.value) {
+    handleSearch()
+  }
+}
+
 function jumpNextMatch() {
   if (searchMatches.value.length === 0) return
-  currentMatchIndex.value = (currentMatchIndex.value + 1) % searchMatches.value.length
-  scrollToMatch(currentMatchIndex.value)
+  const nextIdx = (currentMatchIndex.value + 1) % searchMatches.value.length
+  scrollToMatch(nextIdx)
+}
+
+function jumpPrevMatch() {
+  if (searchMatches.value.length === 0) return
+  const prevIdx = (currentMatchIndex.value - 1 + searchMatches.value.length) % searchMatches.value.length
+  scrollToMatch(prevIdx)
 }
 
 function scrollToMatch(idx) {
+  if (idx < 0 || idx >= searchMatches.value.length) return
+  currentMatchIndex.value = idx
   const match = searchMatches.value[idx]
-  if (!match) return
-  const container = isEditing.value ? editorTextareaRef.value : viewerContainerRef.value
-  if (container) {
-    const lineTop = (match.line - 1) * 20
-    container.scrollTo({ top: Math.max(0, lineTop - 60), behavior: 'smooth' })
-  }
+
+  nextTick(() => {
+    if (isEditing.value) {
+      const textarea = editorTextareaRef.value
+      if (textarea) {
+        textarea.focus()
+        textarea.setSelectionRange(match.startIndex, match.endIndex)
+
+        const lineHeight = 20
+        const lineTop = (match.line - 1) * lineHeight
+        const targetScrollTop = Math.max(0, lineTop - textarea.clientHeight / 2 + 30)
+
+        textarea.scrollTop = targetScrollTop
+
+        if (editorBackdropRef.value) {
+          editorBackdropRef.value.scrollTop = targetScrollTop
+        }
+        if (lineGutterRef.value) {
+          lineGutterRef.value.scrollTop = targetScrollTop
+        }
+      }
+    } else {
+      const container = viewerContainerRef.value
+      if (container) {
+        const activeEl = container.querySelector('#active-preview-match')
+        if (activeEl) {
+          activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        } else {
+          const lineTop = (match.line - 1) * 20
+          container.scrollTo({
+            top: Math.max(0, lineTop - container.clientHeight / 2 + 30),
+            behavior: 'smooth'
+          })
+        }
+      }
+    }
+  })
 }
 
 function clearSearch() {
   searchQuery.value = ''
   searchMatches.value = []
   currentMatchIndex.value = -1
+  if (isEditing.value && editorTextareaRef.value) {
+    const cur = editorTextareaRef.value.selectionStart || 0
+    editorTextareaRef.value.setSelectionRange(cur, cur)
+  }
+}
+
+function handleSearchEsc() {
+  if (searchQuery.value) {
+    clearSearch()
+  } else {
+    closeModal()
+  }
 }
 
 // 专用外部应用打开 (Word打开Word，Excel打开Excel，系统打开系统)
@@ -666,16 +923,26 @@ function locateInFolder() {
 
 function closeModal() {
   emit('update:visible', false)
+  emit('update:show', false)
+  emit('update:isOpen', false)
+  emit('close')
 }
 
 // 监听 Esc 键关闭
 function handleKeyDown(e) {
-  if (!props.visible) return
+  if (!isModalVisible.value) return
   if (e.key === 'Escape') {
-    closeModal()
+    if (searchQuery.value) {
+      clearSearch()
+    } else {
+      closeModal()
+    }
   } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f' && isTextFile.value) {
     e.preventDefault()
-    if (searchInputRef.value) searchInputRef.value.focus()
+    if (searchInputRef.value) {
+      searchInputRef.value.focus()
+      searchInputRef.value.select()
+    }
   }
 }
 
@@ -691,5 +958,64 @@ onUnmounted(() => {
 <style scoped>
 .tab-4 {
   tab-size: 4;
+}
+
+/* 编辑模式下的层叠布局与精确对齐 */
+.editor-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  padding: 1rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.75rem; /* text-xs: 12px */
+  line-height: 1.25rem; /* leading-5: 20px */
+  box-sizing: border-box;
+  tab-size: 4;
+  white-space: pre;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
+.editor-backdrop {
+  pointer-events: none;
+  color: transparent;
+  background-color: transparent;
+  overflow: hidden;
+  user-select: none;
+  z-index: 1;
+}
+
+.editor-textarea {
+  background-color: transparent;
+  color: #e2e8f0;
+  caret-color: #38bdf8;
+  resize: none;
+  outline: none;
+  border: none;
+  overflow: auto;
+  z-index: 2;
+}
+
+/* 文本域原生选区风格与 DevOrbit 琥珀黄高亮保持协调 */
+.editor-textarea::selection {
+  background-color: rgba(245, 158, 11, 0.45);
+  color: #ffffff;
+}
+
+/* 编辑器背景高亮匹配项 */
+:deep(.editor-search-mark) {
+  background-color: rgba(234, 179, 8, 0.35); /* 琥珀黄色半透明 */
+  color: transparent;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(234, 179, 8, 0.5);
+}
+
+:deep(.editor-search-mark.is-current) {
+  background-color: #f59e0b; /* 琥珀黄实色 */
+  color: transparent;
+  border-radius: 2px;
+  box-shadow: 0 0 0 2px #fbbf24, 0 0 8px rgba(245, 158, 11, 0.85);
 }
 </style>

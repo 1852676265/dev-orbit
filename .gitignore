@@ -36,3 +36,4 @@ Thumbs.db
 # Local environment
 .env.local
 .env.*.local
+.jeikcode/codegraph/
